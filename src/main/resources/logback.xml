@@ -1,0 +1,38 @@
+<configuration>
+
+    <property name="LOG_PATTERN" value="[%d{HH:mm:ss.SSS}] %-5level [%replace(%thread){'com.allanvital.dnsao.Main.main','main'}] [%logger] %msg%n" />
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>90</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE"/>
+    </appender>
+
+    <logger name="DNS" level="DEBUG" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </logger>
+
+    <logger name="CACHE" level="DEBUG" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </logger>
+
+    <logger name="INFRA" level="DEBUG" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </logger>
+
+    <logger name="org.xbill.DNS" level="OFF" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </logger>
+
+    <root level="WARN">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </root>
+
+</configuration>

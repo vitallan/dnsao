@@ -1,0 +1,20 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+
+cache:
+  enabled: false
+
+resolver:
+  multiplier: 3
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"

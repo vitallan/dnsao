@@ -1,0 +1,261 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
+    <link rel="shortcut icon" href="/img/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="DNSao" />
+    <link rel="manifest" href="/img/site.webmanifest" />
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DNSao • Dashboard</title>
+
+    <link rel="stylesheet" href="/css/bulma.min.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+
+    <script src="/js/chart.js?v=1.0.0"></script>
+    <script src="/js/graph.js?v=1.0.0"></script>
+    <script src="/js/summary.js?v=1.0.0"></script>
+
+</head>
+
+<body class="has-background-light">
+
+<section class="section pt-4 pb-2">
+    <div class="container">
+        <div id="buildBanner" class="notification is-warning is-light is-hidden">
+            <strong>Building</strong> — resources in load...
+        </div>
+
+        <div class="level">
+            <div class="is-flex is-align-items-center is-flex-wrap-wrap">
+                <figure class="image mr-3" style="width: 32px; height: 32px;">
+                    <img src="/img/favicon-96x96.png" alt="DNSao Logo">
+                </figure>
+                <div class="is-flex is-flex-direction-column">
+                    <h1 class="title is-4 mb-1">DNSao Stats Dashboard</h1>
+                    <p id="lastUpdated" class="subtitle is-7 has-text-grey mt-0">—</p>
+                </div>
+            </div>
+            <div class="level-right">
+                <span id="statusTag" class="tag is-success is-light">Online</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-2">
+    <div class="container">
+        <div id="summary" class="columns is-multiline is-variable is-4">
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="total">
+                    <header class="card-header">
+                        <p class="card-header-title">Total</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="cache">
+                    <header class="card-header">
+                        <p class="card-header-title">Cache</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="cacheRateTag">—%</span>
+                        </span>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="blocked">
+                    <header class="card-header">
+                        <p class="card-header-title">Blocked</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="avgTime">
+                    <header class="card-header">
+                        <p class="card-header-title">Avg Response Time (ms)</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="local">
+                    <header class="card-header">
+                        <p class="card-header-title">Local</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="upstream">
+                    <header class="card-header">
+                        <p class="card-header-title">Upstream</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="refused">
+                    <header class="card-header">
+                        <p class="card-header-title">Refused</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-6-tablet is-3-desktop">
+                <div class="card" data-key="servfail">
+                    <header class="card-header">
+                        <p class="card-header-title">Servfail</p>
+                    </header>
+                    <div class="card-content has-text-centered">
+                        <p class="title is-4 value">—</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="columns">
+            <div class="column">
+                <div class="card">
+                    <header class="card-header">
+                        <p class="card-header-title">Last Day Timeline</p>
+                    </header>
+                    <div class="card-content">
+                        <div class="content">
+                            <div class="box p-0" style="height: 320px;">
+                                <canvas id="queriesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-4-desktop">
+                <div class="card">
+                    <header class="card-header">
+                        <p class="card-header-title">Count by Upstream</p>
+                        <span class="card-header-icon">
+                <span class="tag is-info is-light" id="upstreamCountTag">— upstreams</span>
+              </span>
+                    </header>
+                    <div class="card-content">
+                        <div class="content">
+                            <div class="box p-0" id="upstreamPieWrap" style="height: 320px;">
+                                <canvas id="upstreamPie"></canvas>
+                            </div>
+                            <div id="upstreamLegend" class="tags are-medium mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorBox" class="notification is-danger is-light is-hidden"></div>
+    </div>
+</section>
+
+<footer class="footer py-4">
+    <div class="content has-text-centered is-size-7 has-text-grey">
+        <span>© DNSao</span> · <span id="buildInfo">v0.1.0</span>
+    </div>
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('buildBanner').classList.remove('is-hidden');
+      refresh();
+    });
+
+    async function refresh() {
+      try {
+        const res = await fetch('/stats');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const stats = await res.json();
+
+        document.getElementById('buildBanner').classList.add('is-hidden');
+
+        renderSummary(stats.summary);
+        buildChart(stats);
+        buildUpstreamPie(stats);
+
+        computeCacheRate(stats.summary);
+        fillUpstreamLegend(stats.upstream);
+
+        document.getElementById('lastUpdated').textContent =
+          'Updated at ' + new Date().toLocaleString('pt-BR');
+
+        const status = document.getElementById('statusTag');
+        status.className = 'tag is-success is-light';
+        status.textContent = 'Online';
+
+        document.getElementById('errorBox').classList.add('is-hidden');
+      } catch (e) {
+        console.error(e);
+        const errorBox = document.getElementById('errorBox');
+        errorBox.textContent = 'Error in update: ' + (e.message || e);
+        errorBox.classList.remove('is-hidden');
+
+        const status = document.getElementById('statusTag');
+        status.className = 'tag is-danger is-light';
+        status.textContent = 'Offline';
+
+        const el = document.getElementById('lastUpdated');
+        if (el) el.textContent = '—';
+      }
+    }
+
+    function computeCacheRate(summary) {
+      try {
+        const total = Number(summary.total || 0);
+        const cache = Number(summary.cache || 0);
+        const rate = total > 0 ? Math.round((cache / total) * 100) : 0;
+        const tag = document.querySelector('[data-key="cacheRateTag"]');
+        if (tag) tag.textContent = rate + '%';
+      } catch {}
+    }
+
+    function fillUpstreamLegend(upstream) {
+      const wrap = document.getElementById('upstreamLegend');
+      if (!wrap || !upstream) return;
+      wrap.innerHTML = '';
+      const entries = Object.entries(upstream).sort((a,b) => b[1] - a[1]);
+      entries.slice(0, 6).forEach(([host, count]) => {
+        const span = document.createElement('span');
+        span.className = 'tag is-rounded';
+        span.textContent = `${host} · ${count}`;
+        wrap.appendChild(span);
+      });
+      const tag = document.getElementById('upstreamCountTag');
+      if (tag) tag.textContent = `${entries.length} upstreams`;
+    }
+</script>
+</body>
+</html>

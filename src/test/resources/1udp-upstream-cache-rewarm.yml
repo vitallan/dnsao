@@ -1,0 +1,17 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+
+cache:
+  enabled: true
+  maxCacheEntries: 2
+  rewarm: true
+  maxRewarmCount: 2
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
