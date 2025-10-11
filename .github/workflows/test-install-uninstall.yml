@@ -1,0 +1,159 @@
+name: TEST DNSao install/uninstall scripts
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DNSAO_PORT: "8053"
+  SERVICE_NAME: dnsao
+  INSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/install.sh
+  UNINSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/uninstall.sh
+  DOCKER_APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/prod/config-samples/docker/application.yml
+
+jobs:
+  install-uninstall-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout (minimal)
+        uses: actions/checkout@v4
+
+      - name: Ensure tools (Java 17, dnsutils, curl, jq)
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openjdk-17-jre-headless dnsutils curl jq
+
+      - name: Download install/uninstall scripts
+        run: |
+          set -euxo pipefail
+          curl -fsSL "${INSTALL_URL}" -o install.sh
+          curl -fsSL "${UNINSTALL_URL}" -o uninstall.sh
+          chmod +x install.sh uninstall.sh
+          echo "Original install.sh first lines:"
+          head -n 40 install.sh || true
+
+      - name: Patch install.sh to use docker application.yml (port ${DNSAO_PORT})
+        run: |
+          set -euxo pipefail
+          sed -i 's|^APP_YML_URL="https://raw\.githubusercontent\.com/.*/config-samples/.*/application\.yml"|APP_YML_URL="'${DOCKER_APP_YML_URL}'"|' install.sh
+          echo "Patched install.sh first lines:"
+          head -n 60 install.sh || true
+          echo "Resolved APP_YML_URL line:"
+          grep -n '^APP_YML_URL=' install.sh || true
+
+      - name: Run install.sh
+        run: |
+          set -euxo pipefail
+          sudo bash ./install.sh | sed -e 's/\x1b\[[0-9;]*m//g' | tee install.log
+
+      - name: Wait for readiness on UDP/TCP ${DNSAO_PORT}
+        run: |
+          set -euxo pipefail
+          for i in $(seq 1 30); do
+            if systemctl is-active --quiet "${SERVICE_NAME}"; then
+              echo "Service ${SERVICE_NAME} is active."
+              break
+            fi
+            sleep 1
+          done
+          systemctl --no-pager --full status "${SERVICE_NAME}" || true
+
+          READY=0
+          for i in $(seq 1 30); do
+            if dig +time=2 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A >/dev/null 2>&1; then
+              echo "DNSao responded over UDP on port ${DNSAO_PORT}"
+              READY=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "${READY}" -ne 1 ]; then
+            echo "UDP probe failed, trying TCP for another 30s..."
+            for i in $(seq 1 30); do
+              if dig +tcp +time=2 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A >/dev/null 2>&1; then
+                echo "DNSao responded over TCP on port ${DNSAO_PORT}"
+                READY=1
+                break
+              fi
+              sleep 2
+            done
+          fi
+          if [ "${READY}" -ne 1 ]; then
+            echo "Service did not respond on port ${DNSAO_PORT} in time"
+            sudo journalctl -u "${SERVICE_NAME}" -n 200 --no-pager || true
+            exit 1
+          fi
+
+      - name: Smoke tests (UDP and TCP)
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+
+          echo "== UDP queries ==" | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" google.com A | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" definitely-not-a-domain.invalid A | tee -a artifacts/dig_udp.txt
+
+          echo "== TCP queries ==" | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" google.com A | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" definitely-not-a-domain.invalid A | tee -a artifacts/dig_tcp.txt
+
+      - name: Collect service logs
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+          sudo journalctl -u "${SERVICE_NAME}" -n 500 --no-pager > artifacts/journalctl_${SERVICE_NAME}.log 2>&1 || true
+          sudo test -f /var/log/dnsao/dnsao.log && sudo tail -n 500 /var/log/dnsao/dnsao.log > artifacts/dnsao_app.log || true
+
+      - name: Run uninstall.sh
+        if: always()
+        run: |
+          set -euxo pipefail
+          sudo bash ./uninstall.sh | sed -e 's/\x1b\[[0-9;]*m//g' | tee uninstall.log
+
+      - name: Post-uninstall checks (ports, service, filesystem)
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+          
+          if systemctl list-unit-files | grep -q "^${SERVICE_NAME}\.service"; then
+            echo "Service unit still present after uninstall (unexpected)" | tee -a artifacts/uninstall_checks.txt
+            systemctl status "${SERVICE_NAME}" || true
+          else
+            echo "Service unit removed (expected)" | tee -a artifacts/uninstall_checks.txt
+          fi
+          
+          (sudo ss -tulpn | grep ":${DNSAO_PORT}" && echo "Port ${DNSAO_PORT} still in use (unexpected)" >> artifacts/uninstall_checks.txt) || echo "Port ${DNSAO_PORT} free (expected)" >> artifacts/uninstall_checks.txt
+          
+          if [ -d /etc/dnsao ]; then
+            echo "/etc/dnsao still exists (unexpected)" >> artifacts/uninstall_checks.txt
+            sudo find /etc/dnsao -maxdepth 2 -type f -ls >> artifacts/uninstall_checks.txt || true
+          else
+            echo "/etc/dnsao removed (expected)" >> artifacts/uninstall_checks.txt
+          fi
+
+      - name: Collect local logs
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+          cp -f install.log artifacts/install.log || true
+          cp -f uninstall.log artifacts/uninstall.log || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dnsao-install-selftest
+          path: artifacts
+          if-no-files-found: warn
