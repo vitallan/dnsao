@@ -3,7 +3,7 @@ WORKDIR /build
 
 COPY pom.xml .
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -B -U -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -B -U package
 
 RUN set -eux; \
     mkdir -p /out; \
