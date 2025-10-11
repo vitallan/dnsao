@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="" alt="DNSao" width="150" />
+  <img src="https://github.com/vitallan/dnsao/blob/main/docs/docs/assets/logo.svg?raw=true" width="150" alt="DNSao logo">
 </p>
 
 <h1 align="center">DNSao</h1>
