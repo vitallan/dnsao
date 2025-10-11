@@ -1,0 +1,149 @@
+name: Selftest DNSao (docker compose check)
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  IMAGE: ghcr.io/vitallan/dnsao:latest
+  DNSAO_PORT: "8053"
+  ADMIN_PORT: "8044"
+  CONFIG_DIR: config
+  CONTAINER_NAME: dnsao
+  APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/prod/config-samples/docker/application.yml
+
+jobs:
+  docker-compose-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (minimal)
+        uses: actions/checkout@v4
+
+      - name: Ensure tools (dnsutils, curl, jq)
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dnsutils curl jq
+
+      - name: Log in to GHCR (for private or rate-limited pulls)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare config directory and application.yml
+        run: |
+          set -euxo pipefail
+          mkdir -p "${CONFIG_DIR}"
+          curl -fsSL "${APP_YML_URL}" -o "${CONFIG_DIR}/application.yml"
+          echo "Downloaded application.yml to ${CONFIG_DIR}/application.yml"
+          echo "---- first lines ----"
+          head -n 30 "${CONFIG_DIR}/application.yml" || true
+
+      - name: Write docker-compose.yml (ephemeral for CI)
+        run: |
+          set -euxo pipefail
+          cat > docker-compose.yml <<'YAML'
+          version: "3.8"
+          services:
+            dnsao:
+              image: ${IMAGE}
+              container_name: ${CONTAINER_NAME}
+              restart: unless-stopped
+              ports:
+                - "${DNSAO_PORT}:${DNSAO_PORT}/tcp"
+                - "${DNSAO_PORT}:${DNSAO_PORT}/udp"
+                - "${ADMIN_PORT}:${ADMIN_PORT}"
+              volumes:
+                - ./${CONFIG_DIR}:/etc/dnsao
+          YAML
+          echo "docker-compose.yml created:"
+          sed -n '1,999p' docker-compose.yml
+
+      - name: Docker compose up
+        run: |
+          set -euxo pipefail
+          docker compose version
+          docker compose pull
+          docker compose up -d
+          echo "Container list:"
+          docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Ports}}\t{{.Status}}'
+
+      - name: Wait for DNSao to be ready (basic health)
+        run: |
+          set -euxo pipefail
+          
+          for i in $(seq 1 30); do
+            if dig +time=2 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A >/dev/null 2>&1; then
+              echo "DNSao responded over UDP on port ${DNSAO_PORT}"
+              READY=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "${READY:-0}" -ne 1 ]; then
+            echo "UDP probe failed, trying TCP for another 30s..."
+            for i in $(seq 1 30); do
+              if dig +tcp +time=2 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" example.com A >/dev/null 2>&1; then
+                echo "DNSao responded over TCP on port ${DNSAO_PORT}"
+                READY=1
+                break
+              fi
+              sleep 2
+            done
+          fi
+          if [ "${READY:-0}" -ne 1 ]; then
+            echo "DNSao did not become ready in time"
+            docker logs ${CONTAINER_NAME} || true
+            exit 1
+          fi
+
+      - name: Smoke tests (UDP and TCP)
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+
+          echo "== UDP queries ==" | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" allanvital.com A | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" google.com A | tee -a artifacts/dig_udp.txt
+          dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" definitely-not-a-domain.invalid A | tee -a artifacts/dig_udp.txt
+
+          echo "== TCP queries ==" | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" allanvital.com A | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" google.com A | tee -a artifacts/dig_tcp.txt
+          dig +tcp +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" definitely-not-a-domain.invalid A | tee -a artifacts/dig_tcp.txt
+
+          # simple cache (same query 2x) -
+          { time dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" allanvital.com A >/dev/null; } 2> artifacts/timing_udp_1.txt
+          { time dig +time=3 +tries=1 @127.0.0.1 -p "${DNSAO_PORT}" allanvital.com A >/dev/null; } 2> artifacts/timing_udp_2.txt
+
+      - name: Collect container logs
+        if: always()
+        run: |
+          set -euxo pipefail
+          mkdir -p artifacts
+          docker logs ${CONTAINER_NAME} > artifacts/dnsao_container.log 2>&1 || true
+          docker compose ps > artifacts/compose_ps.txt || true
+          docker inspect ${CONTAINER_NAME} > artifacts/container_inspect.json || true
+
+      - name: Docker compose down (cleanup)
+        if: always()
+        run: |
+          set -euxo pipefail
+          docker compose down --remove-orphans || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dnsao-docker-selftest
+          path: artifacts
+          if-no-files-found: warn
