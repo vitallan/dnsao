@@ -1,4 +1,4 @@
-name: Selftest DNSao (docker compose check)
+name: TEST DNSao docker compose
 
 on:
   schedule:
