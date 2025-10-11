@@ -45,7 +45,7 @@ It handles both UDP and TCP queries, and supports modern encrypted upstreams (Do
 
 ---
 
-More info can be found at the documentation.
+More info can be found at the [documentation](https://vitallan.github.io/dnsao/).
 
 ## Building from Source
 

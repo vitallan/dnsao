@@ -45,7 +45,7 @@ Ele lida com consultas DNS via UDP e TCP, oferece suporte a upstreams criptograf
 
 ---
 
-Mais informações podem ser encontradas na documentação.
+Mais informações podem ser encontradas na [documentação](https://vitallan.github.io/dnsao/pt/).
 
 ## Compilando a Partir do Código-Fonte
 
