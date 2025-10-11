@@ -45,7 +45,7 @@ stop_disable_service() {
       systemctl stop "${APP_NAME}.service" || warn "failed to stop ${APP_NAME} (moving on)"
     fi
     if systemctl is-enabled --quiet "${APP_NAME}.service"; then
-      info "disabling servicee ${APP_NAME}"
+      info "disabling service ${APP_NAME}"
       systemctl disable "${APP_NAME}.service" || warn "failed to disable service ${APP_NAME} (moving on)"
     fi
   else

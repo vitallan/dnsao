@@ -10,9 +10,9 @@ APP_DIR="/etc/${APP_NAME}"
 LOG_DIR="/var/log/${APP_NAME}"
 SERVICE_FILE="/etc/systemd/system/${APP_NAME}.service"
 
-JAR_URL="https://repo.visal.pro/all/com/dnsao-1.0-SNAPSHOT.jar"
-LOGBACK_URL="https://gitea.visal.pro/avital/dnsao/raw/branch/main/config-samples/balanced/logback.xml"
-APP_YML_URL="https://gitea.visal.pro/avital/dnsao/raw/branch/main/config-samples/balanced/application.yml"
+JAR_URL="https://github.com/vitallan/dnsao/releases/latest/download/dnsao.jar"
+LOGBACK_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/balanced/logback.xml"
+APP_YML_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/balanced/application.yml"
 
 JAVA_BIN="$(command -v java || true)"
 CURL_BIN="$(command -v curl || true)"
@@ -20,6 +20,12 @@ NOLOGIN_BIN="$(command -v nologin || echo /usr/sbin/nologin)"
 
 abort() { echo "ERRO: $*" >&2; exit 1; }
 info()  { echo "==> $*"; }
+
+if ss -tulpn | grep -qE '(:|%lo:)53\b'; then
+  info "Port 53 is in use (probably systemd-resolved)."
+  info "If wanted, to disable: sudo systemctl disable --now systemd-resolved && sudo rm -f /etc/resolv.conf && echo 'nameserver 127.0.0.1' | sudo tee /etc/resolv.conf"
+  info "or fix the local dns before installing DNSao"
+fi
 
 require_root() {
   [[ "${EUID}" -eq 0 ]] || abort "install script should be run as root"
@@ -32,7 +38,7 @@ require_systemd() {
 
 require_tools() {
   [[ -n "${CURL_BIN}" ]] || abort "curl not found in PATH"
-  [[ -n "${JAVA_BIN}" ]] || info "java not found in PATH"
+  [[ -n "${JAVA_BIN}" ]] || abort "java not found in PATH"
 }
 
 create_user_group() {
@@ -79,8 +85,8 @@ ExecStart=/usr/bin/env java \
   -Xms128m -Xmx128m \
   -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m \
   -Xss512k \
-  -Dconfig=/etc/dns/application.yml \
-  -Dlogback.configurationFile=/etc/dns/logback.xml \
+  -Dconfig=/etc/dnsao/application.yml \
+  -Dlogback.configurationFile=/etc/dnsao/logback.xml \
   -jar /etc/dnsao/dnsao.jar
 
 Restart=on-failure

@@ -82,9 +82,10 @@ extra_javascript:
   - javascript/umami-loader.js
 
 extra:
-  install_url: https://github.com/vitallan
-  latest_jar_url: https://github.com/vitallan
-  sample_conf_url: https://github.com/vitallan
+  install_url: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/install.sh
+  uninstall_url: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/uninstall.sh
+  latest_jar_url: https://github.com/vitallan/dnsao/releases/latest/download/dnsao.jar
+  sample_conf_url: https://github.com/vitallan/dnsao/tree/prod/config-samples
   social:
     - icon: material/github
       link: https://github.com/vitallan/dnsao

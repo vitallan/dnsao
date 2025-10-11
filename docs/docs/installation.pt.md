@@ -27,7 +27,13 @@ dnf install -y java-17-openjdk-headless
 
 outras opções podem ser encontradas no [próprio site da openjdk](https://openjdk.org/install/){:target="_blank"}. Após a instalação da jdk, a máquina estará preparada para rodar **DNSao**.
 
-Antes de instalar, visite o [script de instalação]({{ install_url }}){:target="_blank"} para revisar e confirmar o que está sendo executado. 
+Antes de instalar, visite o [script de instalação]({{ install_url }}){:target="_blank"} para revisar e confirmar o que está sendo executado. Confirme também que não há nenhum processo escutando a porta 53.
+
+```bash
+sudo ss -tulpn | grep :53
+```
+
+Esse comando deve retornar vazio.
    
 para executar o script de instalação, basta rodar o comando abaixo:
 
@@ -81,9 +87,41 @@ sudo systemctl enable dnsao
 sudo systemctl start dnsao
 ```
 
+Para desinstalar, voce pode usar o [script de desinstalação]({{uninstall_url}}).
+
 ## Instalação via Docker
 
-TODO
+Você pode usar docker para rodar **DNSao** também. Confirme que não há nada rodando na porta 53:
+
+```bash
+sudo ss -tulpn | grep :53
+```
+
+Esse comando não deve retornar nada. Então você pode usar docker compose:
+
+```yaml
+
+version: "3.8"
+
+services:
+  dnsao:
+    image: ghcr.io/vitallan/dnsao:latest
+    container_name: dnsao
+    restart: unless-stopped
+
+    ports:
+      - "53:8053/tcp"
+      - "53:8053/udp"
+      - "8044:8044"
+
+    volumes:
+      - /your/local/volume:/etc/dnsao
+
+```
+
+E executar `docker compose up -d`.
+
+Se `/your/local/volume` estiver vazio, **DNSao** irá fazer o download dos arquivos application.yml e logback.xml padrão para docker no volume montado e os usará.
 
 ## Instalação manual
 

@@ -14,6 +14,9 @@
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License">
   </a>
+  <a href="https://vitallan.github.io/dnsao/">
+    <img src="https://img.shields.io/badge/Documentation-DNSao-green?style=for-the-badge&logo=readthedocs" alt="License">
+  </a>
 </p>
 
 

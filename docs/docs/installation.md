@@ -6,7 +6,7 @@ There are three ways to install **DNSao**:
 - [Via Docker (Recommended)](#installation-via-docker)
 - [Manual](#manual-installation)
 
-After the instalation is complete, **DNSao** you can point your devices (or, ideally your router) to use it as a DNS server. Reach to the web port defined in [application.yml](configuration.md) to check the metrics dashboard and enjoy the ride.
+After the instalation is complete, you can point your devices (or, ideally your router) to use it as a DNS server. Reach to the web port defined in [application.yml](configuration.md) to check the metrics dashboard and enjoy the ride.
 
 ## Installation via script
 
@@ -27,7 +27,13 @@ dnf install -y java-17-openjdk-headless
 
 Other options can be found on the [official OpenJDK website](https://openjdk.org/install/){:target="_blank"}. After installing the JDK, the machine will be ready to run **DNSao**.
 
-Before installing, visit the [installation script]({{ install_url }}){:target="_blank"} to review and confirm what will be executed.  
+Before installing, visit the [installation script]({{ install_url }}){:target="_blank"} to review and confirm what will be executed. Also, confirm that nothing else is listening on port 53 to avoid conflict:
+
+```bash
+sudo ss -tulpn | grep :53
+```
+
+This should return nothing.
 
 To execute the installation script, simply run the following command:
 
@@ -81,9 +87,39 @@ sudo systemctl enable dnsao
 sudo systemctl start dnsao
 ```
 
+To uninstall, you can use the [uninstall script]({{uninstall_url}}).
+
 ## Installation via Docker
 
-TODO
+You can use docker to run **DNSao** as well. Make sure that the host machine is not running anything on port 53:
+
+```bash
+sudo ss -tulpn | grep :53
+```
+
+This should return nothing. Then you can use docker compose:
+
+```yaml
+
+version: "3.8"
+
+services:
+  dnsao:
+    image: ghcr.io/vitallan/dnsao:latest
+    container_name: dnsao
+    restart: unless-stopped
+
+    ports:
+      - "53:8053/tcp"
+      - "53:8053/udp"
+      - "8044:8044"
+
+    volumes:
+      - /your/local/volume:/etc/dnsao
+
+```
+
+If `/your/local/volume` is empty, **DNSao** will download the default docker application.yml and logback.xml files to the volume and use then. 
 
 ## Manual installation
 
