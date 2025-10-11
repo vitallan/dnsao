@@ -35,11 +35,11 @@ VOLUME ["/etc/dnsao"]
 
 EXPOSE 8053/tcp 8053/udp 8044/tcp
 
-COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 STOPSIGNAL SIGTERM
 USER dnsao
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["java","-jar","/opt/dnsao/dnsao.jar"]
