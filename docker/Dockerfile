@@ -10,6 +10,7 @@ RUN set -eux; \
     JAR="$(ls -1 target/*.jar | grep -v -E '(sources|javadoc)' | head -n1)"; \
     cp "$JAR" /out/dnsao.jar
 
+
 FROM eclipse-temurin:17-jre
 
 LABEL org.opencontainers.image.title="DNSao" \
@@ -18,19 +19,27 @@ LABEL org.opencontainers.image.title="DNSao" \
 
 ENV DNSAO_HOME=/opt/dnsao \
     DNSAO_CONFIG=/etc/dnsao \
-    JAVA_OPTS="-Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k -XX:+ExitOnOutOfMemoryError"
+    JAVA_OPTS="-Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k -XX:+ExitOnOutOfMemoryError" \
+    RUN_USER=dnsao \
+    RUN_GROUP=dnsao \
+    RUN_UID=10001 \
+    RUN_GID=10001
 
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
-  && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gosu \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r dnsao && useradd -r -g dnsao -d ${DNSAO_HOME} -s /usr/sbin/nologin dnsao
+RUN groupadd -g "${RUN_GID}" -r "${RUN_GROUP}" \
+ && useradd  -u "${RUN_UID}" -r -g "${RUN_GROUP}" -d "${DNSAO_HOME}" -s /usr/sbin/nologin "${RUN_USER}"
+
+RUN mkdir -p "${DNSAO_HOME}" "${DNSAO_CONFIG}" \
+ && chown -R "${RUN_USER}:${RUN_GROUP}" "${DNSAO_HOME}" "${DNSAO_CONFIG}"
 
 WORKDIR ${DNSAO_HOME}
-COPY --from=build /out/dnsao.jar ${DNSAO_HOME}/dnsao.jar
 
-RUN mkdir -p ${DNSAO_CONFIG} \
-  && chown -R dnsao:dnsao ${DNSAO_HOME} ${DNSAO_CONFIG}
+COPY --chown=${RUN_USER}:${RUN_GROUP} --from=build /out/dnsao.jar ${DNSAO_HOME}/dnsao.jar
+
 VOLUME ["/etc/dnsao"]
 
 EXPOSE 8053/tcp 8053/udp 8044/tcp
@@ -39,7 +48,7 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 STOPSIGNAL SIGTERM
-USER dnsao
 
+USER root
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["java","-jar","/opt/dnsao/dnsao.jar"]

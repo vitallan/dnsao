@@ -12,6 +12,19 @@ LOGBACK_XML="${DNSAO_CONFIG}/logback.xml"
 APP_YML_URL="${APP_YML_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/docker/application.yml}"
 LOGBACK_URL="${LOGBACK_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/docker/logback.xml}"
 
+if [ "$(id -u)" -eq 0 ]; then
+  RUN_USER="${RUN_USER:-dnsao}"
+  RUN_GROUP="${RUN_GROUP:-dnsao}"
+  DNSAO_HOME="${DNSAO_HOME:-/opt/dnsao}"
+  DNSAO_CONFIG="${DNSAO_CONFIG:-/etc/dnsao}"
+
+  mkdir -p "${DNSAO_HOME}" "${DNSAO_CONFIG}"
+  chown -R "${RUN_USER}:${RUN_GROUP}" "${DNSAO_HOME}" "${DNSAO_CONFIG}"
+
+  exec gosu "${RUN_USER}:${RUN_GROUP}" "$0" "$@"
+fi
+
+
 echo "[dnsao] Home: ${DNSAO_HOME}"
 echo "[dnsao] Config dir: ${DNSAO_CONFIG}"
 
