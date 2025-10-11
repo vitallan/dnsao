@@ -1,0 +1,41 @@
+server:
+  port: 53
+  udpThreadPool: 10
+  tcpThreadPool: 3
+  webPort: 8044
+
+cache:
+  enabled: true
+  maxCacheEntries: 1000
+  rewarm: true
+  maxRewarmCount: 5
+
+resolver:
+  tlsPoolSize: 5
+  multiplier: 3
+  upstreams:
+    - ip: "1.1.1.1"
+      port: 53
+      protocol: "udp"
+    - ip: "1.0.0.1"
+      port: 53
+      protocol: "udp"
+    - ip: "8.8.8.8"
+      port: 53
+      protocol: "udp"
+    - ip: "149.112.112.112"
+      port: 53
+      protocol: "udp"
+    - ip: "9.9.9.9"
+      port: 53
+      protocol: "udp"
+    - ip: "8.8.4.4"
+      port: 53
+      protocol: "udp" 
+    
+
+  localMappings:
+
+  blocklists:
+    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+
