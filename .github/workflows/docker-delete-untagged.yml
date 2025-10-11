@@ -1,9 +1,9 @@
-name: GHCR cleanup (remove all untagged)
+name: GHCR cleanup (untagged only, SAFE)
 
 on:
-  schedule:
-    - cron: "27 3 * * *"   # 00:27 BRT
   workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"   # ~00:17 BRT
 
 permissions:
   packages: write
@@ -17,10 +17,10 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Delete ALL untagged versions
+      - name: Delete untagged container versions (keep a buffer!)
         uses: actions/delete-package-versions@v5
         with:
           package-name: dnsao
           package-type: container
-          delete-only-untagged: true
-          min-versions-to-keep: 0
+          delete-only-untagged-versions: true
+          min-versions-to-keep: 10 
