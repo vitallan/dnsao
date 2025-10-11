@@ -1,9 +1,9 @@
 name: Build 'latest' from prod tag (GHCR)
 
 on:
-  push:
-    tags:
-      - "prod"
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
