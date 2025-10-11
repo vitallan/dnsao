@@ -88,7 +88,7 @@ O **DNSao** possui três loggers principais: **DNS, CACHE e INFRA**. Se você pr
 
 Este é o único arquivo de configuração da aplicação. Nele você define quais portas serão usadas, quais recursos estarão habilitados, quais *upstreams* serão utilizados, mapeamentos locais e quais blocklists de DNS serão aplicadas. Abaixo está um exemplo completo:
 
-```yml
+```yaml
 server:
   port: 53 
   udpThreadPool: 10
@@ -140,7 +140,7 @@ resolver:
 
 ### server
 
-```yml
+```yaml
 server:
   port: 53 
   udpThreadPool: 10
@@ -159,7 +159,7 @@ A propriedade **server** define as propriedades de alto nível da aplicação.
 
 ### cache
 
-```yml
+```yaml
 cache:
   enabled: true
   maxCacheEntries: 1000
@@ -178,7 +178,7 @@ A propriedade **cache** define o comportamento do cache da aplicação. O cache 
 
 ### resolver
 
-```yml
+```yaml
 resolver:
   tlsPoolSize: 5
   multiplier: 3

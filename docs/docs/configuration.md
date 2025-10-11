@@ -90,7 +90,7 @@ For troubleshooting, analysis, or personal preference, you can set each log indi
 
 This is the only configuration file for the application. Here you can define which ports will be used, which features are enabled, which upstreams will be used, local mappings, and which DNS blocklists will be applied. Below is a complete example:
 
-```yml
+```yaml
 server:
   port: 53 
   udpThreadPool: 10
@@ -143,7 +143,7 @@ resolver:
 
 ### server
 
-```yml
+```yaml
 server:
   port: 53 
   udpThreadPool: 10
@@ -162,7 +162,7 @@ The **server** property defines the application’s top-level properties.
 
 ### cache
 
-```yml
+```yaml
 cache:
   enabled: true
   maxCacheEntries: 1000
@@ -181,7 +181,7 @@ The **cache** property defines the application’s cache behavior. The cache is 
 
 ### resolver
 
-```yml
+```yaml
 resolver:
   tlsPoolSize: 5
   multiplier: 3
