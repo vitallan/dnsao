@@ -49,7 +49,7 @@ Mais informações podem ser encontradas na documentação.
 Você pode compilar o DNSao usando **Maven** e **Java 17 ou superior**.
 
 ```bash
-git clone https://github.com/allanvital/dnsao.git
+git clone https://github.com/vitallan/dnsao.git
 cd dnsao
 mvn clean package -DskipTests
 ```
@@ -100,7 +100,7 @@ Acesse o painel através da porta administrativa configurada no seu `application
 ## Contribuindo
 
 Contribuições são bem-vindas!
-Abra issues, sugira melhorias ou envie pull requests diretamente no [GitHub](https://github.com/allanvital/dnsao).
+Abra issues, sugira melhorias ou envie pull requests diretamente no [GitHub](https://github.com/vitallan/dnsao).
 
 ---
 
@@ -118,8 +118,8 @@ O DNSao utiliza bibliotecas open-source, incluindo:
 
 ## Links
 
-* [Documentação Oficial](https://github.com/allanvital/dnsao)
-* [Repositório no GitHub](https://github.com/allanvital/dnsao)
+* [Documentação Oficial](https://github.com/vitallan/dnsao)
+* [Repositório no GitHub](https://github.com/vitallan/dnsao)
 
 ---
 

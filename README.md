@@ -49,7 +49,7 @@ More info can be found at the documentation.
 You can build DNSao using **Maven** and **Java 17 or later**.
 
 ```bash
-git clone https://github.com/allanvital/dnsao.git
+git clone https://github.com/vitallan/dnsao.git
 cd dnsao
 mvn clean package -DskipTests
 ````
@@ -101,7 +101,7 @@ Access it via the admin port configured in your `application.yml` (e.g. `http://
 ## Contributing
 
 Contributions are welcome!
-Open issues, suggest improvements, or submit pull requests directly on [GitHub](https://github.com/allanvital/dnsao).
+Open issues, suggest improvements, or submit pull requests directly on [GitHub](https://github.com/vitallan/dnsao).
 
 ---
 
@@ -119,8 +119,8 @@ DNSao makes use of open-source libraries, including:
 
 ## Links
 
-* [Official Documentation](https://github.com/allanvital/dnsao)
-* [GitHub Repository](https://github.com/allanvital/dnsao)
+* [Official Documentation](https://github.com/vitallan/dnsao)
+* [GitHub Repository](https://github.com/vitallan/dnsao)
 
 ---
 
