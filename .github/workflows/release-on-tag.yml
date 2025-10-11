@@ -1,0 +1,142 @@
+name: Release on tag
+
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 17 (Temurin) + cache Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Extract tag/version
+        id: ver
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set ${revision} to release version
+        run: |
+          mvn -B -q versions:set-property \
+            -Dproperty=revision \
+            -DnewVersion="${{ steps.ver.outputs.version }}" \
+            -DgenerateBackupPoms=false
+
+      - name: Run tests
+        run: mvn -B test
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 17 (Temurin) + cache Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Extract tag/version
+        id: ver
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set ${revision} to release version
+        run: |
+          mvn -B -q versions:set-property \
+            -Dproperty=revision \
+            -DnewVersion="${{ steps.ver.outputs.version }}" \
+            -DgenerateBackupPoms=false
+
+      - name: Build (skip tests)
+        run: mvn -B -DskipTests clean package
+
+      - name: Collect jars
+        id: jars
+        shell: bash
+        run: |
+          set -euo pipefail
+          JAR_WITH_VERSION="$(ls target/*-"${{ steps.ver.outputs.version }}".jar | head -n 1)"
+          if [ -z "${JAR_WITH_VERSION:-}" ]; then
+            echo "Jar not found at target/*-${{ steps.ver.outputs.version }}.jar"
+            exit 1
+          fi
+          cp "$JAR_WITH_VERSION" dnsao.jar
+          echo "jar_with_version=$JAR_WITH_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}                 # v1.2.3
+          name: DNSao ${{ steps.ver.outputs.version }}           # "DNSao 1.2.3"
+          generate_release_notes: true
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.jars.outputs.jar_with_version }}
+            dnsao.jar
+
+      - name: Move 'prod' tag to this release's commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT=$(git rev-list -n 1 "${{ steps.ver.outputs.tag }}")
+          git tag -f prod "$COMMIT"
+          git push -f origin refs/tags/prod
+
+      - name: Fresh checkout of default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEFAULT_BRANCH }}
+          fetch-depth: 0
+
+      - name: Calc next version SNAPSHOT (patch +1)
+        id: next
+        shell: bash
+        run: |
+          IFS='.' read -r MA MI PA <<< "${{ steps.ver.outputs.version }}"
+          NEXT_PATCH=$((PA + 1))
+          echo "next_version=${MA}.${MI}.${NEXT_PATCH}-SNAPSHOT" >> "$GITHUB_OUTPUT"
+
+      - name: Set ${revision} to next SNAPSHOT and commit
+        shell: bash
+        run: |
+          mvn -B -q versions:set-property \
+            -Dproperty=revision \
+            -DnewVersion="${{ steps.next.outputs.next_version }}" \
+            -DgenerateBackupPoms=false
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): bump revision to ${{ steps.next.outputs.next_version }} [skip ci]" || echo "nothing to commit"
+          git push origin "${DEFAULT_BRANCH}"
