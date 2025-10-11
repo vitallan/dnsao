@@ -76,7 +76,7 @@ mvn exec:java
 
 **Importante**: a branch main é a que é usada para desenvolvimento atualmente, então não deve ser considerada estável. Se o foco é a estabilidade do build, use a tag "prod"
 
-Releases novas e novas imagens docker são geradas a partir do commit/push de uma nova tag no formato v0.0.0.
+Releases novas e novas imagens docker são geradas a partir do commit/push de uma nova tag no formato v0.0.0. A tag "latest" do docker sempre aponta para a tag "prod" do código e é disponibilizada diariamente.
 
 ## Configuração
 
