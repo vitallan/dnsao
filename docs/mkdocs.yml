@@ -1,0 +1,92 @@
+site_name: DNSao Docs
+site_description: DNSao — multi-upstream DNS forwarder with cache & DoT upstreams
+site_url: https://vitallan.github.io/dnsao/
+repo_url: https://github.com/vitallan/dnsao
+repo_name: vitallan/dnsao
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - header.autohide
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: green
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Backlog: next.md
+
+plugins:
+  - macros
+  - search:
+      lang:
+        - en
+        - pt
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: pt
+          name: Português (Brasil)
+          build: true
+          nav_translations:
+            Home: Início
+            Configuration: Configuração
+            Installation: Instalação
+            Backlog: Backlog
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra_javascript:
+  - javascript/umami-loader.js
+
+extra:
+  install_url: https://github.com/vitallan
+  latest_jar_url: https://github.com/vitallan
+  sample_conf_url: https://github.com/vitallan
+  social:
+    - icon: material/github
+      link: https://github.com/vitallan/dnsao
+    - icon: material/web
+      link: https://allanvital.com
