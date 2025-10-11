@@ -1,9 +1,9 @@
-name: Nightly Build 'latest' from prod tag (GHCR)
+name: Build 'latest' from prod tag (GHCR)
 
 on:
-  schedule:
-    - cron: "0 3 * * *"
-  workflow_dispatch:
+  push:
+    tags:
+      - "prod"
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ env:
   CONTEXT: .
 
 concurrency:
-  group: nightly-latest
+  group: latest
   cancel-in-progress: false
 
 jobs:
