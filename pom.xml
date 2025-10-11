@@ -10,7 +10,7 @@
   <name>dnsao</name>
 
   <properties>
-    <revision>0.0.4-SNAPSHOT</revision>
+    <revision>0.0.5-SNAPSHOT</revision>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
   </properties>
