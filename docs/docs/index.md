@@ -5,7 +5,7 @@ title: Home
 # DNSao
 
 <p align="center">
-  <img src="/assets/logo.svg" alt="DNSao Logo" width="200">
+  <img src="assets/logo.svg" alt="DNSao Logo" width="200">
 </p>
 <p align="center">
 <strong>DNSao</strong> is a high-performance multi-upstream DNS forwarder
