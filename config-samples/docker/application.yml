@@ -1,0 +1,46 @@
+server:
+  port: 8053
+  udpThreadPool: 10
+  tcpThreadPool: 3
+  webPort: 8044
+
+cache:
+  enabled: true
+  maxCacheEntries: 1000
+  rewarm: true
+  maxRewarmCount: 5
+
+resolver:
+  tlsPoolSize: 5
+  multiplier: 3
+  upstreams:
+    - ip: "1.1.1.1"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "cloudflare-dns.com"
+    - ip: "1.0.0.1"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "cloudflare-dns.com"
+    - ip: "8.8.8.8"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "dns.google"
+    - ip: "8.8.4.4"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "dns.google"
+    - ip: "149.112.112.112"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "dns.quad9.net"
+    - ip: "9.9.9.9"
+      port: 853
+      protocol: "dot"
+      tlsAuthName: "dns.quad9.net"
+
+  localMappings:
+
+  blocklists:
+    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+
