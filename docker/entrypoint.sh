@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-set -euo pipefail
+set -eu
 
 DNSAO_HOME="${DNSAO_HOME:-/opt/dnsao}"
 DNSAO_CONFIG="${DNSAO_CONFIG:-/etc/dnsao}"
@@ -20,7 +20,7 @@ if [ ! -f "${APP_JAR}" ]; then
   exit 1
 fi
 
-mkdir -p "${DNSAO_CONFIG}" 2>/dev/null || true
+mkdir -p "${DNSAO_CONFIG}" 
 
 if [ ! -f "${APP_YML}" ]; then
   echo "[dnsao] application.yml not provided. Downloading default ${APP_YML_URL}..."
