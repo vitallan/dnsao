@@ -118,7 +118,7 @@ O DNSao utiliza bibliotecas open-source, incluindo:
 
 ## Links
 
-* [Documentação Oficial](https://github.com/vitallan/dnsao)
+* [Documentação Oficial](https://vitallan.github.io/dnsao/pt)
 * [Repositório no GitHub](https://github.com/vitallan/dnsao)
 
 ---

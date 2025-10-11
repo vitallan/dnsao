@@ -119,7 +119,7 @@ DNSao makes use of open-source libraries, including:
 
 ## Links
 
-* [Official Documentation](https://github.com/vitallan/dnsao)
+* [Official Documentation](https://vitallan.github.io/dnsao/)
 * [GitHub Repository](https://github.com/vitallan/dnsao)
 
 ---
