@@ -1,4 +1,4 @@
-name: GHCR cleanup (untagged only, SAFE)
+name: Maintenance - GHCR cleanup (untagged only, SAFE)
 
 on:
   workflow_dispatch:

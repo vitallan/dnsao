@@ -1,4 +1,4 @@
-name: TEST DNSao install/uninstall scripts
+name: Maintenance - TEST DNSao install/uninstall scripts
 
 on:
   workflow_dispatch:

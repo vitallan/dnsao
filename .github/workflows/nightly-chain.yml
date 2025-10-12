@@ -1,4 +1,4 @@
-name: Nightly chain (publish -> cleanup -> test scripts -> test compose)
+name: Maintenance - Nightly chain (publish -> cleanup -> test scripts -> test compose)
 
 on:
   schedule:

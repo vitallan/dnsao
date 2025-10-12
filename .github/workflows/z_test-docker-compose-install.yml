@@ -1,4 +1,4 @@
-name: TEST DNSao docker compose
+name: Maintenance - TEST DNSao docker compose
 
 on:
   workflow_dispatch:
