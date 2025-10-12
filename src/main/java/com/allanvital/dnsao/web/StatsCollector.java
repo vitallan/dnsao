@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
@@ -29,7 +30,7 @@ public class StatsCollector implements QueryEventListener {
 
     private static final Logger log = LoggerFactory.getLogger(DNS);
 
-    //5 minutes window
+    //10 minutes window
     public static final long DEFAULT_BUCKET_INTERVAL_MS = 10 * 60_000L;
     // 24 hour retention
     public static final long DEFAULT_WINDOW_MS = 24 * 60 * 60_000L;
@@ -39,20 +40,9 @@ public class StatsCollector implements QueryEventListener {
 
     private final ConcurrentSkipListMap<Long, Bucket> buckets = new ConcurrentSkipListMap<>();
 
-    private final LongAdder totalElapsedTime = new LongAdder();
-    private final LongAdder totalQueries = new LongAdder();
-    private final LongAdder totalCacheHits = new LongAdder();
-    private final LongAdder totalBlockHits = new LongAdder();
-    private final LongAdder totalLocalHits = new LongAdder();
-    private final LongAdder totalUpstreamHits = new LongAdder();
-    private final LongAdder totalRefusedHits = new LongAdder();
-    private final LongAdder totalServFailHits = new LongAdder();
-
     private final LongSupplier nowSupplier;
 
     private final ConcurrentSkipListSet<String> KNOWN_UPSTREAMS = new ConcurrentSkipListSet<>();
-
-    private final ConcurrentHashMap<String, LongAdder> upstreamIndividualHits = new ConcurrentHashMap<>();
 
     public StatsCollector() {
         this(DEFAULT_BUCKET_INTERVAL_MS, DEFAULT_WINDOW_MS, System::currentTimeMillis);
@@ -74,17 +64,9 @@ public class StatsCollector implements QueryEventListener {
         bucket.increment(queryEvent);
         trimOldBucketsByLatest(bucketStart);
 
-        totalQueries.increment();
-        totalElapsedTime.add(queryEvent.getElapsedTime());
-
         QueryResolvedBy queryResolvedBy = queryEvent.getQueryResolvedBy();
         if (queryResolvedBy == null) {
             return;
-        }
-
-        LongAdder counter = getCounter(queryResolvedBy);
-        if (counter != null) {
-            counter.increment();
         }
 
         if (queryResolvedBy == QueryResolvedBy.UPSTREAM) {
@@ -93,44 +75,58 @@ public class StatsCollector implements QueryEventListener {
                 return;
             }
             KNOWN_UPSTREAMS.add(source);
-            upstreamIndividualHits.computeIfAbsent(source, k -> new LongAdder());
-            upstreamIndividualHits.get(source).increment();
         }
     }
 
     public long getQueryCount(QueryResolvedBy queryResolvedBy) {
-        LongAdder counter = getCounter(queryResolvedBy);
-        if (counter != null) {
-            return counter.sum();
-        }
-        return 0;
-    }
-
-    private LongAdder getCounter(QueryResolvedBy resolvedBy) {
-        return switch (resolvedBy) {
-            case CACHE -> totalCacheHits;
-            case BLOCKED -> totalBlockHits;
-            case LOCAL -> totalLocalHits;
-            case REFUSED -> totalRefusedHits;
-            case SERVFAIL -> totalServFailHits;
-            case UPSTREAM -> totalUpstreamHits;
-        };
+        maybeTrimByNow();
+        NavigableMap<Long, Bucket> countsRaw = getBucketsFilledAnchoredToNow();
+        AtomicLong count = new AtomicLong();
+        countsRaw.forEach((interval, bucket) -> {
+            count.set(count.get() + bucket.getCounter(queryResolvedBy));
+        });
+        return count.get();
     }
 
     public ConcurrentHashMap<String, LongAdder> getUpstreamIndividualHits() {
-        return upstreamIndividualHits;
+        maybeTrimByNow();
+        ConcurrentHashMap<String, LongAdder> toReturn = new ConcurrentHashMap<>();
+        for (String upstream : KNOWN_UPSTREAMS) {
+            toReturn.put(upstream, new LongAdder());
+        }
+        NavigableMap<Long, Bucket> countsRaw = getBucketsFilledAnchoredToNow();
+        countsRaw.forEach((interval, bucket) -> {
+            Map<String, LongAdder> upstreamHits = bucket.getUpstreamHits();
+            for (Map.Entry<String, LongAdder> entry : upstreamHits.entrySet()) {
+                String upstream = entry.getKey();
+                LongAdder hits = entry.getValue();
+                if (toReturn.containsKey(upstream)) {
+                    LongAdder counted = toReturn.get(upstream);
+                    counted.add(hits.sum());
+                    toReturn.put(upstream, counted);
+                } else {
+                    toReturn.put(upstream, hits);
+                }
+            }
+        });
+        return toReturn;
     }
 
     public long getQueryCount() {
-        return totalQueries.sum();
+        return getQueryCount(null);
     }
 
     public double getQueryElapsedTime() {
-        long count = totalQueries.sum();
+        long count = getQueryCount();
         if (count == 0) {
             return 0.0;
         }
-        return totalElapsedTime.sum() / (double) count;
+        NavigableMap<Long, Bucket> countsRaw = getBucketsFilledAnchoredToNow();
+        AtomicLong elapseTimeSum = new AtomicLong();
+        countsRaw.forEach((interval, bucket) -> {
+            elapseTimeSum.set(elapseTimeSum.get() + bucket.getElapseTimeSum());
+        });
+        return elapseTimeSum.get() / (double) count;
     }
 
     public NavigableMap<Long, Long> getCountsFilledAnchoredToNow() {

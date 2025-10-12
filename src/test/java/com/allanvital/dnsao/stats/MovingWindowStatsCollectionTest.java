@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.stats;
 
 import com.allanvital.dnsao.notification.QueryEvent;
+import com.allanvital.dnsao.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.StatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,9 +9,13 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 import static com.allanvital.dnsao.TestHolder.t;
+import static com.allanvital.dnsao.notification.QueryResolvedBy.CACHE;
+import static com.allanvital.dnsao.notification.QueryResolvedBy.UPSTREAM;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -82,6 +87,59 @@ public class MovingWindowStatsCollectionTest {
             assertEquals(expectedVals[i], entry.getValue(), "unexpected value idx=" + i);
             i++;
         }
+    }
+
+    @Test
+    public void shouldKeepCountOnlyOnCurrentWindow() {
+        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z")));
+        assertEquals(1, statsCollector.getQueryCount());
+
+        nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
+        assertEquals(1, statsCollector.getQueryCount());
+
+        nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
+        assertEquals(0, statsCollector.getQueryCount());
+    }
+
+    @Test
+    public void shouldKeepCountOnlyOnCurrentWindowBySource() {
+        statsCollector.receiveNewQuery(new QueryEvent(CACHE, null, t("2025-10-02T10:07:00Z")));
+        assertEquals(1, statsCollector.getQueryCount(CACHE));
+
+        nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
+        assertEquals(1, statsCollector.getQueryCount(CACHE));
+
+        nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
+        assertEquals(0, statsCollector.getQueryCount(CACHE));
+    }
+
+    @Test
+    public void shouldKeepElapsedTimeOnlyOnCurrentWindow() {
+        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z"), 100));
+        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:01Z"), 200));
+        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:02Z"), 300));
+
+        assertEquals(200, statsCollector.getQueryElapsedTime());
+
+        nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
+        assertEquals(200, statsCollector.getQueryElapsedTime());
+
+        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T12:07:02Z"), 300));
+        nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
+        assertEquals(300, statsCollector.getQueryElapsedTime());
+    }
+
+    @Test
+    public void shouldCountGeneralByUpstreamOnlyOnCurrentWindowByUpstream() {
+        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:07:00Z")));
+        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:08:00Z")));
+
+        ConcurrentHashMap<String, LongAdder> upstreamHits = statsCollector.getUpstreamIndividualHits();
+        assertEquals(2, upstreamHits.get("1.1.1.1").sum());
+
+        nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
+        upstreamHits = statsCollector.getUpstreamIndividualHits();
+        assertEquals(0, upstreamHits.get("1.1.1.1").sum());
     }
 
 }

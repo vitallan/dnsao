@@ -14,6 +14,8 @@ public class Bucket {
 
     private final LongAdder totalCounter = new LongAdder();
 
+    private final LongAdder elapsedTimeSum = new LongAdder();
+
     private final LongAdder blocked = new LongAdder();
     private final LongAdder cached = new LongAdder();
     private final LongAdder upstream = new LongAdder();
@@ -25,6 +27,7 @@ public class Bucket {
 
     public void increment(QueryEvent queryEvent) {
         totalCounter.increment();
+        elapsedTimeSum.add(queryEvent.getElapsedTime());
         if (queryEvent.getQueryResolvedBy() != null) {
             switch (queryEvent.getQueryResolvedBy()) {
                 case CACHE -> cached.increment();
@@ -50,6 +53,9 @@ public class Bucket {
 
     public long getCounter(QueryResolvedBy queryResolvedBy) {
         long count = 0;
+        if (queryResolvedBy == null) {
+            return getTotalCounter();
+        }
         switch (queryResolvedBy) {
             case CACHE -> count = cached.sum();
             case BLOCKED -> count = blocked.sum();
@@ -59,6 +65,10 @@ public class Bucket {
             case SERVFAIL -> count = servfail.sum();
         }
         return count;
+    }
+
+    public long getElapseTimeSum() {
+        return this.elapsedTimeSum.sum();
     }
 
     public long getTotalCounter()  {

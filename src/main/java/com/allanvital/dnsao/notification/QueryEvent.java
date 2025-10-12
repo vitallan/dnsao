@@ -25,6 +25,11 @@ public class QueryEvent {
         this.time = time;
     }
 
+    public QueryEvent(long time, long elapsedTime) {
+        this(time);
+        this.elapsedTime = elapsedTime;
+    }
+
     public QueryEvent(QueryResolvedBy queryResolvedBy) {
         this.queryResolvedBy = queryResolvedBy;
     }
