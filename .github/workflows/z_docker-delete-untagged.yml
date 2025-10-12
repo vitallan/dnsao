@@ -2,8 +2,7 @@ name: GHCR cleanup (untagged only, SAFE)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "17 3 * * *"   # ~00:17 BRT
+  workflow_call: {}
 
 permissions:
   packages: write

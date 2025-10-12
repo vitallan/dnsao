@@ -1,0 +1,30 @@
+name: Nightly chain (publish -> cleanup -> test scripts -> test compose)
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker-publish-latest:
+    uses: ./.github/workflows/z_docker-publish-latest.yml
+    secrets: inherit
+
+  docker-delete-untagged:
+    needs: docker-publish-latest
+    uses: ./.github/workflows/z_docker-delete-untagged.yml
+    secrets: inherit
+
+  test-install-uninstall:
+    needs: docker-delete-untagged
+    uses: ./.github/workflows/z_test-install-uninstall.yml
+    secrets: inherit
+
+  test-docker-compose-install:
+    needs: test-install-uninstall
+    uses: ./.github/workflows/z_test-docker-compose-install.yml
+    secrets: inherit

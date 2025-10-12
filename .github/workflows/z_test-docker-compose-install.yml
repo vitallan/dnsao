@@ -1,9 +1,8 @@
 name: TEST DNSao docker compose
 
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
+  workflow_call: {}
 
 permissions:
   contents: read

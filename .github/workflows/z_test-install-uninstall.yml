@@ -1,9 +1,8 @@
 name: TEST DNSao install/uninstall scripts
 
 on:
-  schedule:
-    - cron: "30 6 * * *"
   workflow_dispatch:
+  workflow_call: {}
 
 permissions:
   contents: read
