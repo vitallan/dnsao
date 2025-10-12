@@ -45,6 +45,9 @@ public class FileUtils {
             while ((line = br.readLine()) != null) {
                 String domain = getDomainFromLine(line);
                 if (domain != null && !domain.isEmpty()) {
+                    if (domain.endsWith(".")) {
+                        domain = domain.substring(0, domain.length() - 1);
+                    }
                     entries.add(domain.toLowerCase());
                     count++;
                 }

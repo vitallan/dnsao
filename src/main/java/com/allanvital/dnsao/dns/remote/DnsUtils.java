@@ -14,6 +14,8 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -84,16 +86,18 @@ public class DnsUtils {
     }
 
     public static boolean isBlocked(Name qname, Set<String> blockedSet) {
-        String fqdn = qname.toString(true).toLowerCase();
-
-        int idx = 0;
-        while (idx != -1) {
-            if (blockedSet.contains(fqdn.substring(idx))) {
-                return true;
-            }
-            idx = fqdn.indexOf('.', idx + 1);
+        String fqdn = qname.toString(true).toLowerCase(Locale.ROOT);
+        if (fqdn.endsWith(".")) {
+            fqdn = fqdn.substring(0, fqdn.length() - 1);
         }
 
+        if (blockedSet.contains(fqdn)) return true;
+        int dot = fqdn.indexOf('.');
+        while (dot != -1 && dot + 1 < fqdn.length()) {
+            String suffix = fqdn.substring(dot + 1);
+            if (blockedSet.contains(suffix)) return true;
+            dot = fqdn.indexOf('.', dot + 1);
+        }
         return false;
     }
 
