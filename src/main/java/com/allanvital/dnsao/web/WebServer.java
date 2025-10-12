@@ -39,9 +39,17 @@ public class WebServer {
             cfg.router.ignoreTrailingSlashes = true;
         });
 
+        app.get("/query", ctx -> ctx.redirect("/query.html"));
+
         app.get("/stats", ctx -> {
             ctx.contentType("application/json; charset=utf-8").result(
-                    builder.buildJsonStats().toString()
+                    builder.buildHomeJsonStats().toString()
+            );
+        });
+
+        app.get("/queries", ctx -> {
+            ctx.contentType("application/json; charset=utf-8").result(
+                    builder.buildQueriesArray().toString()
             );
         });
 

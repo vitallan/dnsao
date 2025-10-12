@@ -1,15 +1,12 @@
 package com.allanvital.dnsao.web.json;
 
+import com.allanvital.dnsao.notification.QueryEvent;
 import com.allanvital.dnsao.web.StatsCollector;
 import com.allanvital.dnsao.web.pojo.Bucket;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,12 +23,35 @@ public class JsonBuilder {
         this.statsCollector = statsCollector;
     }
 
-    public JsonObject buildJsonStats() {
+    public JsonObject buildHomeJsonStats() {
         JsonObject root = Json.object();
         addSummarization(root);
         addPerUpstreamCount(root);
         addQueriesPerBucket(root);
         return root;
+    }
+
+    public JsonObject buildQueriesArray() {
+        JsonObject root = Json.object();
+        addOrderedQueries(root);
+        return root;
+    }
+
+    private void addOrderedQueries(JsonObject root) {
+        JsonArray rows = Json.array();
+        for (QueryEvent q : statsCollector.getOrderedQueryEvents()) {
+            JsonArray row = Json.array();
+            row.add(formatMillis(q.getTime(), "HH:mm:ss.SSS"));
+            row.add(q.getQueryResolvedBy().toString());
+            row.add(q.getClient());
+            row.add(q.getType());
+            row.add(q.getDomain());
+            row.add(q.getAnswer());
+            row.add(q.getSource());
+            row.add(q.getElapsedTime());
+            rows.add(row);
+        }
+        root.add("queries", rows);
     }
 
     private void addQueriesPerBucket(JsonObject root) {

@@ -1,16 +1,18 @@
 package com.allanvital.dnsao.notification;
 
+import org.jetbrains.annotations.NotNull;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
 import java.util.List;
+import java.util.Objects;
 
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class QueryEvent {
+public class QueryEvent implements Comparable<QueryEvent> {
 
     private long time;
     private QueryResolvedBy queryResolvedBy;
@@ -146,5 +148,22 @@ public class QueryEvent {
 
     public void setQueryResolvedBy(QueryResolvedBy queryResolvedBy) {
         this.queryResolvedBy = queryResolvedBy;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        QueryEvent that = (QueryEvent) o;
+        return time == that.time && elapsedTime == that.elapsedTime && queryResolvedBy == that.queryResolvedBy && Objects.equals(client, that.client) && Objects.equals(type, that.type) && Objects.equals(domain, that.domain) && Objects.equals(answer, that.answer) && Objects.equals(source, that.source);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(time, queryResolvedBy, client, type, domain, answer, source, elapsedTime);
+    }
+
+    @Override
+    public int compareTo(QueryEvent o) {
+        return Long.compare(this.time, o.time);
     }
 }

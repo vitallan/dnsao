@@ -1,0 +1,357 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="icon" type="image/png" href="/img/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/img/favicon.svg" />
+    <link rel="shortcut icon" href="/img/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="DNSao" />
+    <link rel="manifest" href="/img/site.webmanifest" />
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DNSao • Dashboard</title>
+
+    <link rel="stylesheet" href="/css/bulma.min.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+
+</head>
+
+<body class="has-background-light">
+
+<nav class="navbar has-shadow is-light py-3" role="navigation" aria-label="main navigation">
+    <div class="container is-align-items-center">
+        <div class="navbar-brand is-align-items-center">
+            <a class="navbar-item" href="/">
+                <figure class="image mr-3">
+                    <img src="/img/favicon-96x96.png" alt="DNSao Logo" style="object-fit: contain;">
+                </figure>
+                <span class="is-size-4 has-text-weight-semibold">DNSao</span>
+            </a>
+
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="dnsaoNavbar">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <div id="dnsaoNavbar" class="navbar-menu is-align-items-center">
+            <div class="navbar-start ml-4">
+                <a href="/" class="navbar-item is-size-5">Home</a>
+                <a href="/query" class="navbar-item is-size-5">Queries</a>
+            </div>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span id="statusTag" class="tag is-success is-medium is-light">Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<section class="section pt-4 pb-2">
+    <div class="container has-text-centered">
+        <h1 class="title is-3">Query Log</h1>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                    Queries (last 24h)
+                </p>
+                <div class="card-header-icon" aria-label="controls">
+                    <div class="field is-grouped is-align-items-center mr-3">
+                        <div class="control">
+                            <div class="select is-small">
+                                <select id="pageSize">
+                                    <option value="10">10 / page</option>
+                                    <option value="25" selected>25 / page</option>
+                                    <option value="50">50 / page</option>
+                                    <option value="100">100 / page</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <button id="refreshBtn" class="button is-small">Refresh</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="card-content">
+                <div class="columns is-multiline">
+                    <div class="column is-12">
+                        <label class="label is-size-7 mb-1">Filter (Resolved By, Client, Type, Domain, Answers, Source)</label>
+                        <input id="filterAll" class="input" type="text" placeholder="Type to filter… (time and elapsed are not filtered)">
+                    </div>
+                </div>
+
+                <div id="statusLine" class="is-size-7 has-text-grey mb-3">Loading…</div>
+
+                <div class="table-container">
+                    <table class="table is-fullwidth is-striped is-hoverable is-narrow">
+                        <thead>
+                        <tr>
+                            <th class="is-clickable" data-key="time">Time</th>
+                            <th class="is-clickable" data-key="resolvedBy">Resolved By</th>
+                            <th class="is-clickable" data-key="client">Client</th>
+                            <th class="is-clickable" data-key="type">Type</th>
+                            <th class="is-clickable" data-key="domain">Domain</th>
+                            <th class="is-clickable" data-key="answers">Answer(s)</th>
+                            <th class="is-clickable" data-key="source">Source</th>
+                            <th class="is-clickable has-text-right" data-key="elapsed">Elapsed (ms)</th>
+                        </tr>
+                        </thead>
+                        <tbody id="queriesBody"></tbody>
+                    </table>
+                </div>
+
+                <nav class="pagination is-centered mt-4" role="navigation" aria-label="pagination">
+                    <a class="pagination-previous" id="prevPage">Previous</a>
+                    <a class="pagination-next" id="nextPage">Next</a>
+                    <ul class="pagination-list" id="paginationList"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .is-clickable { cursor: pointer; user-select: none; }
+    th[data-sort="asc"]::after  { content: " ▲"; font-size: 0.8em; }
+    th[data-sort="desc"]::after { content: " ▼"; font-size: 0.8em; }
+</style>
+
+<script>
+    (function () {
+      const T_BODY = document.getElementById('queriesBody');
+      const STATUS = document.getElementById('statusLine');
+      const PAGE_SIZE_SEL = document.getElementById('pageSize');
+      const PAGINATION_LIST = document.getElementById('paginationList');
+      const BTN_PREV = document.getElementById('prevPage');
+      const BTN_NEXT = document.getElementById('nextPage');
+      const BTN_REFRESH = document.getElementById('refreshBtn');
+      const FILTER_ALL = document.getElementById('filterAll');
+      const HEADERS = Array.from(document.querySelectorAll('thead th.is-clickable'));
+
+      let allRows = [];
+      let currentPage = 1;
+      let pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
+      let sortKey = 'time';
+      let sortDir = 'desc'; // padrão: mais recentes primeiro
+
+      function setStatus(text) { STATUS.textContent = text; }
+      function fmtSource(v) { return (v === null || v === undefined || v === '') ? '—' : v; }
+
+      // Campos que entram no filtro global (exclui time e elapsed)
+      const FILTERABLE_KEYS = ['resolvedBy', 'client', 'type', 'domain', 'answers', 'source'];
+
+      function applyGlobalFilter(rows) {
+        const q = FILTER_ALL.value.trim().toLowerCase();
+        if (!q) return rows;
+        return rows.filter(r => {
+          for (const k of FILTERABLE_KEYS) {
+            const v = (r[k] ?? '').toString().toLowerCase();
+            if (v.includes(q)) return true;
+          }
+          return false;
+        });
+      }
+
+      function compare(a, b) {
+        const dir = (sortDir === 'asc') ? 1 : -1;
+        const ka = a[sortKey];
+        const kb = b[sortKey];
+
+        if (sortKey === 'elapsed') {
+          const na = Number(ka) || 0;
+          const nb = Number(kb) || 0;
+          if (na === nb) return 0;
+          return (na < nb ? -1 : 1) * dir;
+        }
+
+        // strings (inclui time como string)
+        const sa = (ka ?? '').toString().toLowerCase();
+        const sb = (kb ?? '').toString().toLowerCase();
+        if (sa === sb) return 0;
+        return (sa < sb ? -1 : 1) * dir;
+      }
+
+      function updateSortIndicators() {
+        HEADERS.forEach(th => th.removeAttribute('data-sort'));
+        const th = HEADERS.find(th => th.dataset.key === sortKey);
+        if (th) th.setAttribute('data-sort', sortDir);
+      }
+
+      function renderTable() {
+        const filtered = applyGlobalFilter(allRows).slice(); // copia antes de ordenar
+        const total = filtered.length;
+
+        filtered.sort(compare);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        const start = (currentPage - 1) * pageSize;
+        const pageRows = filtered.slice(start, start + pageSize);
+
+        T_BODY.innerHTML = '';
+        if (pageRows.length === 0) {
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 8;
+          td.className = 'has-text-centered has-text-grey';
+          td.textContent = 'No queries to display.';
+          tr.appendChild(td);
+          T_BODY.appendChild(tr);
+        } else {
+          for (const r of pageRows) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="white-space:nowrap;">${r.time}</td>
+              <td>${r.resolvedBy}</td>
+              <td>${r.client}</td>
+              <td>${r.type}</td>
+              <td style="max-width: 280px; overflow-wrap: anywhere;">${r.domain}</td>
+              <td style="max-width: 360px; overflow-wrap: anywhere;">${r.answers}</td>
+              <td>${fmtSource(r.source)}</td>
+              <td class="has-text-right">${r.elapsed}</td>
+            `;
+            T_BODY.appendChild(tr);
+          }
+        }
+
+        renderPagination(totalPages);
+        const from = total === 0 ? 0 : (start + 1);
+        const to = start + pageRows.length;
+        setStatus(`Showing ${from}–${to} of ${total} • Sorted by ${sortKey} (${sortDir})`);
+        updateSortIndicators();
+      }
+
+      function renderPagination(totalPages) {
+        PAGINATION_LIST.innerHTML = '';
+        BTN_PREV.classList.toggle('is-disabled', currentPage <= 1);
+        BTN_NEXT.classList.toggle('is-disabled', currentPage >= totalPages);
+
+        const maxBtns = 7;
+        let pages = [];
+        if (totalPages <= maxBtns) {
+          pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+        } else {
+          const first = 1, last = totalPages;
+          const windowStart = Math.max(3, currentPage - 2);
+          const windowEnd   = Math.min(last - 2, currentPage + 2);
+
+          pages.push(first, 2);
+          if (windowStart > 3) pages.push('…');
+          for (let p = windowStart; p <= windowEnd; p++) pages.push(p);
+          if (windowEnd < last - 2) pages.push('…');
+          pages.push(last - 1, last);
+        }
+
+        pages.forEach(p => {
+          const li = document.createElement('li');
+          if (p === '…') {
+            li.innerHTML = `<span class="pagination-ellipsis">&hellip;</span>`;
+          } else {
+            const a = document.createElement('a');
+            a.className = 'pagination-link' + (p === currentPage ? ' is-current' : '');
+            a.textContent = p;
+            a.setAttribute('aria-label', `Go to page ${p}`);
+            a.addEventListener('click', () => { currentPage = p; renderTable(); });
+            li.appendChild(a);
+          }
+          PAGINATION_LIST.appendChild(li);
+        });
+      }
+
+      async function fetchData() {
+        try {
+          setStatus('Loading…');
+          const res = await fetch('/queries', { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+
+          const rows = (json.queries || []).map(a => ({
+            time: a[0],
+            resolvedBy: a[1],
+            client: a[2],
+            type: a[3],
+            domain: a[4],
+            answers: a[5],
+            source: a[6],
+            elapsed: a[7]
+          }));
+
+          allRows = rows;
+          currentPage = 1;
+          renderTable();
+        } catch (err) {
+          console.error(err);
+          T_BODY.innerHTML = '';
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 8;
+          td.className = 'has-text-centered has-text-danger';
+          td.textContent = 'Failed to load queries.';
+          tr.appendChild(td);
+          T_BODY.appendChild(tr);
+          setStatus('Error fetching data.');
+        }
+      }
+
+      // eventos
+      PAGE_SIZE_SEL.addEventListener('change', () => {
+        pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
+        currentPage = 1;
+        renderTable();
+      });
+      BTN_PREV.addEventListener('click', () => {
+        if (currentPage > 1) { currentPage--; renderTable(); }
+      });
+      BTN_NEXT.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(applyGlobalFilter(allRows).length / pageSize));
+        if (currentPage < totalPages) { currentPage++; renderTable(); }
+      });
+      BTN_REFRESH.addEventListener('click', fetchData);
+      FILTER_ALL.addEventListener('input', () => { currentPage = 1; renderTable(); });
+
+      HEADERS.forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.key;
+          if (key === sortKey) {
+            sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
+          } else {
+            sortKey = key;
+            sortDir = (key === 'elapsed') ? 'desc' : 'asc'; // default por coluna
+          }
+          renderTable();
+        });
+      });
+
+      // inicial
+      fetchData();
+    })();
+</script>
+
+<footer class="footer py-4">
+    <div class="content has-text-centered is-size-7 has-text-grey">
+        <span>© DNSao</span> · <span id="buildInfo">v0.1.0</span>
+    </div>
+</footer>
+</body>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const burger = document.querySelector('.navbar-burger');
+      const menu = document.getElementById(burger.dataset.target);
+
+      burger.addEventListener('click', () => {
+        burger.classList.toggle('is-active');
+        menu.classList.toggle('is-active');
+      });
+    });
+</script>
+</html>

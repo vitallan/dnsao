@@ -8,10 +8,7 @@ import com.allanvital.dnsao.web.pojo.Bucket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -110,6 +107,17 @@ public class StatsCollector implements QueryEventListener {
             }
         });
         return toReturn;
+    }
+
+    public List<QueryEvent> getOrderedQueryEvents() {
+        maybeTrimByNow();
+        LinkedList<QueryEvent> queryEvents = new LinkedList<>();
+        NavigableMap<Long, Bucket> countsRaw = getBucketsFilledAnchoredToNow();
+        countsRaw.forEach((interval, bucket) -> {
+            queryEvents.addAll(bucket.getQueryEvents());
+        });
+        queryEvents.sort(Comparator.comparingLong(QueryEvent::getTime).reversed()); //argh
+        return queryEvents;
     }
 
     public long getQueryCount() {

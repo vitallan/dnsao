@@ -23,26 +23,45 @@
 
 <body class="has-background-light">
 
-<section class="section pt-4 pb-2">
-    <div class="container">
-        <div id="buildBanner" class="notification is-warning is-light is-hidden">
-            <strong>Building</strong> — resources in load...
+<nav class="navbar has-shadow is-light py-3" role="navigation" aria-label="main navigation">
+    <div class="container is-align-items-center">
+        <div class="navbar-brand is-align-items-center">
+            <a class="navbar-item" href="/">
+                <figure class="image mr-3">
+                    <img src="/img/favicon-96x96.png" alt="DNSao Logo" style="object-fit: contain;">
+                </figure>
+                <span class="is-size-4 has-text-weight-semibold">DNSao</span>
+            </a>
+
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="dnsaoNavbar">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
         </div>
 
-        <div class="level">
-            <div class="is-flex is-align-items-center is-flex-wrap-wrap">
-                <figure class="image mr-3" style="width: 32px; height: 32px;">
-                    <img src="/img/favicon-96x96.png" alt="DNSao Logo">
-                </figure>
-                <div class="is-flex is-flex-direction-column">
-                    <h1 class="title is-4 mb-1">DNSao Stats Dashboard</h1>
-                    <p id="lastUpdated" class="subtitle is-7 has-text-grey mt-0">—</p>
-                </div>
+        <div id="dnsaoNavbar" class="navbar-menu is-align-items-center">
+            <div class="navbar-start ml-4">
+                <a href="/" class="navbar-item is-size-5">Home</a>
+                <a href="/query" class="navbar-item is-size-5">Queries</a>
             </div>
-            <div class="level-right">
-                <span id="statusTag" class="tag is-success is-light">Online</span>
+
+            <div class="navbar-end">
+                <div class="navbar-item">
+                    <span id="statusTag" class="tag is-success is-medium is-light">Online</span>
+                </div>
+                <p id="lastUpdated" class="subtitle is-7 has-text-grey mt-0">—</p>
+            </div>
+            <div id="buildBanner" class="notification is-warning is-light is-hidden">
+                <strong>Building</strong> — resources in load...
             </div>
         </div>
+    </div>
+</nav>
+
+<section class="section pt-4 pb-2">
+    <div class="container has-text-centered">
+        <h1 class="title is-3">Stats Dashboard</h1>
     </div>
 </section>
 

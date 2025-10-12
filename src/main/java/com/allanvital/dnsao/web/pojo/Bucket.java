@@ -5,6 +5,8 @@ import com.allanvital.dnsao.notification.QueryResolvedBy;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -23,11 +25,14 @@ public class Bucket {
     private final LongAdder refused = new LongAdder();
     private final LongAdder servfail = new LongAdder();
 
+    private final PriorityBlockingQueue<QueryEvent> queryEvents = new PriorityBlockingQueue<>();
+
     private final ConcurrentSkipListMap<String, LongAdder> upstreamsHit = new ConcurrentSkipListMap<>();
 
     public void increment(QueryEvent queryEvent) {
         totalCounter.increment();
         elapsedTimeSum.add(queryEvent.getElapsedTime());
+        queryEvents.add(queryEvent);
         if (queryEvent.getQueryResolvedBy() != null) {
             switch (queryEvent.getQueryResolvedBy()) {
                 case CACHE -> cached.increment();
@@ -45,6 +50,10 @@ public class Bucket {
                 }
             }
         }
+    }
+
+    public PriorityBlockingQueue<QueryEvent> getQueryEvents() {
+        return this.queryEvents;
     }
 
     public Map<String, LongAdder> getUpstreamHits() {

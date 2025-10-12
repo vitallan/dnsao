@@ -6,6 +6,7 @@ import com.allanvital.dnsao.web.StatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
@@ -140,6 +141,52 @@ public class MovingWindowStatsCollectionTest {
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
         upstreamHits = statsCollector.getUpstreamIndividualHits();
         assertEquals(0, upstreamHits.get("1.1.1.1").sum());
+    }
+
+    @Test
+    public void getOrderedQueryEvents() {
+        QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
+        QueryEvent q2 = new QueryEvent(t("2025-10-02T09:32:00Z"), 100);
+        QueryEvent q3 = new QueryEvent(t("2025-10-02T09:41:00Z"), 100);
+        QueryEvent q4 = new QueryEvent(t("2025-10-02T09:51:00Z"), 100);
+
+        statsCollector.receiveNewQuery(q1);
+        statsCollector.receiveNewQuery(q2);
+        statsCollector.receiveNewQuery(q3);
+        statsCollector.receiveNewQuery(q4);
+
+        List<QueryEvent> orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        assertTrue(orderedQueryEvents.containsAll(List.of(q1, q2, q3, q4)));
+        assertEquals(q4, orderedQueryEvents.get(0));
+        assertEquals(q3, orderedQueryEvents.get(1));
+        assertEquals(q2, orderedQueryEvents.get(2));
+        assertEquals(q1, orderedQueryEvents.get(3));
+
+        nowRef.set(t("2025-10-02T10:30:00Z")); // walk the "now" to half an hour later
+
+        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
+        assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
+        assertTrue(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
+        assertTrue(orderedQueryEvents.contains(q4), orderedQueryEvents.toString());
+        assertEquals(q4, orderedQueryEvents.get(0));
+        assertEquals(q3, orderedQueryEvents.get(1));
+
+        nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to half an hour later
+
+        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
+        assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
+        assertFalse(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
+        assertTrue(orderedQueryEvents.contains(q4), orderedQueryEvents.toString());
+        assertEquals(q4, orderedQueryEvents.get(0));
+
+        nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
+        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        assertFalse(orderedQueryEvents.contains(q1));
+        assertFalse(orderedQueryEvents.contains(q2));
+        assertFalse(orderedQueryEvents.contains(q3));
+        assertFalse(orderedQueryEvents.contains(q4));
     }
 
 }
