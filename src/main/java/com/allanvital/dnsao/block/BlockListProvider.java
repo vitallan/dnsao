@@ -30,6 +30,7 @@ public class BlockListProvider {
     private final List<String> blockListUrl;
     private final FileHandler fileHandler;
     private final AtomicReference<Set<String>> blockListRef = new AtomicReference<>(Set.of());
+    private final AtomicReference<Set<String>> allowListRef = new AtomicReference<>(Set.of());
 
     public BlockListProvider(List<String> allowListUrls, List<String> blockListUrl, FileHandler fileHandler) {
         this.allowListUrls = allowListUrls;
@@ -50,6 +51,7 @@ public class BlockListProvider {
         blockList.removeAll(allowList);
 
         blockListRef.set(Collections.unmodifiableSet(blockList));
+        allowListRef.set(Collections.unmodifiableSet(allowList));
     }
 
     public Set<String> getBlockList() {
@@ -57,6 +59,9 @@ public class BlockListProvider {
     }
 
     public boolean isBlocked(Name name) {
+        if (this.allowListRef.get().contains(name.toString())) {
+            return false;
+        }
         return DnsUtils.isBlocked(name, this.blockListRef.get());
     }
 

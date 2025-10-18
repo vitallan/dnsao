@@ -1,3 +1,4 @@
 this.should.be.blocked
 0.0.0.0 another.blocked.one
 0.0.0.0 this.should.be.enabled
+us-4.evergage.com
