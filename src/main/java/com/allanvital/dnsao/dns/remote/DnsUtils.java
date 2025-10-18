@@ -85,11 +85,16 @@ public class DnsUtils {
         return fail;
     }
 
-    public static boolean isBlocked(Name qname, Set<String> blockedSet) {
+    public static String normalize(Name qname) {
         String fqdn = qname.toString(true).toLowerCase(Locale.ROOT);
         if (fqdn.endsWith(".")) {
             fqdn = fqdn.substring(0, fqdn.length() - 1);
         }
+        return fqdn;
+    }
+
+    public static boolean isBlocked(Name qname, Set<String> blockedSet) {
+        String fqdn = normalize(qname);
 
         if (blockedSet.contains(fqdn)) return true;
         int dot = fqdn.indexOf('.');

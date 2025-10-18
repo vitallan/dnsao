@@ -59,7 +59,7 @@ public class BlockListProvider {
     }
 
     public boolean isBlocked(Name name) {
-        if (this.allowListRef.get().contains(name.toString())) {
+        if (this.allowListRef.get().contains(DnsUtils.normalize(name))) {
             return false;
         }
         return DnsUtils.isBlocked(name, this.blockListRef.get());

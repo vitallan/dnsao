@@ -44,6 +44,7 @@ public class BlockListProviderTest {
     public void shouldHandleAllowAndBlockListConsistently() throws TextParseException {
         assertTrue(blockListProvider.getBlockList().contains("us-4.evergage.com"));
         assertFalse(blockListProvider.isBlocked(Name.fromString("itauunibanco2.us-4.evergage.com")));
+        assertFalse(blockListProvider.isBlocked(Name.fromString("itauunibanco2.us-4.evergage.com.")));
     }
 
 }
