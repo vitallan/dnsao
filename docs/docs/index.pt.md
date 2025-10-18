@@ -38,4 +38,27 @@ Todo o código está disponível no [Github](https://github.com/vitallan/dnsao) 
 [Aprenda a instalar e usar!](installation.pt.md){ .md-button .md-button--primary }
 {: style="text-align:center" }
 
+## Screenshots
+
+### Sumário de queries do dia 
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-summary.png" alt="summary">
+</p>
+
+### Gráfico com as queries por horário
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-timeline.png" alt="timeline graph">
+</p>
+
+### Distribuição de upstreams
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-upstream-distribution.png" alt="upstream distribution">
+</p>
+
+[Aprenda a instalar e usar!](installation.pt.md){ .md-button .md-button--primary }
+{: style="text-align:center" }
+
 <div style="margin-bottom: 60px;"></div>

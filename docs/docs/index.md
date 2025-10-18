@@ -39,4 +39,27 @@ All source code is available on the project’s [GitHub](https://github.com/vita
 [Learn how to install and use!](installation.md){ .md-button .md-button--primary }
 {: style="text-align:center" }
 
+## Screenshots
+
+### Query Summary
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-summary.png" alt="summary">
+</p>
+
+### Graph with queries timeline 
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-timeline.png" alt="timeline graph">
+</p>
+
+### Upstream distribution
+
+<p align="center">
+  <img src="/dnsao/assets/screenshot-upstream-distribution.png" alt="upstream distribution">
+</p>
+
+[Learn how to install and use!](installation.md){ .md-button .md-button--primary }
+{: style="text-align:center" }
+
 <div style="margin-bottom: 60px;"></div>
