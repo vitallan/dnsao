@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.cache.map;
 
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
-import com.allanvital.dnsao.cache.rewarm.RewarmCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

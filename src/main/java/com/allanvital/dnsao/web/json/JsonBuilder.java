@@ -41,7 +41,7 @@ public class JsonBuilder {
         JsonArray rows = Json.array();
         for (QueryEvent q : statsCollector.getOrderedQueryEvents()) {
             JsonArray row = Json.array();
-            row.add(formatMillis(q.getTime(), "HH:mm:ss.SSS"));
+            row.add(formatMillis(q.getTime(), "yyyy-MM-dd HH:mm:ss.SSS"));
             row.add(q.getQueryResolvedBy().toString());
             row.add(q.getClient());
             row.add(q.getType());

@@ -5,6 +5,7 @@ Há três formas de instalar **DNSao**:
 - [Por script](#instalacao-por-script)
 - [Via Docker (recomendado)](#instalacao-via-docker)
 - [Manual](#instalacao-manual)
+- [Depois de Instalar](#depois-de-instalar)
 
 Depois de terminar a instalação, você pode configurar seus dispositivos (ou, idealmente, seu roteador) para usar **DNSao** como seu servidor de DNS. Acesse a porta web definida no [aplication.yml](configuration.pt.md) para ter acesso ao dashboard de métricas.
 
@@ -144,5 +145,17 @@ O comando final fica então:
 ```bash
 java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k  -jar /etc/dnsao/dnsao.jar
 ```
+
+## Depois de instalar
+
+Depois de configurar e iniciar o servidor com algum dos métodos acima, você precisará configurar seu roteador para servir para seus clientes DHCP para usarem **DNSao** como servidor de DNS, o que fará os demais dispositivos da sua rede o usarem automaticamente.
+
+Tal configuração depende de que tipo de roteador é usado.
+
+Outra forma de usar **DNSao** como servidor de DNS é configurar em cada dispositivo individualmente. Pode não ser o ideal para ambientes com muitos dispositivos, mas pode ser feito, e é especialmente útil para testar a instalação antes de apontar todos juntos.
+
+[Instruções para windows](https://www.solveyourtech.com/how-to-change-dns-server-windows-11-a-step-by-step-guide/)
+
+[Instruções para Linux](https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/)
 
 <div style="margin-bottom: 60px;"></div>

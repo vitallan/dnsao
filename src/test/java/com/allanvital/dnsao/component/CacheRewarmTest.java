@@ -1,15 +1,20 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.cache.CacheManager;
-import com.allanvital.dnsao.cache.rewarm.RewarmCacheManager;
-import com.allanvital.dnsao.dns.remote.ResolverFactory;
+import com.allanvital.dnsao.SystemGraph;
 import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
+import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
+import com.allanvital.dnsao.dns.remote.ResolverFactory;
 import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.utils.ThreadShop;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Message;
+
+import java.util.concurrent.ExecutorService;
 
 import static com.allanvital.dnsao.notification.EventType.*;
 
@@ -19,29 +24,32 @@ import static com.allanvital.dnsao.notification.EventType.*;
 public class CacheRewarmTest extends TestHolder {
 
     private CacheManager cacheManager;
-    private RewarmCacheManager rewarmCacheManager;
     private ResolverFactory resolverFactory;
     private String domain = "domain.com";
     private String ip = "10.10.10.10";
     private Message response;
+    private RewarmWorker rewarmWorker;
+    private ExecutorService executorService;
+    private RewarmScheduler rewarmScheduler;
 
     @BeforeEach
     public void setup() throws ConfException {
         this.loadConf("1udp-upstream-cache-rewarm.yml", false);
         super.startFakeDnsServer();
         resolverFactory = new ResolverFactory(null, conf.getResolver().getUpstreams());
-        this.rewarmCacheManager = new RewarmCacheManager(conf.getCache(), resolverFactory, 0);
-        this.cacheManager = new CacheManager(conf.getCache(), this.rewarmCacheManager);
+        rewarmScheduler = new RewarmScheduler(500);
+        this.cacheManager = new CacheManager(conf.getCache(), rewarmScheduler);
+        executorService = ThreadShop.buildExecutor("test-rewarm", 1);
+        rewarmWorker = SystemGraph.scheduleRewarmWorker(executorService, conf.getCache(), rewarmScheduler, cacheManager, resolverFactory);
         response = super.prepareSimpleMockResponse(domain, ip, 1);
     }
 
     @Test
-    public void shouldRewarmThreeTimesBeforeDiscardingEntry() throws InterruptedException {
+    public void shouldRewarmTwoTimesBeforeDiscardingEntry() throws InterruptedException {
         cacheManager.put("A:" + domain, response, 1L);
         eventListener.waitEventCount(CACHE_REWARM, 2);
         Assertions.assertEquals(2, fakeDnsServer.getCallCount());
         eventListener.waitEventCount(CACHE_REWARM_EXPIRED, 1);
-        Assertions.assertTrue(rewarmCacheManager.isEmpty(), rewarmCacheManager.toString());
     }
 
     @Test
@@ -50,55 +58,52 @@ public class CacheRewarmTest extends TestHolder {
         cacheManager.put(key, response, 1L);
         eventListener.waitEventCount(CACHE_REWARM, 1);
         cacheManager.get(key);
-        eventListener.waitEventCount(CACHE_REWARM_PROMOTION, 1);
         eventListener.waitEventCount(CACHE_REWARM, 3);
         Assertions.assertEquals(3, fakeDnsServer.getCallCount());
         eventListener.waitEventCount(CACHE_REWARM_EXPIRED, 1);
-        Assertions.assertTrue(rewarmCacheManager.isEmpty(), rewarmCacheManager.toString());
     }
 
     @Test
-    public void shouldPromoteAndResetTtlWhenRewarming() throws InterruptedException {
+    public void shouldResetTtlAndRewarmCountWhenHittingRewarmed() throws InterruptedException {
         String key = "A:" + domain;
         cacheManager.put(key, response, 1L);
         eventListener.waitEventCount(CACHE_REWARM, 1);
+
         cacheManager.get(key);
         eventListener.assertCount(CACHE_HIT, 1);
-        eventListener.assertCount(CACHE_REWARM_PROMOTION, 1);
-        Assertions.assertEquals(1, fakeDnsServer.getCallCount());
+        eventListener.waitEventCount(CACHE_REWARM, 2);
+
+        cacheManager.get(key);
+        eventListener.assertCount(CACHE_HIT, 2);
+        eventListener.waitEventCount(CACHE_REWARM, 3);
+
+        cacheManager.get(key);
+        eventListener.assertCount(CACHE_HIT, 3);
+        eventListener.waitEventCount(CACHE_REWARM, 4);
+
+        Assertions.assertEquals(4, fakeDnsServer.getCallCount());
     }
 
     @Test
-    public void shouldRemoveLeastUsedFromMainCacheButPromoteCorrectlyWhenRequested() throws InterruptedException {
-        String domain1 = "domain1.com";
-        String ip1 = "10.10.10.50";
-        String key1 = "A:" + domain1;
-
-        String domain2 = "domain2.com";
-        String ip2 = "10.10.10.60";
-        String key2 = "A:" + domain2;
-
-        String domain3 = "domain3.com";
-        String ip3 = "10.10.10.70";
-        String key3 = "A:" + domain3;
-
-        Message response1 = super.prepareSimpleMockResponse(domain1, ip1, 1);
-        Message response2 = super.prepareSimpleMockResponse(domain2, ip2, 1);
-        Message response3 = super.prepareSimpleMockResponse(domain3, ip3, 1);
-
-        cacheManager.put(key1, response1, 1L);
-        eventListener.waitEventCount(CACHE_REWARM, 1);
-        cacheManager.put(key2, response2, 1L);
-        cacheManager.put(key3, response3, 1L); //should remove the first on from cache
-
-        cacheManager.get(key1);
-        eventListener.assertCount(CACHE_HIT, 1);
-        eventListener.assertCount(CACHE_REWARM_PROMOTION, 1);
+    public void shouldNotFireRewarmAfterCancel() throws InterruptedException {
+        String key = "A:" + domain;
+        cacheManager.put(key, response, 1L);
+        rewarmScheduler.cancel(key);
+        Thread.sleep(2000);
+        Assertions.assertEquals(0, fakeDnsServer.getCallCount());
+        eventListener.assertCount(CACHE_REWARM, 0);
     }
 
     @AfterEach
     public void tearDown() {
-        this.rewarmCacheManager.shutdown();
+        rewarmWorker.shutdown();
+        while (rewarmWorker.isRunning()) {
+            Thread.yield();
+        }
+        executorService.shutdownNow();
+        while (!executorService.isTerminated()) {
+            Thread.yield();
+        }
         super.stopFakeDnsServer();
         eventListener.reset();
     }

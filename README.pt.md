@@ -30,13 +30,14 @@
 
 O DNSao foi projetado para ser um encaminhador de DNS leve, configurável e voltado à privacidade.  
 
-Ele lida com consultas DNS via UDP e TCP, oferece suporte a upstreams criptografados modernos (DoT), mantém um sistema de cache flexível e fornece uma interface web para visualização de métricas.
+Ele lida com consultas DNS via UDP e TCP, oferece suporte a upstreams criptografados modernos (DoT), mantém um sistema de cache robusto e fornece uma interface web para visualização de métricas.
 
 ### Funcionalidades Atuais
 
 - Responde consultas DNS locais via UDP e TCP
 - Múltiplos resolvedores DNS upstream (UDP/DoT)
 - Sistema de cache com reconhecimento de TTL e revalidação assíncrona
+- DNSSEC aware com políticas configuráveis
 - Registro opcional de consultas (query logging)
 - Painel de métricas em tempo real desenvolvido com Bulma + Chart.js
 - Suporte a listas de bloqueio e mapeamentos/substituições locais
@@ -85,7 +86,7 @@ Releases novas e novas imagens docker são geradas a partir do commit/push de um
 
 Todas as opções de configuração do aplicativo são definidas em um único arquivo `application.yml`.
 
-Mais informações detalhadas podem ser encontradas na documentação.
+Mais informações detalhadas podem ser encontradas na [documentação](https://vitallan.github.io/dnsao/pt/configuration).
 
 ---
 
@@ -104,8 +105,9 @@ Acesse o painel através da porta administrativa configurada no seu `application
 
 ## Contribuindo
 
-Contribuições são bem-vindas!
-Abra issues, sugira melhorias ou envie pull requests diretamente no [GitHub](https://github.com/vitallan/dnsao).
+Contribuições são bem-vindas, mas o foco atual deve ser em reporte de bugs, sugestões de melhorias e feedbacks em geral. **DNSao** está com seu funcionamento estável, mas o código ainda está em criação e muitas das interfaces internas pode mudar sem avisos anteriores.
+
+Issues são a forma recomendada de contato sobre o projeto [GitHub](https://github.com/vitallan/dnsao/issues).
 
 ---
 
@@ -124,7 +126,7 @@ O DNSao utiliza bibliotecas open-source, incluindo:
 ## Links
 
 * [Documentação Oficial](https://vitallan.github.io/dnsao/pt)
-* [Repositório no GitHub](https://github.com/vitallan/dnsao)
+* [Meu site](https://allanvital.com/pt-br/)
 
 ---
 

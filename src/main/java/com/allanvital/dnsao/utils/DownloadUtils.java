@@ -25,21 +25,24 @@ public class DownloadUtils {
 
     public static Path getAppDir() throws IOException {
         String base = System.getProperty("java.io.tmpdir");
-        Path dir = Paths.get(base, "dns-files");
+        Path dir = Paths.get(base, "dnsao-files");
         Files.createDirectories(dir);
         return dir;
     }
 
-    public static Path downloadToTemp(String url) throws IOException, InterruptedException {
+    public static Path downloadToPath(String url, Path target) throws IOException, InterruptedException {
         URI uri = URI.create(url);
-        Path appDir = getAppDir();
         log.debug("downloading url {}", url);
-        String fileName = fileName(uri);
-        Path target = appDir.resolve(fileName);
 
         if (Files.exists(target)) {
-            log.debug("cached file for {} already exists on {}", url, target);
-            return target;
+            long oneHour = 60 * 60 * 1000L;
+            long now = System.currentTimeMillis();
+            long lastModified = target.toFile().lastModified();
+            boolean isOlderThanOneHour = (now - lastModified) > oneHour;
+            if (!isOlderThanOneHour) {
+                log.debug("cached file for {} already exists on {}", url, target);
+                return target;
+            }
         }
 
         HttpClient client = HttpClient.newBuilder()
@@ -68,6 +71,10 @@ public class DownloadUtils {
         log.debug("url {} downloaded at {}", url, target);
 
         return target;
+    }
+
+    public static String fileName(String uri) {
+        return fileName(URI.create(uri));
     }
 
     public static String fileName(URI uri) {

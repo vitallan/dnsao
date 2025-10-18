@@ -1,8 +1,9 @@
 package com.allanvital.dnsao.dns.remote;
 
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQueryResult;
 import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
-import com.allanvital.dnsao.utils.ExceptionUtils;
+import com.allanvital.dnsao.exc.DnsSecPolicyException;
 import com.allanvital.dnsao.utils.ThreadShop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +16,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -192,8 +192,8 @@ public class DnsUtils {
         return new SOARecord(soaZone, qclass, refresh, mname, rname, serial, refresh, retry, expire, refresh);
     }
 
-    public static DnsQueryResult query(Message query, List<NamedResolver> resolvers)
-            throws ExecutionException, InterruptedException, TimeoutException {
+    public static DnsQueryResult query(Message query, List<NamedResolver> resolvers, DNSSecMode dnsSecMode)
+            throws InterruptedException, TimeoutException {
 
         String threadName = Thread.currentThread().getName();
         ExecutorService executor = ThreadShop.buildExecutor(threadName + "-res", resolvers.size());
@@ -201,15 +201,35 @@ public class DnsUtils {
             List<Callable<DnsQueryResult>> tasks = resolvers.stream()
                     .<Callable<DnsQueryResult>>map(resolver -> () -> {
                         Message response = resolver.send(query);
-                        if (response == null) throw new IOException("Null response");
+                        if (response == null) {
+                            throw new IOException("Null response");
+                        }
+                        if (shouldRejectByDnssecPolicy(response, dnsSecMode)) {
+                            throw new DnsSecPolicyException("non accepted answer based on dnssec policy");
+                        }
                         return new DnsQueryResult(response, resolver);
                     })
                     .toList();
 
             return executor.invokeAny(tasks, 3, TimeUnit.SECONDS);
-        } finally {
+        } catch (ExecutionException e) {
+            String question = query.getQuestion().toString();
+            log.warn("query {} failed. Cause: {}", question, e.getMessage());
+            return null;
+        }
+        finally {
             executor.shutdownNow();
         }
+    }
+
+    public static boolean shouldRejectByDnssecPolicy(Message response, DNSSecMode dnsSecMode) {
+        final int rcode = response.getRcode();
+        final boolean ad = response.getHeader().getFlag(Flags.AD);
+        return switch (dnsSecMode) {
+            case SIMPLE -> rcode == Rcode.SERVFAIL;
+            case RIGID -> !ad;
+            default -> false;
+        };
     }
 
     public static boolean isDirectAnswer(int type) {

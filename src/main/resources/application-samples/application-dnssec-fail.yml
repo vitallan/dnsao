@@ -1,0 +1,38 @@
+server:
+  port: 1053
+  udpThreadPool: 20
+  tcpThreadPool: 4
+  webPort: 8044
+
+cache:
+  enabled: true
+  maxCacheEntries: 1000
+  rewarm: true
+  maxRewarmCount: 5
+
+resolver:
+  tlsPoolSize: 5
+  multiplier: 2 #how many upstreams we will reach on each active remote query
+  upstreams:
+    - ip: "208.67.222.222" # NO DNSSEC!
+      port: 53
+      protocol: "udp"
+    - ip: "208.67.220.220" # NO DNSSEC!
+      port: 53
+      protocol: "udp"
+  localMappings:
+    - domain: "karpov"
+      ip: "192.168.68.113"
+    - domain: "cronicle.intranet"
+      ip: "192.168.68.126"
+  allowLists:
+    - "https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/myAllowList.txt"
+  blocklists:
+    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    - "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/Bets.txt"
+    #- "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/youtube.txt"
+    #- "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/Malicious.txt"
+    #- "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/ransomware.txt"
+    #- "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/spam.mails.txt"
+    #- "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/main/Telemetry.txt"
+    #- "https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt"

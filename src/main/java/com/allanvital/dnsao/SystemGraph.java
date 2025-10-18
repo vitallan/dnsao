@@ -1,7 +1,11 @@
 package com.allanvital.dnsao;
 
+import com.allanvital.dnsao.block.BlockListProvider;
+import com.allanvital.dnsao.block.DownloadFileHandler;
+import com.allanvital.dnsao.block.FileHandler;
 import com.allanvital.dnsao.cache.CacheManager;
-import com.allanvital.dnsao.cache.rewarm.RewarmCacheManager;
+import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
+import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
@@ -10,14 +14,17 @@ import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolManager;
 import com.allanvital.dnsao.dns.server.DnsServer;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.utils.DownloadUtils;
-import com.allanvital.dnsao.utils.ExceptionUtils;
-import com.allanvital.dnsao.utils.FileUtils;
+import com.allanvital.dnsao.utils.ThreadShop;
 import com.allanvital.dnsao.web.WebServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 import static com.allanvital.dnsao.AppLoggers.INFRA;
 
@@ -38,13 +45,18 @@ public class SystemGraph {
 
         DOTConnectionPoolManager poolManager = dotConnectionPoolManager(resolverConf.getTlsPoolSize());
         ResolverFactory resolverFactory = resolverFactory(poolManager, resolverConf.getUpstreams());
-        RewarmCacheManager rewarmCacheManager = rewarmCacheManager(cacheConf, resolverFactory);
-        CacheManager cacheManager = cacheManager(cacheConf, rewarmCacheManager);
+        RewarmScheduler rewarmScheduler = rewarmScheduler(5_000);
+        CacheManager cacheManager = cacheManager(cacheConf, rewarmScheduler);
+        ExecutorService rewarmService = rewarmWorkerExecutor();
+        scheduleRewarmWorker(rewarmService, cacheConf, rewarmScheduler, cacheManager, resolverFactory);
 
-        Set<String> blockList = blockList(resolverConf.getBlocklists());
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
 
-        QueryProcessorFactory factory = queryProcessorFactory(resolverFactory, cacheManager, blockList, locaMappings, resolverConf.getMultiplier());
+        FileHandler fileHandler = fileHandler();
+
+        BlockListProvider blockListProvider = blockListProvider(resolverConf.getAllowLists(), resolverConf.getBlocklists(), fileHandler);
+
+        QueryProcessorFactory factory = queryProcessorFactory(resolverFactory, cacheManager, blockListProvider, locaMappings, resolverConf.getMultiplier(), resolverConf.getDnsSecMode());
 
         dnsServer = dnsServer(serverConf, factory);
         webServer = webServer(serverConf.getWebPort());
@@ -80,39 +92,47 @@ public class SystemGraph {
         return new WebServer(webPort);
     }
 
-    private RewarmCacheManager rewarmCacheManager(CacheConf cacheConf, ResolverFactory factory) {
-        return new RewarmCacheManager(cacheConf, factory, 1000);
+    public static RewarmWorker scheduleRewarmWorker(ExecutorService executorService, CacheConf cacheConf, RewarmScheduler rewarmScheduler, CacheManager cacheManager, ResolverFactory resolverFactory) {
+        if (cacheConf.isRewarm()) {
+            RewarmWorker rewarmWorker = new RewarmWorker(rewarmScheduler, cacheManager, resolverFactory, cacheConf.getMaxRewarmCount());
+            executorService.submit(rewarmWorker);
+            return rewarmWorker;
+        }
+        return null;
     }
 
-    private CacheManager cacheManager(CacheConf cacheConf, RewarmCacheManager rewarmCacheManager) {
-        return new CacheManager(cacheConf, rewarmCacheManager);
+    private ExecutorService rewarmWorkerExecutor() {
+        return ThreadShop.buildExecutor("rewarm", 1);
     }
 
-    private QueryProcessorFactory queryProcessorFactory(ResolverFactory resolverFactory, CacheManager cacheManager, Set<String> blockList, Map<String, String> localMappings, int multiplier) {
-        return new QueryProcessorFactory(resolverFactory.getAllResolvers(), cacheManager, blockList, localMappings, multiplier);
+    private CacheManager cacheManager(CacheConf cacheConf, RewarmScheduler rewarmScheduler) {
+        return new CacheManager(cacheConf, rewarmScheduler);
+    }
+
+    private RewarmScheduler rewarmScheduler(long timeBeforeTtlToTriggerRewarm) {
+        return new RewarmScheduler(timeBeforeTtlToTriggerRewarm);
+    }
+
+    private QueryProcessorFactory queryProcessorFactory(ResolverFactory resolverFactory, CacheManager cacheManager, BlockListProvider blockListProvider, Map<String, String> localMappings, int multiplier, DNSSecMode dnsSecMode) {
+        return new QueryProcessorFactory(resolverFactory.getAllResolvers(), cacheManager, blockListProvider, localMappings, multiplier, dnsSecMode);
+    }
+
+    public BlockListProvider blockListProvider(List<String> blockList, List<String> allowList, FileHandler fileHandler) {
+        return new BlockListProvider(blockList, allowList, fileHandler);
     }
 
     private DOTConnectionPoolManager dotConnectionPoolManager(int tlsPoolSize) {
         return new DOTConnectionPoolManager(tlsPoolSize);
     }
 
-    private Set<String> blockList(List<String> blockList) {
-        Set<String> blockedDomains = new TreeSet<>();
-        if (blockList != null && !blockList.isEmpty()) {
-            for (String blockUrl : blockList) {
-                try {
-                    DownloadUtils.downloadToTemp(blockUrl);
-                } catch (IOException | InterruptedException e) {
-                    log.error("unable do download " + blockUrl + ". Error was " + ExceptionUtils.findRootCause(e).getMessage());
-                }
-            }
-            try {
-                blockedDomains = FileUtils.getBlockedDomains();
-            } catch (IOException e) {
-                log.error("unable read blocklist files . Error was " + ExceptionUtils.findRootCause(e).getMessage());
-            }
+    private FileHandler fileHandler() throws ConfException {
+        Path workDir = null;
+        try {
+            workDir = DownloadUtils.getAppDir();
+            return new DownloadFileHandler(workDir);
+        } catch (IOException e) {
+            throw new ConfException(e.getMessage());
         }
-        return blockedDomains;
     }
 
     private Map<String, String> localMappings(List<LocalMapping> localMappings) {

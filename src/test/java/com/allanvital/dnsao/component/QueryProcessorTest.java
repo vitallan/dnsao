@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.component;
 
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.QueryProcessor;
 import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.ResolverFactory;
@@ -27,7 +28,7 @@ public class QueryProcessorTest extends TestHolder {
         super.startFakeDnsServer();
         super.prepareSimpleMockResponse(domain, responseIp);
         ResolverFactory resolverFactory = new ResolverFactory(null, conf.getResolver().getUpstreams());
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, null, 1);
+        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, null, 1, DNSSecMode.OFF);
         processor = factory.buildQueryProcessor();
     }
 

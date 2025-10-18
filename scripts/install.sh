@@ -84,7 +84,7 @@ WorkingDirectory=/etc/dnsao
 ExecStart=/usr/bin/env java \
   -Xms128m -Xmx128m \
   -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m \
-  -Xss512k \
+  -Xss320k \
   -Dconfig=/etc/dnsao/application.yml \
   -Dlogback.configurationFile=/etc/dnsao/logback.xml \
   -jar /etc/dnsao/dnsao.jar

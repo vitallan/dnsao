@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.component;
 
 import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.QueryProcessor;
 import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
@@ -37,7 +38,7 @@ public class MultiplierTest extends TestHolder {
                 new FakeResolverWithBarrier(barrier, false, counter),
                 new FakeResolverWithBarrier(barrier, false, counter)
         );
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolvers, null, null, null, multiplier);
+        QueryProcessorFactory factory = new QueryProcessorFactory(resolvers, null, null, null, multiplier, DNSSecMode.OFF);
         processor = factory.buildQueryProcessor();
     }
 

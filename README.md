@@ -30,13 +30,14 @@
 
 DNSao is designed to serve as a lightweight, configurable, and privacy-oriented DNS forwarder.  
 
-It handles both UDP and TCP queries, and supports modern encrypted upstreams (DoT), while maintaining a flexible caching system and a simple web interface for live metrics.
+It handles both UDP and TCP queries, and supports modern encrypted upstreams (DoT), while maintaining a robust caching system and a simple web interface for live metrics.
 
 ### Current Features
 
 - Answers both UDP and TCP for local DNS queries
 - Multiple upstream DNS resolvers (UDP/DoT)
 - TTL-aware caching system with asynchronous rewarm
+- DNSSEC aware with configurable policies
 - Query logging (optional)
 - Real-time metrics dashboard built with Bulma + Chart.js
 - Pluggable blocklists and local mappings/overrides
@@ -86,7 +87,7 @@ New releases and docker images are generated based on commit/push of a new tag i
 
 All app configuration options are defined in a single `application.yml`.
 
-More detailed info can be found at the documentation.
+More detailed info can be found at the [documentation](https://vitallan.github.io/dnsao/configuration/).
 
 ---
 
@@ -95,6 +96,7 @@ More detailed info can be found at the documentation.
 DNSao provides a built-in **metrics dashboard** that displays:
 
 * Query volume
+* Searchable queries resolved
 * Cache hit/miss rate
 * Average response time
 * Upstream distribution
@@ -105,8 +107,9 @@ Access it via the admin port configured in your `application.yml` (e.g. `http://
 
 ## Contributing
 
-Contributions are welcome!
-Open issues, suggest improvements, or submit pull requests directly on [GitHub](https://github.com/vitallan/dnsao).
+Contributions are welcome, but mostly for bug reporting, suggest improvements and general feedback. The server is fairly stable now, but some code is still being created, and a lot of inner interfaces might change without notice. 
+
+Issues are the recommended form of contact [GitHub](https://github.com/vitallan/dnsao/issues).
 
 ---
 
@@ -125,7 +128,7 @@ DNSao makes use of open-source libraries, including:
 ## Links
 
 * [Official Documentation](https://vitallan.github.io/dnsao/)
-* [GitHub Repository](https://github.com/vitallan/dnsao)
+* [My personal site](https://allanvital.com)
 
 ---
 

@@ -143,12 +143,11 @@
       let currentPage = 1;
       let pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
       let sortKey = 'time';
-      let sortDir = 'desc'; // padrão: mais recentes primeiro
+      let sortDir = 'desc';
 
       function setStatus(text) { STATUS.textContent = text; }
       function fmtSource(v) { return (v === null || v === undefined || v === '') ? '—' : v; }
 
-      // Campos que entram no filtro global (exclui time e elapsed)
       const FILTERABLE_KEYS = ['resolvedBy', 'client', 'type', 'domain', 'answers', 'source'];
 
       function applyGlobalFilter(rows) {
@@ -175,7 +174,6 @@
           return (na < nb ? -1 : 1) * dir;
         }
 
-        // strings (inclui time como string)
         const sa = (ka ?? '').toString().toLowerCase();
         const sb = (kb ?? '').toString().toLowerCase();
         if (sa === sb) return 0;
@@ -189,7 +187,7 @@
       }
 
       function renderTable() {
-        const filtered = applyGlobalFilter(allRows).slice(); // copia antes de ordenar
+        const filtered = applyGlobalFilter(allRows).slice();
         const total = filtered.length;
 
         filtered.sort(compare);
@@ -211,7 +209,7 @@
           for (const r of pageRows) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td style="white-space:nowrap;">${r.time}</td>
+              <td>${r.time}</td>
               <td>${r.resolvedBy}</td>
               <td>${r.client}</td>
               <td>${r.type}</td>
@@ -303,7 +301,6 @@
         }
       }
 
-      // eventos
       PAGE_SIZE_SEL.addEventListener('change', () => {
         pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
         currentPage = 1;
@@ -326,13 +323,12 @@
             sortDir = (sortDir === 'asc') ? 'desc' : 'asc';
           } else {
             sortKey = key;
-            sortDir = (key === 'elapsed') ? 'desc' : 'asc'; // default por coluna
+            sortDir = (key === 'elapsed') ? 'desc' : 'asc';
           }
           renderTable();
         });
       });
 
-      // inicial
       fetchData();
     })();
 </script>

@@ -19,7 +19,7 @@ LABEL org.opencontainers.image.title="DNSao" \
 
 ENV DNSAO_HOME=/opt/dnsao \
     DNSAO_CONFIG=/etc/dnsao \
-    JAVA_OPTS="-Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k -XX:+ExitOnOutOfMemoryError" \
+    JAVA_OPTS="-Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss320k -XX:+ExitOnOutOfMemoryError" \
     RUN_USER=dnsao \
     RUN_GROUP=dnsao \
     RUN_UID=10001 \

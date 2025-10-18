@@ -1,10 +1,7 @@
 package com.allanvital.dnsao.conf;
 
 import com.allanvital.dnsao.TestHolder;
-import com.allanvital.dnsao.conf.inner.CacheConf;
-import com.allanvital.dnsao.conf.inner.ResolverConf;
-import com.allanvital.dnsao.conf.inner.ServerConf;
-import com.allanvital.dnsao.conf.inner.Upstream;
+import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.exc.ConfException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +45,8 @@ public class DefaultConfTest extends TestHolder {
         assertEquals(1, resolverConf.getMultiplier());
         assertEquals(3, resolverConf.getTlsPoolSize());
 
+        assertEquals(DNSSecMode.SIMPLE, resolverConf.getDnsSecMode());
+        assertTrue(resolverConf.getAllowLists().isEmpty());
         assertTrue(resolverConf.getBlocklists().isEmpty());
         assertTrue(resolverConf.getLocalMappings().isEmpty());
 

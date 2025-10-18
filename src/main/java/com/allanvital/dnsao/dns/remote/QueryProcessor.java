@@ -1,6 +1,8 @@
 package com.allanvital.dnsao.dns.remote;
 
+import com.allanvital.dnsao.block.BlockListProvider;
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQueryResult;
 import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
@@ -42,15 +44,13 @@ public class QueryProcessor {
 
     private final List<NamedResolver> resolvers = new LinkedList<>();
     private final CacheManager cacheManager;
-    private final Set<String> blockedList;
     private final Map<String, String> localMappings;
+    private final BlockListProvider blockListProvider;
+    private final DNSSecMode dnsSecMode;
 
-    public QueryProcessor(List<NamedResolver> resolvers, CacheManager cacheManager, Set<String> blockedList, Map<String, String> localMappings) {
-        if (blockedList != null) {
-            this.blockedList = blockedList;
-        } else {
-            this.blockedList = new TreeSet<>();
-        }
+    public QueryProcessor(List<NamedResolver> resolvers, CacheManager cacheManager, BlockListProvider blockListProvider, Map<String, String> localMappings, DNSSecMode dnsSecMode) {
+        this.blockListProvider = blockListProvider;
+        this.dnsSecMode = dnsSecMode;
         if (localMappings != null) {
             this.localMappings = localMappings;
         } else {
@@ -62,15 +62,19 @@ public class QueryProcessor {
 
     public DnsQuery processQuery(InetAddress clientAddress, byte[] data) {
         try {
-            Message query = new Message(data);
+            Message clientQuery = new Message(data);
+            Message query = DnssecQueryShaper.prepareUpstreamQuery(clientQuery, dnsSecMode);
             Record question = query.getQuestion();
             Name name = question.getName();
             int type = question.getType();
             String typeName = Type.string(type);
             String client = clientAddress.getHostAddress();
             DnsQuery dnsQuery = new DnsQuery(client);
+            if (log.isDebugEnabled()) {
+                logRequestHeaderAndFlags(query);
+            }
 
-            if (isBlocked(name, blockedList)) {
+            if (blockListProvider != null && blockListProvider.isBlocked(name)) {
                 Message blocked = buildBlocked(query);
                 dnsQuery.setResolvedByAndResponse(BLOCKED, blocked);
                 return dnsQuery;
@@ -100,13 +104,15 @@ public class QueryProcessor {
             }
 
             log.debug("Query {} from {} to {}", typeName, client, name);
-            DnsQueryResult queryResult = query(query, resolvers);
-            Message externalResponse = queryResult.message();
-            if (externalResponse == null) {
+            DnsQueryResult queryResult = query(query, resolvers, dnsSecMode);
+
+            if (queryResult == null || queryResult.message() == null) {
                 Message servFail = buildServFail(query);
                 dnsQuery.setResolvedByAndResponse(SERVFAIL, servFail);
                 return dnsQuery;
             }
+
+            Message externalResponse = queryResult.message();
             int rcode = externalResponse.getRcode();
             externalResponse.getHeader().setID(query.getHeader().getID());
             putInCache(name, type, rcode, externalResponse);
@@ -129,11 +135,26 @@ public class QueryProcessor {
                 log.warn("Invalid DNS query from {} (len={}): {}", clientAddress, data.length, e.getMessage());
             }
             return query;
-        } catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
+        } catch (IOException | InterruptedException | TimeoutException e) {
             Throwable rootCause = findRootCause(e);
             log.error("Failed to process query: {} - {}", rootCause, rootCause.getMessage());
             return null;
         }
+    }
+
+    private void logRequestHeaderAndFlags(Message query) {
+        boolean ad = query.getHeader().getFlag(Flags.AD);
+        boolean cd = query.getHeader().getFlag(Flags.CD);
+        List<Record> section = query.getSection(Section.ADDITIONAL);
+        OPTRecord opt = null;
+        for (Record r : section) {
+            if (r instanceof OPTRecord) {
+                opt = (OPTRecord) r;
+                break;
+            }
+        }
+        boolean doFlag = (opt != null) && ((opt.getFlags() & ExtendedFlags.DO) != 0);
+        log.debug("REQ flags -> AD={}, CD={}, DO={}", ad, cd, doFlag);
     }
 
     private Message getFromCache(Name questionName, int type) {

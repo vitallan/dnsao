@@ -7,7 +7,6 @@ public enum EventType {
 
     CACHE_HIT,
     CACHE_REWARM,
-    CACHE_REWARM_PROMOTION,
     CACHE_REWARM_EXPIRED,
 
 }

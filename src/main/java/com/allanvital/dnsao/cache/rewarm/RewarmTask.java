@@ -1,20 +1,22 @@
 package com.allanvital.dnsao.cache.rewarm;
 
-import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class RewarmTask {
+public class RewarmTask implements Delayed {
 
     private final String key;
     private final long triggerAtMs;
-    private final DnsCacheEntry dnsCacheEntry;
 
-    public RewarmTask(String key, long triggerAtMs, DnsCacheEntry dnsCacheEntry) {
+    public RewarmTask(String key, long triggerAtMs) {
         this.key = key;
         this.triggerAtMs = triggerAtMs;
-        this.dnsCacheEntry = dnsCacheEntry;
     }
 
     public String getKey() {
@@ -25,7 +27,28 @@ public class RewarmTask {
         return triggerAtMs;
     }
 
-    public DnsCacheEntry getDnsCacheEntry() {
-        return dnsCacheEntry;
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        RewarmTask that = (RewarmTask) o;
+        return triggerAtMs == that.triggerAtMs && Objects.equals(key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key, triggerAtMs);
+    }
+
+    @Override
+    public long getDelay(@NotNull TimeUnit unit) {
+        long delayMs = triggerAtMs - System.currentTimeMillis();
+        return unit.convert(delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(@NotNull Delayed o) {
+        if (this == o) return 0;
+        long other = ((RewarmTask) o).triggerAtMs;
+        return Long.compare(this.triggerAtMs, other);
     }
 }

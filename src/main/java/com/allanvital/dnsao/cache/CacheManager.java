@@ -2,7 +2,7 @@ package com.allanvital.dnsao.cache;
 
 import com.allanvital.dnsao.cache.map.LruDnsCache;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
-import com.allanvital.dnsao.cache.rewarm.RewarmCacheManager;
+import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.notification.EventType;
 import com.allanvital.dnsao.notification.NotificationManager;
@@ -24,39 +24,40 @@ public class CacheManager {
 
     private final boolean enabled;
     private final Map<String, DnsCacheEntry> cache;
-    private final RewarmCacheManager rewarmCacheManager;
 
     private final NotificationManager notificationManager = NotificationManager.getInstance();
+    private final RewarmScheduler rewarmScheduler;
 
-    public CacheManager(CacheConf cacheConf, RewarmCacheManager rewarmCacheManager) {
+    public CacheManager(CacheConf cacheConf, RewarmScheduler rewarmScheduler) {
         if (cacheConf == null || !cacheConf.isEnabled()) {
             enabled = false;
             cache = null;
-            this.rewarmCacheManager = null;
+            this.rewarmScheduler = null;
             return;
         }
         enabled = true;
-        this.rewarmCacheManager = rewarmCacheManager;
+        this.rewarmScheduler = rewarmScheduler;
         this.cache = Collections.synchronizedMap(new LruDnsCache(cacheConf.getMaxCacheEntries()));
+    }
+
+    public DnsCacheEntry safeGet(String key) {
+        if (cache.containsKey(key)) {
+            return cache.get(key);
+        }
+        return null;
     }
 
     public Message get(String key) {
         if (!enabled) {
             return null;
         }
-        DnsCacheEntry entry = cache.get(key);
+        DnsCacheEntry entry = safeGet(key);
         if (entry != null && !entry.isExpired()) {
             log.info("cache hit for {}", key);
+            entry.setRewarmCount(0);
+            addEntry(key, entry);
             notificationManager.notify(EventType.CACHE_HIT);
             return entry.getResponse();
-        }
-
-        DnsCacheEntry warmEntry = this.rewarmCacheManager.take(key);
-        if (warmEntry != null && !warmEntry.isExpired()) {
-            log.info("warm cache hit for {}", key);
-            this.promote(key, warmEntry);
-            notificationManager.notify(EventType.CACHE_HIT);
-            return warmEntry.getResponse();
         }
 
         if (entry != null && entry.isExpired()) {
@@ -68,14 +69,12 @@ public class CacheManager {
         return null;
     }
 
-    private void promote(String key, DnsCacheEntry entry) {
+    public void rewarm(String key, DnsCacheEntry entry) {
         if (!enabled) {
             return;
         }
-        log.info("promoting {} to cache", key);
-        entry.setRewarmCount(0);
+        log.debug("rewarming entry {}", key);
         addEntry(key, entry);
-        notificationManager.notify(EventType.CACHE_REWARM_PROMOTION);
     }
 
     public void put(String key, Message response, Long ttlSecs) {
@@ -88,7 +87,7 @@ public class CacheManager {
 
     private void addEntry(String key, DnsCacheEntry entry) {
         cache.put(key, entry);
-        rewarmCacheManager.schedule(key, entry);
+        rewarmScheduler.schedule(key, entry.getExpiryTime());
     }
 
 }

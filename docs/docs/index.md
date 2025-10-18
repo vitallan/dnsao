@@ -12,10 +12,12 @@ title: Home
 </p>
 
 ---
+
 - **DNS Sinkhole**: blocks domains based on lists, acting as a [DNS sinkhole](https://en.wikipedia.org/wiki/DNS_sinkhole){:target="_blank"}, preventing access to unwanted content, invasive advertising, and hindering trackers
 - **DNS over TLS Support**: performs queries to upstream servers using traditional UDP or [DoT](https://en.wikipedia.org/wiki/DNS_over_TLS){:target="_blank"}, ensuring greater privacy in resolutions
 - **Parallel Querying to Multiple Upstreams**: sends the same query to multiple upstream servers in parallel and returns the fastest response, reducing browsing latency
 - **High-Performance Cache**: stores responses respecting their original TTL, includes negative caching, and a rewarm (pre-heating) mechanism to keep frequently used entries always available
+- **DNSSEC-Aware Policies**: requests DNSSEC data from upstream resolvers and applies configurable policies (off/simple/rigid) based on the AD flag
 - **YAML Configuration**: all server configuration is centralized in a single .yaml file, easy to version and replicate across multiple instances for high availability
 - **Local DNS Mapping**: allows defining local domain resolutions for specific IPs — ideal for homelabs, self-hosting, and internal networks
 - **Metrics Dashboard**: provides a metrics dashboard to monitor operation and performance

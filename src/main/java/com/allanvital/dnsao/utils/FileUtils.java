@@ -25,18 +25,6 @@ public class FileUtils {
 
     public static final String COMMENT = "#";
 
-    public static Set<String> getBlockedDomains() throws IOException {
-        Set<String> blockedDomains = new TreeSet<>();
-        Path appDir = DownloadUtils.getAppDir();
-        try (Stream<Path> list = Files.list(appDir)) {
-            list.forEach(path -> {
-                log.debug("reading blocked entries from {}", path);
-                blockedDomains.addAll(readFileEntries(path));
-            });
-        }
-        return blockedDomains;
-    }
-
     public static Set<String> readFileEntries(Path file) {
         Set<String> entries = new HashSet<>();
         int count = 0;
@@ -92,14 +80,6 @@ public class FileUtils {
 
     private static boolean looksLikeIp(String s) {
         return s.matches("\\d+\\.\\d+\\.\\d+\\.\\d+") || s.contains(":");
-    }
-
-    private static String cleanDomain(String s) {
-        s = s.trim();
-        while (s.endsWith(".")) {
-            s = s.substring(0, s.length() - 1);
-        }
-        return s.toLowerCase(Locale.ROOT);
     }
 
 }

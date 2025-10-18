@@ -5,6 +5,7 @@ There are three ways to install **DNSao**:
 - [Via script](#installation-via-script)
 - [Via Docker (Recommended)](#installation-via-docker)
 - [Manual](#manual-installation)
+- [Post-install](#post-install)
 
 After the instalation is complete, you can point your devices (or, ideally your router) to use it as a DNS server. Reach to the web port defined in [application.yml](configuration.md) to check the metrics dashboard and enjoy the ride.
 
@@ -142,5 +143,17 @@ The final command is then:
 ```bash
 java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k  -jar /etc/dnsao/dnsao.jar
 ```
+
+## Post install
+
+After setting up the server with one of the above installation methods, you will need to configure your router to serve to it's DHCP clients to use **DNSao** as their DNS server, which will make the devices in your network use it.
+
+Such configuration depends on the which router is used.
+
+Another way is to set each individual device to use **DNSao** as it's DNS server, which might not be ideal for multiple devices, but can be done, and it is also useful to test the installation before going full on.
+
+[Instructions for windows](https://www.solveyourtech.com/how-to-change-dns-server-windows-11-a-step-by-step-guide/)
+
+[Instructions for linux](https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/)
 
 <div style="margin-bottom: 60px;"></div>

@@ -14,42 +14,97 @@ import java.util.List;
 public class MessageUtils {
 
     public static Message buildARequest(String domain) {
+        return buildARequest(domain, false);
+    }
+
+    public static Message buildARequest(String domain, boolean withDO) {
         String domainToUse = domain;
         try {
             if (!domain.endsWith(".")) {
                 domainToUse = domain + ".";
             }
-            return Message.newQuery(Record.newRecord(Name.fromString(domainToUse), Type.A, DClass.IN));
+            Message message = Message.newQuery(Record.newRecord(Name.fromString(domainToUse), Type.A, DClass.IN));
+            if (withDO) {
+                OPTRecord opt = new OPTRecord(1232, 0, 0, ExtendedFlags.DO);
+                message.addRecord(opt, Section.ADDITIONAL);
+            }
+            return message;
         } catch (TextParseException e) {
             Assertions.fail("failed to create message " + e.getMessage());
             return null;
         }
     }
 
-    public static Message buildAResponse(Message request, String ipAddress, long ttl) {
-        try {
-            Record question = request.getQuestion();
-            Name qname = question.getName();
-            int qtype = question.getType();
-            int qclass = question.getDClass();
+    private static Message baseResponseFrom(Message request) {
+        Header qh = request.getHeader();
 
-            Message response = new Message(request.getHeader().getID());
-            Header header = response.getHeader();
-            header.setFlag(Flags.QR);
+        Message response = new Message(qh.getID());
+        Header rh = response.getHeader();
 
+        rh.setOpcode(qh.getOpcode());
+
+        rh.setFlag(Flags.QR);
+
+        if (qh.getFlag(Flags.RD)) {
+            rh.setFlag(Flags.RD);
+        }
+
+        Record question = request.getQuestion();
+        if (question != null) {
             response.addRecord(question, Section.QUESTION);
+        }
+        return response;
+    }
 
-            if (qtype == Type.A) {
-                InetAddress address = InetAddress.getByName(ipAddress);
-                ARecord aRecord = new ARecord(qname, qclass, ttl, address);
-                response.addRecord(aRecord, Section.ANSWER);
+    public static Message buildAResponse(Message request, String ipAddress, long ttl) {
+        return buildAResponse(request, ipAddress, ttl, false);
+    }
+
+    public static Message buildAResponse(Message request, String ipAddress, long ttl, boolean authenticated) {
+        try {
+            Message response = baseResponseFrom(request);
+
+            Record question = request.getQuestion();
+            if (question != null && question.getType() == Type.A) {
+                Name qname = question.getName();
+                int qclass = question.getDClass();
+
+                ARecord arec = new ARecord(qname, qclass, ttl, InetAddress.getByName(ipAddress));
+                response.addRecord(arec, Section.ANSWER);
+            }
+
+            if (authenticated) {
+                response.getHeader().setFlag(Flags.AD);
+            } else {
+                response.getHeader().unsetFlag(Flags.AD);
             }
 
             return response;
         } catch (IOException e) {
-            Assertions.fail("failed to create response " + e.getMessage());
+            Assertions.fail("failed to create A response: " + e.getMessage());
             return null;
         }
+    }
+
+    public static Message buildNxdomainResponseFrom(Message request, boolean authenticated) {
+        Message response = baseResponseFrom(request);
+        Header h = response.getHeader();
+        h.setRcode(Rcode.NXDOMAIN);
+
+        if (authenticated) {
+            h.setFlag(Flags.AD);
+        } else {
+            h.unsetFlag(Flags.AD);
+        }
+        return response;
+    }
+
+    public static Message buildServfailFrom(Message request) {
+        Message response = baseResponseFrom(request);
+        Header h = response.getHeader();
+        h.setRcode(Rcode.SERVFAIL);
+        h.unsetFlag(Flags.AD);
+        return response;
     }
 
     public static String extractIpFromResponseMessage(Message response) {

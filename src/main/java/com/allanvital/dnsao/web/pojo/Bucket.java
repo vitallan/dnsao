@@ -25,6 +25,8 @@ public class Bucket {
     private final LongAdder refused = new LongAdder();
     private final LongAdder servfail = new LongAdder();
 
+    private final long MAX_QUERY_EVENTS = 5_000;
+
     private final PriorityBlockingQueue<QueryEvent> queryEvents = new PriorityBlockingQueue<>();
 
     private final ConcurrentSkipListMap<String, LongAdder> upstreamsHit = new ConcurrentSkipListMap<>();
@@ -32,7 +34,9 @@ public class Bucket {
     public void increment(QueryEvent queryEvent) {
         totalCounter.increment();
         elapsedTimeSum.add(queryEvent.getElapsedTime());
-        queryEvents.add(queryEvent);
+        if (totalCounter.sum() < MAX_QUERY_EVENTS) {
+            queryEvents.add(queryEvent);
+        }
         if (queryEvent.getQueryResolvedBy() != null) {
             switch (queryEvent.getQueryResolvedBy()) {
                 case CACHE -> cached.increment();
