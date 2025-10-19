@@ -55,7 +55,7 @@ public class CacheManager {
         if (entry != null && !entry.isExpired()) {
             log.info("cache hit for {}", key);
             entry.setRewarmCount(0);
-            addEntry(key, entry);
+            cache.put(key, entry);
             notificationManager.notify(EventType.CACHE_HIT);
             return entry.getResponse();
         }
