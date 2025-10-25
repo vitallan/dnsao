@@ -70,6 +70,7 @@ server:
   port: 53 
   udpThreadPool: 10
   tcpThreadPool: 3
+  httpThreadPool: 10
   webPort: 8044
 ```
 
@@ -80,9 +81,12 @@ The **server** property defines the application’s top-level properties.
 | **port** | the port where the application will listen for UDP and TCP calls, as per DNS standards. Default for DNS servers is 53 |
 | **udpThreadPool** | how many threads will be available for UDP protocol, as the **server**. The default value is 10 |
 | **tcpThreadPool** | how many threads will be available for TCP protocol, as the **server**. The default value is 3 |
+| **httpThreadPool** | how many threads will be available for HTTP protocol, as the **server**. The default value is 10 |
 | **webPort** | the port where the metrics dashboard will be available. Default is 8044 |
 
-In the web interface you can take a look at the server metrics and search the individual queries. The graph contains a rolling window of 24 hours divided in 10 minutes segments. 
+For HTTP queries, the endpoint will be **http://serverIp:webPort/dns-query**, following dns standards. Note that the answer will be in HTTP, not HTTPS. This is a concious decision to avoid manual handling of tls certificates to favor the users possibility to use their own certificates. If https is desired, it is recommended to use a reverse proxy that enables the remote communication to happen through https (like traeffic or nginx) and then reverse proxy internally to **DNSao**.
+
+In the web interface **http://serverIp:webPort/** you can take a look at the server metrics and search the individual queries. The graph contains a rolling window of 24 hours divided in 10 minutes segments. 
 
 These segments are also used to hold the query events to be searchable in the */query* endpoint, however a maximum of 5000 queries will be saved in a given segment. The totals are still accounted for on the general counters, but excess queries won't show on the query table.
 
@@ -159,9 +163,13 @@ These are the inner properties for the "upstreams" property.
 |---------|------------|
 | **upstreams** | the list of upstreams to be queried against |
 | **ip** | IP of the upstream server to be used |
-| **port** | Port of the upsream server to be used. For UDP the common port is 53, for DOT, the default port is 853 | 
-| **protocol** | supported protocols are **udp** and **dot** |
+| **port** | Port of the upsream server to be used. For UDP the common port is 53, for DOT, the default port is 853 and for DOH, the default port is 443 | 
+| **protocol** | supported protocols are **udp**, **dot** and **doh** |
 | **tlsAuthName** | when using **dot** protocol, it is necessary to also set the **tlsAuthName** for remote server validation. This name is confirmed during startup and if the authority verification fails, the upstream is discarded and not used |
+| **host** | when using **doh** protocol, it is necessary to set the **host** property, where the queries will be sent over https |
+| **path** | when using **doh** protocol, it is necessary to set the **path** property, which will be appended at the end of the **host** property. It defaults to **/dns-query** |
+
+You can find examples of the configurations on the [config-samples in the github repo](https://github.com/vitallan/dnsao/tree/main/config-samples). Upstreams of different types can be used at the same type, as long as the necessary properties for each protocol are fullfiled.
 
 The **dnssec** property defines **DNSao** behavior about *DNSSEC* flags and validation, and has the default value as **simple**. The valid values are **off**, **simple** and **rigid**. **DNSao** does not execute the crypt validation of the flags, but rely on the upstream answer to define it's behavior.
 

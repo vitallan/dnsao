@@ -8,7 +8,16 @@ public class ServerConf {
     int port = 1053;
     int udpThreadPool = 20;
     int tcpThreadPool = 4;
+    int httpThreadPool = 10;
     int webPort = 8044;
+
+    public int getHttpThreadPool() {
+        return httpThreadPool;
+    }
+
+    public void setHttpThreadPool(int httpThreadPool) {
+        this.httpThreadPool = httpThreadPool;
+    }
 
     public int getWebPort() {
         return webPort;

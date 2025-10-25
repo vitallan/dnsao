@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.dns.remote.pojo;
 
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import org.xbill.DNS.Message;
 
 /**
@@ -9,14 +9,14 @@ import org.xbill.DNS.Message;
 public class DnsQueryResult {
 
     private final Message message;
-    private final NamedResolver resolver;
+    private final UpstreamResolver resolver;
 
-    public DnsQueryResult(Message message, NamedResolver resolver) {
+    public DnsQueryResult(Message message, UpstreamResolver resolver) {
         this.message = message;
         this.resolver = resolver;
     }
 
     public Message message() { return message; }
-    public NamedResolver resolver() { return resolver; }
+    public UpstreamResolver resolver() { return resolver; }
 
 }

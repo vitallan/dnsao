@@ -1,8 +1,8 @@
 server:
-  port: 1053
+  port: 53
+  udpThreadPool: 10
+  tcpThreadPool: 3
   webPort: 8044
-  udpThreadPool: 20
-  tcpThreadPool: 4
   httpThreadPool: 10
 
 cache:
@@ -12,7 +12,7 @@ cache:
   maxRewarmCount: 5
 
 resolver:
-  multiplier: 3 #how many upstreams we will reach on each active remote query
+  multiplier: 3
   upstreams:
     - host: "cloudflare-dns.com"
       port: 443
@@ -30,13 +30,9 @@ resolver:
       port: 443
       protocol: "doh"
       path: "/dns-query"
+
   localMappings:
-    - domain: "karpov"
-      ip: "192.168.68.113"
-    - domain: "cronicle.intranet"
-      ip: "192.168.68.126"
-  allowLists:
 
   blocklists:
-
+    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 

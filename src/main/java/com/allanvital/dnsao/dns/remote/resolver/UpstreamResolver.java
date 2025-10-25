@@ -7,10 +7,14 @@ import java.io.IOException;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public interface NamedResolver {
+public interface UpstreamResolver {
 
     String getIp();
     int getPort();
     Message send(Message query) throws IOException;
+
+    default String name() {
+        return getIp() + ":" + getPort();
+    }
 
 }

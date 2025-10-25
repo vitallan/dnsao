@@ -8,6 +8,7 @@ import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
 import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.inner.*;
+import com.allanvital.dnsao.dns.local.LocalResolver;
 import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.ResolverFactory;
 import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolManager;
@@ -45,10 +46,8 @@ public class SystemGraph {
 
         DOTConnectionPoolManager poolManager = dotConnectionPoolManager(resolverConf.getTlsPoolSize());
         ResolverFactory resolverFactory = resolverFactory(poolManager, resolverConf.getUpstreams());
-        RewarmScheduler rewarmScheduler = rewarmScheduler(5_000);
+        RewarmScheduler rewarmScheduler = rewarmScheduler(20_000);
         CacheManager cacheManager = cacheManager(cacheConf, rewarmScheduler);
-        ExecutorService rewarmService = rewarmWorkerExecutor();
-        scheduleRewarmWorker(rewarmService, cacheConf, rewarmScheduler, cacheManager, resolverFactory);
 
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
 
@@ -56,10 +55,19 @@ public class SystemGraph {
 
         BlockListProvider blockListProvider = blockListProvider(resolverConf.getAllowLists(), resolverConf.getBlocklists(), fileHandler);
 
-        QueryProcessorFactory factory = queryProcessorFactory(resolverFactory, cacheManager, blockListProvider, locaMappings, resolverConf.getMultiplier(), resolverConf.getDnsSecMode());
+        LocalResolver localResolver = localResolver(blockListProvider, locaMappings);
+
+        QueryProcessorFactory factory = queryProcessorFactory(resolverFactory, cacheManager, localResolver, resolverConf);
+
+        ExecutorService rewarmService = rewarmWorkerExecutor();
+        scheduleRewarmWorker(rewarmService, cacheConf, rewarmScheduler, cacheManager, factory);
 
         dnsServer = dnsServer(serverConf, factory);
-        webServer = webServer(serverConf.getWebPort());
+        webServer = webServer(serverConf.getWebPort(), factory, serverConf.getHttpThreadPool());
+    }
+
+    private LocalResolver localResolver(BlockListProvider blockListProvider, Map<String, String> locaMappings) {
+        return new LocalResolver(blockListProvider, locaMappings);
     }
 
     public void start() {
@@ -88,13 +96,13 @@ public class SystemGraph {
         return new ResolverFactory(dotConnectionPoolManager, upstreams);
     }
 
-    private WebServer webServer(int webPort) {
-        return new WebServer(webPort);
+    private WebServer webServer(int webPort, QueryProcessorFactory queryProcessorFactory, int httpThreadPool) {
+        return new WebServer(webPort, queryProcessorFactory, httpThreadPool);
     }
 
-    public static RewarmWorker scheduleRewarmWorker(ExecutorService executorService, CacheConf cacheConf, RewarmScheduler rewarmScheduler, CacheManager cacheManager, ResolverFactory resolverFactory) {
+    public static RewarmWorker scheduleRewarmWorker(ExecutorService executorService, CacheConf cacheConf, RewarmScheduler rewarmScheduler, CacheManager cacheManager, QueryProcessorFactory queryProcessorFactory) {
         if (cacheConf.isRewarm()) {
-            RewarmWorker rewarmWorker = new RewarmWorker(rewarmScheduler, cacheManager, resolverFactory, cacheConf.getMaxRewarmCount());
+            RewarmWorker rewarmWorker = new RewarmWorker(rewarmScheduler, cacheManager, queryProcessorFactory, cacheConf.getMaxRewarmCount());
             executorService.submit(rewarmWorker);
             return rewarmWorker;
         }
@@ -113,8 +121,8 @@ public class SystemGraph {
         return new RewarmScheduler(timeBeforeTtlToTriggerRewarm);
     }
 
-    private QueryProcessorFactory queryProcessorFactory(ResolverFactory resolverFactory, CacheManager cacheManager, BlockListProvider blockListProvider, Map<String, String> localMappings, int multiplier, DNSSecMode dnsSecMode) {
-        return new QueryProcessorFactory(resolverFactory.getAllResolvers(), cacheManager, blockListProvider, localMappings, multiplier, dnsSecMode);
+    private QueryProcessorFactory queryProcessorFactory(ResolverFactory resolverFactory, CacheManager cacheManager, LocalResolver localResolver, ResolverConf resolverConf) {
+        return new QueryProcessorFactory(resolverFactory.getAllResolvers(), cacheManager, localResolver, resolverConf);
     }
 
     public BlockListProvider blockListProvider(List<String> blockList, List<String> allowList, FileHandler fileHandler) {

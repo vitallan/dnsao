@@ -1,12 +1,10 @@
 package com.allanvital.dnsao.cache.rewarm;
 
-import com.allanvital.dnsao.notification.EventType;
 import com.allanvital.dnsao.notification.NotificationManager;
 import com.allanvital.dnsao.utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 
 import static com.allanvital.dnsao.AppLoggers.CACHE;
@@ -22,7 +20,6 @@ public class RewarmScheduler {
     private final NotificationManager notificationManager = NotificationManager.getInstance();
 
     private final DelayQueue<RewarmTask> queue = new DelayQueue<>();
-    private final ConcurrentHashMap<String, RewarmTask> index = new ConcurrentHashMap<>();
     private final long thresholdToFire;
 
     public RewarmScheduler(long thresholdToFire) {
@@ -32,26 +29,23 @@ public class RewarmScheduler {
     public void schedule(String key, long entryTtl) {
         long now = System.currentTimeMillis();
         long triggerAt = Math.max(now, entryTtl - thresholdToFire);
-        RewarmTask fresh = new RewarmTask(key, triggerAt);
+        RewarmTask task = new RewarmTask(key, triggerAt);
         log.debug("scheduling {} to rewarm at {}", key, TimeUtils.formatMillis(triggerAt, "HH:mm:ss"));
-        RewarmTask old = index.put(key, fresh);
-        if (old != null) {
-            queue.remove(old);
-        }
+        remove(key);
         notificationManager.notify(REWARM_TASK_SCHEDULED);
-        queue.put(fresh);
+        queue.put(task);
     }
 
     public void cancel(String key) {
-        RewarmTask old = index.remove(key);
+        remove(key);
         log.debug("canceling scheduling of {}", key);
-        if (old != null) {
-            queue.remove(old);
-        }
+    }
+
+    private void remove(String key) {
+        RewarmTask task = new RewarmTask(key, System.currentTimeMillis());
+        queue.remove(task);
     }
 
     public DelayQueue<RewarmTask> queue() { return queue; }
-
-    public ConcurrentHashMap<String, RewarmTask> index() { return index; }
 
 }

@@ -2,8 +2,9 @@ package com.allanvital.dnsao.dns.remote;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQueryResult;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.exc.DnsSecPolicyException;
+import com.allanvital.dnsao.utils.HashUtils;
 import com.allanvital.dnsao.utils.ThreadShop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,14 +94,15 @@ public class DnsUtils {
         return fqdn;
     }
 
-    public static boolean isBlocked(Name qname, Set<String> blockedSet) {
+    public static boolean isBlocked(Name qname, Set<Long> blockedSet) {
         String fqdn = normalize(qname);
-
-        if (blockedSet.contains(fqdn)) return true;
+        Long hash = HashUtils.fnv1a64(fqdn);
+        if (blockedSet.contains(hash)) return true;
         int dot = fqdn.indexOf('.');
         while (dot != -1 && dot + 1 < fqdn.length()) {
             String suffix = fqdn.substring(dot + 1);
-            if (blockedSet.contains(suffix)) return true;
+            Long suffixHash = HashUtils.fnv1a64(suffix);
+            if (blockedSet.contains(suffixHash)) return true;
             dot = fqdn.indexOf('.', dot + 1);
         }
         return false;
@@ -197,7 +199,30 @@ public class DnsUtils {
         return new SOARecord(soaZone, qclass, refresh, mname, rname, serial, refresh, retry, expire, refresh);
     }
 
-    public static DnsQueryResult query(Message query, List<NamedResolver> resolvers, DNSSecMode dnsSecMode)
+    public static DnsQueryResult query(Message query, List<UpstreamResolver> resolvers, DNSSecMode dnsSecMode, int maxRetry)
+            throws InterruptedException, TimeoutException {
+
+        TimeoutException timeoutException = null;
+        for (int i = 0; i < maxRetry; i++) {
+            try {
+                DnsQueryResult result = innerQuery(query, resolvers, dnsSecMode);
+                if (result != null) {
+                    return result;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (TimeoutException e) {
+                timeoutException = e;
+            }
+        }
+        if (timeoutException != null) {
+            throw timeoutException;
+        }
+        return null;
+    }
+
+    private static DnsQueryResult innerQuery(Message query, List<UpstreamResolver> resolvers, DNSSecMode dnsSecMode)
             throws InterruptedException, TimeoutException {
 
         String threadName = Thread.currentThread().getName();
@@ -238,7 +263,10 @@ public class DnsUtils {
     }
 
     public static boolean isDirectAnswer(int type) {
-        return type == Type.A || type == Type.AAAA || type == Type.CNAME;
+        return switch (type) {
+            case Type.A, Type.AAAA, Type.CNAME, Type.HTTPS, Type.SVCB -> true;
+            default -> false;
+        };
     }
 
     public static boolean isWarmable(Message msg) {

@@ -13,8 +13,9 @@ title: Início
 
 ---
 - **DNS Sinkhole** : bloqueia domínios com base em listas, agindo como um [DNS sinkhole](https://en.wikipedia.org/wiki/DNS_sinkhole){:target="_blank"}, impedindo acesso a conteúdos indesejados, publicidade invasiva e dificultando o rastreamento por trackers
-- **Suporte a DNS over TLS**: realiza consultas a servidores upstream usando UDP tradicional ou [DoT](https://en.wikipedia.org/wiki/DNS_over_TLS){:target="_blank"}, garantindo maior privacidade nas resoluções
-- **Consulta paralela a múltiplos upstreams**: envia a mesma consulta para vários servidores upstream em paralelo e retorna a resposta mais rápida, reduzindo a latência de navegação
+- **Suporte a DNS over TLS e DNS over HTTPS**: realiza consultas a servidores upstream usando UDP tradicional, [DoT](https://en.wikipedia.org/wiki/DNS_over_TLS){:target="_blank"} e [DoH](https://en.wikipedia.org/wiki/DNS_over_HTTPS){:target="_blank"} garantindo maior privacidade nas resoluções
+- **Consulta paralela a múltiplos upstreams**: pode ser configurado para enviar a mesma consulta para vários servidores upstream em paralelo e retorna a resposta mais rápida, reduzindo a latência de navegação
+- **Protocolos multiplos como servidor**: responde queries dns em UDP, TCP e HTTP, possibilitando diferentes setups de clientes
 - **Cache de Alta Performance**: armazena respostas respeitando o TTL original, inclui cache negativo e mecanismo de rewarm (pré-aquecimento) para manter entradas frequentemente usadas sempre disponíveis
 - **Política configurável de DNSSEC**: solicita dados DNSSEC aos upstreams e aplica políticas (off/simple/rigid) confiando na validação do upstream via bit AD
 - **Configuração em YAML**: toda a configuração do servidor é centralizada em um único arquivo .yaml, fácil de versionar e replicar entre múltiplas instâncias para alta disponibilidade

@@ -9,5 +9,6 @@ public enum EventType {
     CACHE_REWARM,
     CACHE_REWARM_EXPIRED,
     REWARM_TASK_SCHEDULED,
+    QUERY_RESOLVED,
 
 }

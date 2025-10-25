@@ -5,11 +5,12 @@ import com.allanvital.dnsao.TestHolder;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
 import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
+import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.ResolverFactory;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.utils.ThreadShop;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Message;
@@ -32,6 +33,7 @@ public class CacheRewarmTest extends TestHolder {
     private RewarmWorker rewarmWorker;
     private ExecutorService executorService;
     private RewarmScheduler rewarmScheduler;
+    private QueryProcessorFactory queryProcessorFactory;
 
     @BeforeEach
     public void setup() throws ConfException {
@@ -41,7 +43,8 @@ public class CacheRewarmTest extends TestHolder {
         rewarmScheduler = new RewarmScheduler(500);
         this.cacheManager = new CacheManager(conf.getCache(), rewarmScheduler);
         executorService = ThreadShop.buildExecutor("test-rewarm", 1);
-        rewarmWorker = SystemGraph.scheduleRewarmWorker(executorService, conf.getCache(), rewarmScheduler, cacheManager, resolverFactory);
+        queryProcessorFactory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), cacheManager, null, conf.getResolver().getMultiplier(), DNSSecMode.SIMPLE);
+        rewarmWorker = SystemGraph.scheduleRewarmWorker(executorService, conf.getCache(), rewarmScheduler, cacheManager, queryProcessorFactory);
         response = super.prepareSimpleMockResponse(domain, ip, 1);
     }
 

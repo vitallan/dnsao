@@ -16,11 +16,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class BlockedTest {
 
-    private Set<String> blockedSet = new HashSet<>();
+    private Set<Long> blockedSet = new HashSet<>();
 
     @Test
     public void shouldCorrectlyBlockSubdomain() throws TextParseException {
-        blockedSet.add("betano.com");
+        blockedSet.add(HashUtils.fnv1a64("betano.com"));
         assertTrue(DnsUtils.isBlocked(Name.fromString("betano.com."), blockedSet));
         assertTrue(DnsUtils.isBlocked(Name.fromString("www.betano.com."), blockedSet));
         assertFalse(DnsUtils.isBlocked(Name.fromString("soubetano.com."), blockedSet));

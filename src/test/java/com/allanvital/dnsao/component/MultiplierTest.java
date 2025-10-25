@@ -4,7 +4,7 @@ import com.allanvital.dnsao.TestHolder;
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.remote.QueryProcessor;
 import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.helper.FakeResolverWithBarrier;
 import com.allanvital.dnsao.helper.MessageUtils;
 import org.junit.jupiter.api.Assertions;
@@ -24,7 +24,7 @@ public class MultiplierTest extends TestHolder {
     private String domain = "example.com";
     private AtomicInteger counter;
     private CyclicBarrier barrier;
-    private List<NamedResolver> resolvers;
+    private List<UpstreamResolver> resolvers;
     private QueryProcessor processor;
 
     @BeforeEach
@@ -38,7 +38,7 @@ public class MultiplierTest extends TestHolder {
                 new FakeResolverWithBarrier(barrier, false, counter),
                 new FakeResolverWithBarrier(barrier, false, counter)
         );
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolvers, null, null, null, multiplier, DNSSecMode.OFF);
+        QueryProcessorFactory factory = new QueryProcessorFactory(resolvers, null, null, multiplier, DNSSecMode.OFF);
         processor = factory.buildQueryProcessor();
     }
 

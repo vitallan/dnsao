@@ -28,7 +28,7 @@ public class QueryProcessorTest extends TestHolder {
         super.startFakeDnsServer();
         super.prepareSimpleMockResponse(domain, responseIp);
         ResolverFactory resolverFactory = new ResolverFactory(null, conf.getResolver().getUpstreams());
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, null, 1, DNSSecMode.OFF);
+        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, 1, DNSSecMode.OFF);
         processor = factory.buildQueryProcessor();
     }
 

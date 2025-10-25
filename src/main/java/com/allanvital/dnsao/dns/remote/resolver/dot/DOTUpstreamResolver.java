@@ -1,10 +1,14 @@
 package com.allanvital.dnsao.dns.remote.resolver.dot;
 
 import com.allanvital.dnsao.conf.inner.Upstream;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,24 +18,33 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 
+import static com.allanvital.dnsao.AppLoggers.INFRA;
 import static com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPool.closeQuiet;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class DOTNamedResolver implements NamedResolver {
+public class DOTUpstreamResolver implements UpstreamResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final String ip;
     private final String tlsAuthName;
     private final int port;
     private final DOTConnectionPoolManager dotConnectionPoolManager;
 
-    public DOTNamedResolver(DOTConnectionPoolManager dotConnectionPoolManager, Upstream upstream) throws CertificateParsingException, IOException {
+    public DOTUpstreamResolver(DOTConnectionPoolManager dotConnectionPoolManager, Upstream upstream) throws CertificateParsingException, IOException {
+        log.debug("building DOTResolver for host: {}", upstream.getIp());
         this.dotConnectionPoolManager = dotConnectionPoolManager;
         this.ip = upstream.getIp();
         this.tlsAuthName = upstream.getTlsAuthName();
-        this.port = upstream.getPort();
+        if (upstream.getPort() == 0) {
+            this.port = 853;
+        } else {
+            this.port = upstream.getPort();
+        }
         verifyTlsAuthName();
+        log.debug("DOTResolver for host {} built", upstream.getIp());
     }
 
     private void verifyTlsAuthName() throws IOException, CertificateParsingException {
@@ -120,6 +133,11 @@ public class DOTNamedResolver implements NamedResolver {
             din.readFully(resp);
             return new Message(resp);
         }
+    }
+
+    @Override
+    public String toString() {
+        return this.name();
     }
 
 }

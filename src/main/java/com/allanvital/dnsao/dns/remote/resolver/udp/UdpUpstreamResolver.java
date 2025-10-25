@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.dns.remote.resolver.udp;
 
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,15 +18,18 @@ import static com.allanvital.dnsao.AppLoggers.INFRA;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class SimpleNamedResolver extends SimpleResolver implements NamedResolver {
+public class UdpUpstreamResolver extends SimpleResolver implements UpstreamResolver {
 
     private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final String ip;
     private final int port;
 
-    public SimpleNamedResolver(String ip, int port) throws UnknownHostException {
+    public UdpUpstreamResolver(String ip, int port) throws UnknownHostException {
         super(ip);
+        if (port == 0) {
+            port = 53;
+        }
         super.setPort(port);
         this.ip = ip;
         this.port = port;
@@ -59,6 +62,11 @@ public class SimpleNamedResolver extends SimpleResolver implements NamedResolver
             log.error("query to {}  failed: {}", name, rootCause.getMessage());
             return null;
         }
+    }
+
+    @Override
+    public String toString() {
+        return this.name();
     }
 
 }

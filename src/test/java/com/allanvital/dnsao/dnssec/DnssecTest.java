@@ -31,7 +31,7 @@ public class DnssecTest extends TestHolder {
         super.startFakeDnsServer();
         super.prepareSimpleMockResponse(domain, responseIp);
         ResolverFactory resolverFactory = new ResolverFactory(null, conf.getResolver().getUpstreams());
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, null, 1, dnsSecMod);
+        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, 1, dnsSecMod);
         processor = factory.buildQueryProcessor();
     }
 

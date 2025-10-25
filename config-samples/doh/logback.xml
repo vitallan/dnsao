@@ -1,0 +1,56 @@
+<configuration>
+
+	<property name="LOG_DIR" value="/var/log/dnsao"/>
+	<property name="LOG_FILE" value="${LOG_DIR}/dnsao.log"/>
+    <property name="LOG_PATTERN" value="[%d{HH:mm:ss.SSS}] %-5level [%replace(%thread){'com.allanvital.dnsao.Main.main','main'}] [%logger] %msg%n" />
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+	
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${LOG_FILE}</file>
+		<append>true</append>
+		<prudent>false</prudent>
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+		  <fileNamePattern>${LOG_DIR}/dnsao.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+		  <maxHistory>30</maxHistory>
+		  <totalSizeCap>5GB</totalSizeCap>
+		  <cleanHistoryOnStart>true</cleanHistoryOnStart>
+		  <maxFileSize>100MB</maxFileSize>
+		</rollingPolicy>
+		<encoder>
+		  <pattern>${LOG_PATTERN}</pattern>
+		</encoder>
+	  </appender>
+
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>90</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <appender-ref ref="CONSOLE"/>
+    </appender>
+	
+	<appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>8192</queueSize>
+		<discardingThreshold>0</discardingThreshold>
+		<neverBlock>false</neverBlock>
+		<appender-ref ref="FILE"/>
+	  </appender>
+
+    <logger name="org.xbill.DNS" level="OFF" additivity="false">
+        <appender-ref ref="ASYNC_CONSOLE"/>
+		<appender-ref ref="ASYNC_FILE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE"/>
+		<appender-ref ref="ASYNC_FILE"/>
+    </root>
+	
+	<logger name="io.javalin" level="OFF"/>
+    <logger name="org.eclipse.jetty" level="OFF"/>
+
+</configuration>

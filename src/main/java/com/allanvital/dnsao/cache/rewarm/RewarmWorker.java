@@ -2,11 +2,11 @@ package com.allanvital.dnsao.cache.rewarm;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
-import com.allanvital.dnsao.dns.remote.ResolverFactory;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.QueryProcessor;
+import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
+import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
 import com.allanvital.dnsao.notification.EventType;
 import com.allanvital.dnsao.notification.NotificationManager;
-import com.allanvital.dnsao.utils.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -14,6 +14,7 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
+import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -30,17 +31,17 @@ public class RewarmWorker implements Runnable {
 
     private final RewarmScheduler scheduler;
     private final CacheManager cache;
-    private final ResolverFactory resolverFactory;
+    private final QueryProcessorFactory queryProcessorFactory;
     private final int maxRewarmCount;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private long lastBeat = System.currentTimeMillis();
 
     private final NotificationManager notificationManager = NotificationManager.getInstance();
 
-    public RewarmWorker(RewarmScheduler scheduler, CacheManager cache, ResolverFactory resolverFactory, int maxRewarmCount) {
+    public RewarmWorker(RewarmScheduler scheduler, CacheManager cache, QueryProcessorFactory queryProcessorFactory, int maxRewarmCount) {
         this.scheduler = scheduler;
         this.cache = cache;
-        this.resolverFactory = resolverFactory;
+        this.queryProcessorFactory = queryProcessorFactory;
         this.maxRewarmCount = maxRewarmCount;
         log.debug("starting RewarWorker");
     }
@@ -64,6 +65,7 @@ public class RewarmWorker implements Runnable {
 
     @Override
     public void run() {
+        String key = "";
         while (running.get()) {
             heartbeat();
             try {
@@ -71,25 +73,19 @@ public class RewarmWorker implements Runnable {
                 if (task == null) {
                     continue;
                 }
-                String key = task.getKey();
+                key = task.getKey();
                 DnsCacheEntry entry = cache.safeGet(key);
                 if (entry == null) {
                     log.debug("rewarm was scheduled but key already left cache key={}", key);
-                    scheduler.index().remove(key, task);
                     continue;
                 }
 
-                RewarmTask idxTask = scheduler.index().get(key); //to avoid stale schedulings
-                if (idxTask != task) {
-                    continue;
-                }
                 int currentRewarmCount = entry.getRewarmCount();
                 if (currentRewarmCount > maxRewarmCount) { //better to remove scheduled afterward to ensure cache is correctly clean
                     log.debug("max rewarm count for key={}", key);
                     notificationManager.notify(EventType.CACHE_REWARM_EXPIRED);
                     continue;
                 }
-                NamedResolver resolver = resolverFactory.getResolver();
                 Message cachedResponse = entry.getResponse();
                 Record question = cachedResponse.getQuestion();
                 if (question == null) {
@@ -101,7 +97,9 @@ public class RewarmWorker implements Runnable {
                     continue;
                 }
                 Message query = Message.newQuery(question);
-                Message newResponse = resolver.send(query);
+                QueryProcessor queryProcessor = queryProcessorFactory.buildCacheLessQueryProcessor();
+                DnsQuery queryResponse = queryProcessor.processQuery(InetAddress.getByName("127.0.0.1"), query.toWire());
+                Message newResponse = queryResponse.getResponse();
                 if (newResponse == null) {
                     log.debug("it was not possible to rewarm entry {}", key);
                     continue;
@@ -111,7 +109,6 @@ public class RewarmWorker implements Runnable {
                 if (ttlFromDirectResponse == null) {
                     log.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
                             key, Rcode.string(newResponse.getRcode()));
-                    scheduler.index().remove(key, task);
                     continue;
                 }
 
@@ -124,9 +121,11 @@ public class RewarmWorker implements Runnable {
                         Type.string(question.getType()));
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
+                running.set(false);
+                log.debug("stopping rewarm worker");
                 break;
             } catch (Throwable t) {
-                log.debug("Error on rewarmWorker: {}", t.getMessage());
+                log.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage());
                 if (log.isDebugEnabled()) {
                     t.printStackTrace();
                 }

@@ -1,11 +1,13 @@
 package com.allanvital.dnsao.dns.remote;
 
-import com.allanvital.dnsao.block.BlockListProvider;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
+import com.allanvital.dnsao.dns.local.LocalResolver;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.remote.pojo.DnsQueryResult;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
+import com.allanvital.dnsao.notification.EventType;
+import com.allanvital.dnsao.notification.NotificationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
@@ -14,7 +16,6 @@ import org.xbill.DNS.Record;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
 import static com.allanvital.dnsao.AppLoggers.DNS;
@@ -42,20 +43,16 @@ public class QueryProcessor {
             Type.HTTPS
     );
 
-    private final List<NamedResolver> resolvers = new LinkedList<>();
+    private static final int MAX_RETRIES = 5;
+
+    private final List<UpstreamResolver> resolvers = new LinkedList<>();
     private final CacheManager cacheManager;
-    private final Map<String, String> localMappings;
-    private final BlockListProvider blockListProvider;
+    private final LocalResolver localResolver;
     private final DNSSecMode dnsSecMode;
 
-    public QueryProcessor(List<NamedResolver> resolvers, CacheManager cacheManager, BlockListProvider blockListProvider, Map<String, String> localMappings, DNSSecMode dnsSecMode) {
-        this.blockListProvider = blockListProvider;
+    public QueryProcessor(List<UpstreamResolver> resolvers, CacheManager cacheManager, LocalResolver localResolver, DNSSecMode dnsSecMode) {
+        this.localResolver = localResolver;
         this.dnsSecMode = dnsSecMode;
-        if (localMappings != null) {
-            this.localMappings = localMappings;
-        } else {
-            this.localMappings = new HashMap<>();
-        }
         this.resolvers.addAll(resolvers);
         this.cacheManager = cacheManager;
     }
@@ -69,24 +66,19 @@ public class QueryProcessor {
             int type = question.getType();
             String typeName = Type.string(type);
             String client = clientAddress.getHostAddress();
-            DnsQuery dnsQuery = new DnsQuery(client);
-            if (log.isDebugEnabled()) {
+
+            if (log.isTraceEnabled()) {
                 logRequestHeaderAndFlags(query);
             }
 
-            if (blockListProvider != null && blockListProvider.isBlocked(name)) {
-                Message blocked = buildBlocked(query);
-                dnsQuery.setResolvedByAndResponse(BLOCKED, blocked);
-                return dnsQuery;
+            if (localResolver != null) {
+                DnsQuery localResolved = localResolver.resolve(clientAddress, query);
+                if (localResolved != null) {
+                    return localResolved;
+                }
             }
 
-            if (localMappings.containsKey(name.toString().toLowerCase())) {
-                String ip = localMappings.get(name.toString().toLowerCase());
-                Message localAnswer = buildLocalResponse(query, ip);
-                dnsQuery.setResolvedByAndResponse(LOCAL, localAnswer);
-                return dnsQuery;
-            }
-
+            DnsQuery dnsQuery = new DnsQuery(client);
             Message cached = getFromCache(name, type);
             if (cached != null) {
                 Header header = cached.getHeader();
@@ -103,14 +95,15 @@ public class QueryProcessor {
                 return dnsQuery;
             }
 
-            log.debug("Query {} from {} to {}", typeName, client, name);
-            DnsQueryResult queryResult = query(query, resolvers, dnsSecMode);
+            log.trace("Query {} from {} to {} to be resolved", typeName, client, name);
+            DnsQueryResult queryResult = query(query, resolvers, dnsSecMode, MAX_RETRIES);
 
             if (queryResult == null || queryResult.message() == null) {
                 Message servFail = buildServFail(query);
                 dnsQuery.setResolvedByAndResponse(SERVFAIL, servFail);
                 return dnsQuery;
             }
+            log.debug("Query {} from {} to {} solved by {}", typeName, client, name, queryResult.resolver().name());
 
             Message externalResponse = queryResult.message();
             int rcode = externalResponse.getRcode();
@@ -118,7 +111,7 @@ public class QueryProcessor {
             putInCache(name, type, rcode, externalResponse);
 
             dnsQuery.setResolvedBySourceAndResponse(UPSTREAM, queryResult.resolver().getIp(), externalResponse);
-
+            NotificationManager.getInstance().notify(EventType.QUERY_RESOLVED);
             return dnsQuery;
 
         } catch (WireParseException e) {
@@ -154,7 +147,7 @@ public class QueryProcessor {
             }
         }
         boolean doFlag = (opt != null) && ((opt.getFlags() & ExtendedFlags.DO) != 0);
-        log.debug("REQ flags -> AD={}, CD={}, DO={}", ad, cd, doFlag);
+        log.trace("REQ flags -> AD={}, CD={}, DO={}", ad, cd, doFlag);
     }
 
     private Message getFromCache(Name questionName, int type) {

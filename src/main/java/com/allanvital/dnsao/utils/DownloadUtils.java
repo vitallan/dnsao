@@ -35,11 +35,11 @@ public class DownloadUtils {
         log.debug("downloading url {}", url);
 
         if (Files.exists(target)) {
-            long oneHour = 60 * 60 * 1000L;
+            long eightHours = 8 * 60 * 60 * 1000L;
             long now = System.currentTimeMillis();
             long lastModified = target.toFile().lastModified();
-            boolean isOlderThanOneHour = (now - lastModified) > oneHour;
-            if (!isOlderThanOneHour) {
+            boolean isOlderThanEightHours = (now - lastModified) > eightHours;
+            if (!isOlderThanEightHours) {
                 log.debug("cached file for {} already exists on {}", url, target);
                 return target;
             }
@@ -47,11 +47,13 @@ public class DownloadUtils {
 
         HttpClient client = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
 
         HttpRequest req = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofMinutes(2))
+                .header("Accept", "*/*")
                 .GET()
                 .build();
 
@@ -65,6 +67,7 @@ public class DownloadUtils {
 
         int status = resp.statusCode();
         if (status < 200 || status >= 300) {
+            Files.delete(target);
             throw new IOException("HTTP failure trying to download file " + url + " . Status: " + status);
         }
 

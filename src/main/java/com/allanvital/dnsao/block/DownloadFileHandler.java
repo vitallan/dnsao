@@ -8,10 +8,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static com.allanvital.dnsao.AppLoggers.INFRA;
@@ -40,12 +37,20 @@ public class DownloadFileHandler implements FileHandler {
         List<String> fileNames = new LinkedList<>();
         if (urls != null && !urls.isEmpty()) {
             for (String url : urls) {
-                String fileName = DownloadUtils.fileName(url);
-                fileNames.add(fileName);
-                try {
-                    DownloadUtils.downloadToPath(url, toLookInto.resolve(fileName));
-                } catch (IOException | InterruptedException e) {
-                    log.warn("it was not possible to download {}. Error was {}", url, e.getMessage());
+                boolean downloaded = false;
+                for (int i = 0; i < 5; i++) {
+                    String fileName = DownloadUtils.fileName(url);
+                    fileNames.add(fileName);
+                    try {
+                        DownloadUtils.downloadToPath(url, toLookInto.resolve(fileName));
+                        downloaded = true;
+                        break;
+                    } catch (IOException | InterruptedException e) {
+                        log.warn("it was not possible to download {}. Error was {}", url, e.getMessage());
+                    }
+                }
+                if (!downloaded) {
+                    log.warn("failed to download {} even after retries", url);
                 }
             }
         }
@@ -53,9 +58,9 @@ public class DownloadFileHandler implements FileHandler {
     }
 
     @Override
-    public Set<String> readAllEntriesOfType(ListType type) {
+    public Set<Long> readAllEntriesOfType(ListType type) {
         Path toLookInto = pathToLookInto(type);
-        Set<String> domains = new TreeSet<>();
+        Set<Long> domains = new HashSet<>();
         try (Stream<Path> list = Files.list(toLookInto)) {
             list.forEach(path -> {
                 log.debug("reading entries from {}", path);
@@ -71,6 +76,7 @@ public class DownloadFileHandler implements FileHandler {
         return (listType.equals(ListType.ALLOW)) ? (allowListPath) : (blockListPath);
     }
 
+    //this is just to delete files if they are removed from the yml between executinons
     private void cleanOldFiles(Path toClean, List<String> newFileNames) {
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(toClean)) {
             for (Path entry : stream) {

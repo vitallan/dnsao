@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.block;
 
 import com.allanvital.dnsao.dns.remote.DnsUtils;
+import com.allanvital.dnsao.utils.HashUtils;
 import com.allanvital.dnsao.utils.ThreadShop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +30,8 @@ public class BlockListProvider {
     private final List<String> allowListUrls;
     private final List<String> blockListUrl;
     private final FileHandler fileHandler;
-    private final AtomicReference<Set<String>> blockListRef = new AtomicReference<>(Set.of());
-    private final AtomicReference<Set<String>> allowListRef = new AtomicReference<>(Set.of());
+    private final AtomicReference<Set<Long>> blockListRef = new AtomicReference<>(Set.of());
+    private final AtomicReference<Set<Long>> allowListRef = new AtomicReference<>(Set.of());
 
     public BlockListProvider(List<String> allowListUrls, List<String> blockListUrl, FileHandler fileHandler) {
         this.allowListUrls = allowListUrls;
@@ -46,20 +47,20 @@ public class BlockListProvider {
         log.debug("running download and blockList update");
         fileHandler.downloadFiles(allowListUrls, ALLOW);
         fileHandler.downloadFiles(blockListUrl, BLOCK);
-        Set<String> allowList = new HashSet<>(fileHandler.readAllEntriesOfType(ALLOW));
-        Set<String> blockList = new HashSet<>(fileHandler.readAllEntriesOfType(BLOCK));
+        Set<Long> allowList = new HashSet<>(fileHandler.readAllEntriesOfType(ALLOW));
+        Set<Long> blockList = new HashSet<>(fileHandler.readAllEntriesOfType(BLOCK));
         blockList.removeAll(allowList);
 
         blockListRef.set(Collections.unmodifiableSet(blockList));
         allowListRef.set(Collections.unmodifiableSet(allowList));
     }
 
-    public Set<String> getBlockList() {
+    public Set<Long> getBlockList() {
         return blockListRef.get();
     }
 
     public boolean isBlocked(Name name) {
-        if (this.allowListRef.get().contains(DnsUtils.normalize(name))) {
+        if (this.allowListRef.get().contains(HashUtils.fnv1a64(DnsUtils.normalize(name)))) {
             return false;
         }
         return DnsUtils.isBlocked(name, this.blockListRef.get());

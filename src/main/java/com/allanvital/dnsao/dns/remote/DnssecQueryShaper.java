@@ -40,7 +40,7 @@ public class DnssecQueryShaper {
         List<Record> section = message.getSection(Section.ADDITIONAL);
         message.removeAllRecords(Section.ADDITIONAL);
         for (Record record : section) {
-            if (record instanceof  OPTRecord) {
+            if (record instanceof OPTRecord) {
                 continue;
             }
             message.addRecord(record, Section.ADDITIONAL);

@@ -15,14 +15,14 @@ import java.util.Set;
  */
 public class TestFileHandler implements FileHandler {
 
-    private Map<ListType, Set<String>> lists = new HashMap<>();
+    private Map<ListType, Set<Long>> lists = new HashMap<>();
 
     public TestFileHandler() {
         lists.put(ListType.BLOCK, getEntries("lists/blockList.txt"));
         lists.put(ListType.ALLOW, getEntries("lists/allowList.txt"));
     }
 
-    private Set<String> getEntries(String file) {
+    private Set<Long> getEntries(String file) {
         URL resource = getClass().getClassLoader().getResource(file);
         try {
             File f = new File(resource.toURI());
@@ -38,7 +38,7 @@ public class TestFileHandler implements FileHandler {
     }
 
     @Override
-    public Set<String> readAllEntriesOfType(ListType type) {
+    public Set<Long> readAllEntriesOfType(ListType type) {
         return lists.get(type);
     }
 }

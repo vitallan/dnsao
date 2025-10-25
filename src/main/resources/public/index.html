@@ -98,6 +98,9 @@
                 <div class="card" data-key="blocked">
                     <header class="card-header">
                         <p class="card-header-title">Blocked</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="blockedRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -120,6 +123,9 @@
                 <div class="card" data-key="local">
                     <header class="card-header">
                         <p class="card-header-title">Local</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="localRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -131,6 +137,9 @@
                 <div class="card" data-key="upstream">
                     <header class="card-header">
                         <p class="card-header-title">Upstream</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="upstreamRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -142,6 +151,9 @@
                 <div class="card" data-key="refused">
                     <header class="card-header">
                         <p class="card-header-title">Refused</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="refusedRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -153,6 +165,9 @@
                 <div class="card" data-key="servfail">
                     <header class="card-header">
                         <p class="card-header-title">Servfail</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="servFailRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -255,9 +270,31 @@
       try {
         const total = Number(summary.total || 0);
         const cache = Number(summary.cache || 0);
-        const rate = total > 0 ? Math.round((cache / total) * 100) : 0;
-        const tag = document.querySelector('[data-key="cacheRateTag"]');
-        if (tag) tag.textContent = rate + '%';
+        const blocked = Number(summary.blocked || 0);
+        const local = Number(summary.local || 0);
+        const upstream = Number(summary.upstream || 0);
+        const refused = Number(summary.refused || 0);
+        const servFail = Number(summary.refused || 0);
+
+        const cacheRate = total > 0 ? Math.round((cache / total) * 100) : 0;
+        const blockedRate = total > 0 ? Math.round((blocked / total) * 100) : 0;
+        const localRate = total > 0 ? Math.round((local / total) * 100) : 0;
+        const upstreamRate = total > 0 ? Math.round((upstream / total) * 100) : 0;
+        const refusedRate = total > 0 ? Math.round((refused / total) * 100) : 0;
+        const servFailRate = total > 0 ? Math.round((servFail / total) * 100) : 0;
+
+        const cacheTag = document.querySelector('[data-key="cacheRateTag"]');
+        if (cacheTag) cacheTag.textContent = cacheRate + '%';
+        const blockedTag = document.querySelector('[data-key="blockedRateTag"]');
+        if (blockedTag) blockedTag.textContent = blockedRate + '%';
+        const localTag = document.querySelector('[data-key="localRateTag"]');
+        if (localTag) localTag.textContent = localRate + '%';
+        const upstreamTag = document.querySelector('[data-key="upstreamRateTag"]');
+        if (upstreamTag) upstreamTag.textContent = upstreamRate + '%';
+        const refusedTag = document.querySelector('[data-key="refusedRateTag"]');
+        if (refusedTag) refusedTag.textContent = refusedRate + '%';
+        const servFailTag = document.querySelector('[data-key="servFailRateTag"]');
+        if (servFailTag) servFailTag.textContent = servFailRate + '%';
       } catch {}
     }
 

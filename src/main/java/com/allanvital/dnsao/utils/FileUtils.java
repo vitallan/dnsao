@@ -9,10 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
-import java.util.TreeSet;
-import java.util.stream.Stream;
 
 import static com.allanvital.dnsao.AppLoggers.INFRA;
 
@@ -25,8 +22,8 @@ public class FileUtils {
 
     public static final String COMMENT = "#";
 
-    public static Set<String> readFileEntries(Path file) {
-        Set<String> entries = new HashSet<>();
+    public static Set<Long> readFileEntries(Path file) {
+        Set<Long> entries = new HashSet<>();
         int count = 0;
         try (BufferedReader br = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
             String line;
@@ -36,7 +33,8 @@ public class FileUtils {
                     if (domain.endsWith(".")) {
                         domain = domain.substring(0, domain.length() - 1);
                     }
-                    entries.add(domain.toLowerCase());
+                    domain = domain.toLowerCase();
+                    entries.add(HashUtils.fnv1a64(domain));
                     count++;
                 }
             }

@@ -3,6 +3,7 @@ server:
   udpThreadPool: 10
   tcpThreadPool: 3
   webPort: 8044
+  httpThreadPool: 10
 
 cache:
   enabled: true

@@ -31,12 +31,12 @@ public class RewarmTask implements Delayed {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         RewarmTask that = (RewarmTask) o;
-        return triggerAtMs == that.triggerAtMs && Objects.equals(key, that.key);
+        return Objects.equals(key, that.key);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(key, triggerAtMs);
+        return Objects.hash(key);
     }
 
     @Override

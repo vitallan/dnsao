@@ -5,10 +5,12 @@ package com.allanvital.dnsao.conf.inner;
  */
 public class Upstream {
 
+    private String host;
+    private String path = "/dns-query";
     private String ip;
     private String tlsAuthName;
     private String protocol;
-    private int port;
+    private int port = 0;
 
     public String getTlsAuthName() {
         return tlsAuthName;
@@ -27,6 +29,9 @@ public class Upstream {
     }
 
     public String getIp() {
+        if (this.ip == null) {
+            return "9.9.9.9";
+        }
         return ip;
     }
 
@@ -42,9 +47,28 @@ public class Upstream {
         this.port = port;
     }
 
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
     @Override
     public String toString() {
-        return this.ip;
+        if (this.ip != null) {
+            return this.ip;
+        }
+        return this.host;
     }
 
 }

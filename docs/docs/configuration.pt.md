@@ -72,6 +72,7 @@ server:
   port: 53 
   udpThreadPool: 10
   tcpThreadPool: 3
+  httpThreadPool: 10
   webPort: 8044
 ```
 
@@ -82,9 +83,12 @@ A propriedade **server** define as propriedades de alto nível da aplicação.
 | **port**          | porta em que a aplicação escutará chamadas UDP e TCP, conforme os padrões de DNS. O padrão para servidores DNS é 53 |
 | **udpThreadPool** | quantas *threads* estarão disponíveis para o protocolo UDP, no **server**. O valor padrão é 10                      |
 | **tcpThreadPool** | quantas *threads* estarão disponíveis para o protocolo TCP, no **server**. O valor padrão é 3                       |
+| **httpThreadPool** | quantas *threads* estarão disponíveis para o protocolo HTTP, no **server**. O valod padrão é 10 |
 | **webPort**       | porta onde o dashboard de métricas ficará disponível. O padrão é 8044                                               |
 
-Na interface web você pode observar as métricas do servidor e buscar queries individualmente. O gráfico contém uma janela das últimas 24 horas dividida em segmentos de 10 minutos.
+Para queries http, o endpoint é **http://serverIp:webPort/dns-query**, seguindo os padrões de servidor dns via HTTP. Note que a resposta será em HTTP aberto, não em HTTPS. Essa é uma decisão consciente para evitar o manuseio de certificados TLS, de forma que o usuário possa usar os próprios certificados. Caso https seja desejado, é recomendado usar um proxy reverso que possibilite a comunicação remota a ocorrer via HTTPS (como traeffic ou nginx) e fazer o proxy reverso interno para **DNSao**.
+
+Na interface web **http://serverIp:webPort/** você pode observar as métricas do servidor e buscar queries individualmente. O gráfico contém uma janela das últimas 24 horas dividida em segmentos de 10 minutos.
 
 Os segmentos também são usados para conter os eventos de query buscáveis no endpoint */query*, porém, um máximo de 5000 queries será mantida em um dado segmento. Os totais e contadores terão o número correto, mas as queries não serão buscáveis na tabela de query.
 
@@ -164,6 +168,10 @@ Estas são as propriedades internas dentro de **upstreams**:
 | **port**        | Porta do servidor *upstream* a ser usada. Para UDP, a porta comum é 53; para DOT, a porta padrão é 853                                                                                                                                   |
 | **protocol**    | protocolos suportados: **udp** e **dot**                                                                                                                                                                                                 |
 | **tlsAuthName** | ao usar o protocolo **dot**, é necessário também definir **tlsAuthName** para validação do servidor remoto. Esse nome é verificado na inicialização e, se a verificação de autoridade falhar, o *upstream* é descartado e não será usado |
+| **host** | ao usar o protocolo **doh**, é necessário definir a propriedade **host**, para onde as queries serão enviadas via https |
+| **path** | ao usar o protocolo **doh**, é necessário definir a propriedade **path**, que será incluida ao final de **host**. Seu valor default é **/dns-query**  |
+
+Exemplos das configurações possíveis podem ser encontradas na pasta [config-samples no github](https://github.com/vitallan/dnsao/tree/main/config-samples). Diferentes tipos de upstream podem ser usados ao mesmo tempo contanto que as propriedades necessárias para cada protocolo estejam presentes.
 
 A propriedade **dnssec** define o comportamento de **DNSao** sobre as flags e validação *DNSSEC* , e tem o valor default de **simple**. Os valores válidos são **off, simple e rigid**. **DNSao** não executa a validação crypt para as flags e chaves, mas confia na resposta dos servidores upstream para definir seu comportamento.
 

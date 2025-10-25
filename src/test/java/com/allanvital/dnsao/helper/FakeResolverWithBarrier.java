@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.helper;
 
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import org.xbill.DNS.Message;
 
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class FakeResolverWithBarrier implements NamedResolver {
+public class FakeResolverWithBarrier implements UpstreamResolver {
 
     private final String expectedIp = "100.100.100.100";
 

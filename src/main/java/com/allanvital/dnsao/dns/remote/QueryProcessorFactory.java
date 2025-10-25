@@ -1,14 +1,13 @@
 package com.allanvital.dnsao.dns.remote;
 
-import com.allanvital.dnsao.block.BlockListProvider;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.resolver.NamedResolver;
+import com.allanvital.dnsao.conf.inner.ResolverConf;
+import com.allanvital.dnsao.dns.local.LocalResolver;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -18,33 +17,40 @@ public class QueryProcessorFactory {
 
     private final AtomicInteger index = new AtomicInteger(0);
     private final CacheManager cacheManager;
+    private final LocalResolver localResolver;
     private final int multiplier;
-    private final BlockListProvider blockListProvider;
-    private final Map<String, String> localMappings;
     private final DNSSecMode dnsSecMode;
 
-    private final List<NamedResolver> resolvers;
+    private final List<UpstreamResolver> resolvers;
 
-    public QueryProcessorFactory(List<NamedResolver> resolvers, CacheManager cacheManager, BlockListProvider blockListProvider, Map<String, String> localMappings, int multiplier, DNSSecMode dnsSecMode) {
+    public QueryProcessorFactory(List<UpstreamResolver> resolvers, CacheManager cacheManager, LocalResolver localResolver, ResolverConf conf) {
+        this(resolvers, cacheManager, localResolver, conf.getMultiplier(), conf.getDnsSecMode());
+    }
+
+    public QueryProcessorFactory(List<UpstreamResolver> resolvers, CacheManager cacheManager, LocalResolver localResolver, int multiplier, DNSSecMode dnsSecMode) {
         this.resolvers = resolvers;
         this.cacheManager = cacheManager;
-        this.blockListProvider = blockListProvider;
-        this.localMappings = localMappings;
+        this.localResolver = localResolver;
         this.multiplier = multiplier;
         this.dnsSecMode = dnsSecMode;
     }
 
     public QueryProcessor buildQueryProcessor() {
-        List<NamedResolver> paramResolvers = new LinkedList<>();
-        int maxResolvers = multiplier;
-        if (multiplier > resolvers.size()) {
-            maxResolvers = resolvers.size();
-        }
+        return new QueryProcessor(getResolvers(), cacheManager, localResolver, dnsSecMode);
+    }
+
+    public QueryProcessor buildCacheLessQueryProcessor() {
+        return new QueryProcessor(getResolvers(), null, localResolver, dnsSecMode);
+    }
+
+    private List<UpstreamResolver> getResolvers() {
+        List<UpstreamResolver> paramResolvers = new LinkedList<>();
+        int maxResolvers = Math.min(multiplier, resolvers.size());
         for (int i = 0; i < maxResolvers; i++) {
             int position = Math.abs(index.getAndIncrement() % resolvers.size());
             paramResolvers.add(resolvers.get(position));
         }
-        return new QueryProcessor(paramResolvers, cacheManager, blockListProvider, localMappings, dnsSecMode);
+        return paramResolvers;
     }
 
 }

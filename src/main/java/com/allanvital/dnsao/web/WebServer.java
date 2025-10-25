@@ -1,12 +1,24 @@
 package com.allanvital.dnsao.web;
 
+import com.allanvital.dnsao.dns.remote.QueryProcessor;
+import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
+import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
+import com.allanvital.dnsao.notification.NotificationManager;
+import com.allanvital.dnsao.notification.QueryEvent;
 import com.allanvital.dnsao.web.json.JsonBuilder;
 import io.javalin.Javalin;
+import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.UnknownHostException;
+import java.util.Objects;
+
 import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static java.net.InetAddress.getByName;
+import static java.util.Base64.getUrlDecoder;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -16,12 +28,18 @@ public class WebServer {
     private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private Javalin app;
-    private final int port;
+    private int port;
+    private final QueryProcessorFactory queryProcessorFactory;
+    private final int httpThreadPool;
     private final StatsCollector statsCollector = new StatsCollector();
     private final JsonBuilder builder = new JsonBuilder(statsCollector);
+    private static final String DNS_PATH = "/dns-query";
+    private static final String CONTENT_TYPE = "application/dns-message";
 
-    public WebServer(int port) {
+    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool) {
         this.port = port;
+        this.queryProcessorFactory = queryProcessorFactory;
+        this.httpThreadPool = httpThreadPool;
     }
 
     public void start() {
@@ -30,7 +48,12 @@ public class WebServer {
             return;
         }
         log.debug("starting web server on port {}", port);
+        QueuedThreadPool threadPool = new QueuedThreadPool();
+        threadPool.setName("web");
+        threadPool.setMaxThreads(httpThreadPool);
+        threadPool.setMinThreads(httpThreadPool);
         this.app = Javalin.create(cfg -> {
+            cfg.jetty.threadPool = threadPool;
             cfg.staticFiles.add(staticFiles -> {
                 staticFiles.hostedPath = "/";
                 staticFiles.directory = "/public";
@@ -52,10 +75,109 @@ public class WebServer {
                     builder.buildQueriesArray().toString()
             );
         });
+        
+        mapDnsEndpoints();
 
-        app.start(port);
+        this.app.start(port);
+        this.port = this.app.port();
 
         log.debug("web server running on port {}", port);
+    }
+
+    class ErrorResult {
+        int status;
+        String message;
+
+        public ErrorResult(int status, String message) {
+            this.status = status;
+            this.message = message;
+        }
+
+    }
+
+    private ErrorResult validateBasic(Context context, String parameter) {
+        String accept = context.header("accept");
+        if (accept != null && !accept.contains(CONTENT_TYPE)) {
+            return new ErrorResult(406, "non valid accept header");
+        }
+        if (parameter == null || parameter.isEmpty()) {
+            return new ErrorResult(400, "empty dns query");
+        }
+        return null;
+    }
+
+    private void mapDnsEndpoints() {
+        app.post(DNS_PATH, ctx -> {
+            ctx = ctx.contentType(CONTENT_TYPE);
+            String body = ctx.body();
+            ErrorResult errorResult = validateBasic(ctx, body);
+            if (errorResult != null) {
+                ctx.status(errorResult.status).result(errorResult.message);
+                return;
+            }
+            if (ctx.contentType() == null || !Objects.requireNonNull(ctx.contentType()).toLowerCase().startsWith(CONTENT_TYPE)) {
+                ctx.status(415).result("unsupported media type");
+                return;
+            }
+            byte[] requestBytes = ctx.bodyAsBytes();
+
+            processQueryAndSetResult(ctx, requestBytes);
+        });
+
+        app.get(DNS_PATH, ctx -> {
+            ctx = ctx.contentType(CONTENT_TYPE);
+            String encoded = ctx.queryParam("dns");
+            ErrorResult errorResult = validateBasic(ctx, encoded);
+            if (errorResult != null) {
+                ctx.status(errorResult.status).result(errorResult.message);
+                return;
+            }
+
+            byte[] requestBytes;
+            try {
+                requestBytes = getUrlDecoder().decode(encoded);
+            } catch (IllegalArgumentException e) {
+                ctx.status(400).result("invalid dns param");
+                return;
+            }
+
+            processQueryAndSetResult(ctx, requestBytes);
+
+        });
+    }
+
+    private void processQueryAndSetResult(Context ctx, byte[] request) throws UnknownHostException {
+        String ip = getIp(ctx);
+        long start = System.nanoTime();
+        QueryProcessor processor = queryProcessorFactory.buildQueryProcessor();
+        DnsQuery dnsQuery = processor.processQuery(getByName(ip), request);
+        byte[] responseBytes = dnsQuery.getMessageBytes();
+        long elapsedNanos = System.nanoTime() - start;
+        long elapsedMillis = elapsedNanos / 1_000_000;
+        buildAndFireQueryEvent(dnsQuery, elapsedMillis);
+
+        ctx.status(200).result(responseBytes);
+    }
+
+    private String getIp(Context context) {
+        String ip = context.header("X-Forwarded-For");
+        if (ip == null || ip.isBlank()) {
+            ip = context.header("X-Real-IP");
+        }
+        if (ip == null || ip.isBlank()) {
+            ip = context.req().getRemoteAddr();
+        }
+        return ip;
+    }
+
+    //todo: this is HACKY AS HELL. WebServer probably should inherit from ProtocolServer as well and be handled inside the DnsServer
+    protected void buildAndFireQueryEvent(DnsQuery query, long elapsedTime) {
+        QueryEvent queryEvent = new QueryEvent(query.getClient(), query.getResponse(), query.getSource(), query.getQueryResolvedBy(), elapsedTime);
+        NotificationManager.getInstance().notifyQuery(queryEvent);
+    }
+
+    public int getPort() {
+        return this.port;
     }
 
     public void stop() {

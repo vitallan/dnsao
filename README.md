@@ -20,7 +20,7 @@
 </p>
 
 
-**DNSao** is a multi-upstream DNS forwarder written in Java — featuring caching, DNS-over-TLS (DoT) support, and a built-in dashboard for real-time metrics.
+**DNSao** is a multi-upstream DNS forwarder written in Java — featuring caching, privacy-oriented DNS querying support (DoT and DoH), and a built-in dashboard for real-time metrics.
 
 > DNSao is currently under active development
 
@@ -30,12 +30,12 @@
 
 DNSao is designed to serve as a lightweight, configurable, and privacy-oriented DNS forwarder.  
 
-It handles both UDP and TCP queries, and supports modern encrypted upstreams (DoT), while maintaining a robust caching system and a simple web interface for live metrics.
+It handles UDP, TCP and HTTP queries, and supports modern encrypted upstreams (DoT/DoH), while maintaining a robust caching system and a simple web interface for live metrics.
 
 ### Current Features
 
-- Answers both UDP and TCP for local DNS queries
-- Multiple upstream DNS resolvers (UDP/DoT)
+- Answers UDP, TCP and HTTP for local DNS queries
+- Multiple upstream DNS resolvers (UDP/DoT/DoH)
 - TTL-aware caching system with asynchronous rewarm
 - DNSSEC aware with configurable policies
 - Query logging (optional)

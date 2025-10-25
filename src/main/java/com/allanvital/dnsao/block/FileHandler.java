@@ -9,6 +9,6 @@ import java.util.Set;
 public interface FileHandler {
 
     void downloadFiles(List<String> urls, ListType type);
-    Set<String> readAllEntriesOfType(ListType type);
+    Set<Long> readAllEntriesOfType(ListType type);
 
 }
