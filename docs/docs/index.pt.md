@@ -62,4 +62,95 @@ Todo o código está disponível no [Github](https://github.com/vitallan/dnsao) 
 [Aprenda a instalar e usar!](installation.pt.md){ .md-button .md-button--primary }
 {: style="text-align:center" }
 
+## Benchmarks
+
+Benchmarks de DNS podem ser um pouco injustos, porque depois da rajada inicial de chamadas e de todos os domínios estarem cacheados, é só um exercício de quão rápido o processador pode pegar algo da memória e empacotar corretamente o retorno, mas algumas pessoas podem achar necessário, então aqui seguem dois exemplos de testes usando **dnsperf** com uma lista de 250 domínios.
+
+Primeiro rodando em um LXC usando um core de um processador recente (i5-12400) onde acessando 10000 queries por segundo resulta em 100% de sucesso:
+
+```
+avital@texugo:~/temp$ dnsperf -s dnsao1.intranet -d domains.txt -l 1200 -Q 10000
+DNS Performance Testing Tool
+Version 2.14.0
+
+[Status] Command line: dnsperf -s dnsao1.intranet -d domains.txt -l 1200 -Q 10000
+[Status] Sending queries (to 192.168.68.128:53)
+[Status] Started at: Sat Oct 25 10:30:23 2025
+[Status] Stopping after 1200.000000 seconds
+[Status] Testing complete (time limit)
+
+Statistics:
+
+  Queries sent:         11997016
+  Queries completed:    11997016 (100.00%)
+  Queries lost:         0 (0.00%)
+
+  Response codes:       NOERROR 10993096 (91.63%), NXDOMAIN 1003920 (8.37%)
+  Average packet size:  request 30, response 267
+  Run time (s):         1200.000091
+  Queries per second:   9997.512575
+
+  Average Latency (s):  0.000414 (min 0.000093, max 0.503841)
+  Latency StdDev (s):   0.001498
+```
+
+E os dois abaixo usando um raspberry pi 3, com a mesma lista de domínios. Batendo na marca de 100 queries por segundo, ele começa a mostrar alguma limitação:
+
+```
+avital@texugo:~/temp$ dnsperf -s dnsao2.intranet -d domains.txt -l 1200 -Q 50
+DNS Performance Testing Tool
+Version 2.14.0
+
+[Status] Command line: dnsperf -s dnsao2.intranet -d domains.txt -l 1200 -Q 50
+[Status] Sending queries (to 192.168.15.50:53)
+[Status] Started at: Sat Oct 25 12:28:45 2025
+[Status] Stopping after 1200.000000 seconds
+[Status] Testing complete (time limit)
+
+Statistics:
+
+  Queries sent:         60000
+  Queries completed:    60000 (100.00%)
+  Queries lost:         0 (0.00%)
+
+  Response codes:       NOERROR 51968 (86.61%), NXDOMAIN 8032 (13.39%)
+  Average packet size:  request 30, response 297
+  Run time (s):         1200.000098
+  Queries per second:   49.999996
+
+  Average Latency (s):  0.004377 (min 0.001777, max 0.258354)
+  Latency StdDev (s):   0.004117
+  
+
+avital@texugo:~/temp$ dnsperf -s dnsao2.intranet -d domains.txt -l 1200 -Q 100
+DNS Performance Testing Tool
+Version 2.14.0
+
+[Status] Command line: dnsperf -s dnsao2.intranet -d domains.txt -l 1200 -Q 100
+[Status] Sending queries (to 192.168.15.50:53)
+[Status] Started at: Sat Oct 25 12:54:28 2025
+[Status] Stopping after 1200.000000 seconds
+Warning: received a response with an unexpected (maybe timed out) id: 24603
+[Timeout] Query timed out: msg id 24602
+[Timeout] Query timed out: msg id 11636
+[Status] Testing complete (time limit)
+
+Statistics:
+
+  Queries sent:         120000
+  Queries completed:    119998 (100.00%)
+  Queries lost:         2 (0.00%)
+
+  Response codes:       NOERROR 103934 (86.61%), NXDOMAIN 16064 (13.39%)
+  Average packet size:  request 30, response 276
+  Run time (s):         1200.000090
+  Queries per second:   99.998326
+
+  Average Latency (s):  0.004140 (min 0.001823, max 0.184822)
+  Latency StdDev (s):   0.002594
+```
+
+[Aprenda a instalar e usar!](installation.pt.md){ .md-button .md-button--primary }
+{: style="text-align:center" }
+
 <div style="margin-bottom: 60px;"></div>
