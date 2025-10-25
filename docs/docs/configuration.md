@@ -150,12 +150,12 @@ resolver:
     - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 ```
 
-The **resolver** property defines the upstreams to be queried. You must specify the IP, port, and protocol (“dot” or “udp”). These are the top level properties:
+The **resolver** property defines the upstreams to be queried. You must specify the necessary configs for each protocol ("dot", "doh" or "udp"). These are the top level properties:
 
 | Property | Description |
 |---------|------------|
 | **tlsPoolSize** | the maximum pool size for DOT connections per upstream. Using a pool improves performance since the TLS handshake is costly, but increasing it excessively won’t necessarily improve speed — a single connection can serve multiple requests and stale connections are discarded by the upstream |
-| **multiplier** | how many upstreams each query will be sent to. **DNSao** uses the fastest response and discards the others. There’s a trade-off between speed and privacy: the more upstreams queried per request, the more servers will see your DNS queries. If privacy is the main goal, set the multiplier to 1 and use DOT upstreams. |
+| **multiplier** | how many upstreams each query will be sent to. **DNSao** uses the fastest response and discards the others. There’s a trade-off between speed and privacy: the more upstreams queried per request, the more servers will see your DNS queries. If privacy is the main goal, set the multiplier to 1 and use DOT or DOH upstreams. |
 
 These are the inner properties for the "upstreams" property.
 

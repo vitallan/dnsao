@@ -152,12 +152,12 @@ resolver:
     - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 ```
 
-A propriedade **resolver** define os *upstreams* que serão consultados. Você deve especificar IP, porta e protocolo (“dot” ou “udp”). Estas são as propriedades de alto nível:
+A propriedade **resolver** define os *upstreams* que serão consultados. Você deve especificar as configs respectivas para cada protocolo ("dot", "doh" ou "udp"). Estas são as propriedades de alto nível:
 
 | Propriedade     | Descrição                                                                                                                                                                                                                                                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **tlsPoolSize** | tamanho máximo do *pool* de conexões DOT por *upstream*. Usar *pool* melhora a performance, já que o *handshake* TLS é custoso, mas aumentá-lo demais não trará necessariamente mais velocidade — uma única conexão pode servir múltiplas requisições e conexões stale são descartadas pelo *upstream*                     |
-| **multiplier**  | oara quantos *upstreams* cada query será enviada. O **DNSao** usa a resposta mais rápida e descarta as demais. Há um *trade-off* entre velocidade e privacidade: quanto mais *upstreams* por requisição, mais servidores verão suas queries. Se privacidade é o principal objetivo, defina *multiplier* como 1 e use *upstreams* DOT. |
+| **multiplier**  | para quantos *upstreams* cada query será enviada. O **DNSao** usa a resposta mais rápida e descarta as demais. Há um *trade-off* entre velocidade e privacidade: quanto mais *upstreams* por requisição, mais servidores verão suas queries. Se privacidade é o principal objetivo, defina *multiplier* como 1 e use *upstreams* DOT ou DOH. |
 
 Estas são as propriedades internas dentro de **upstreams**:
 
