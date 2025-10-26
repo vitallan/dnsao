@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.remote.resolver.doh;
 
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
+import com.allanvital.dnsao.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -85,7 +86,9 @@ public class DOHUpstreamResolver implements UpstreamResolver {
             }
             return new Message(body);
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            Throwable rootCause = ExceptionUtils.findRootCause(e);
+            log.debug("query to {} failed: {}", query.getQuestion().getName(), rootCause.getMessage());
+            return null;
         } finally {
             semaphore.release();
         }
