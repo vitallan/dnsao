@@ -20,7 +20,7 @@
 </p>
 
 
-**DNSao** is a multi-upstream DNS forwarder written in Java — featuring caching, privacy-oriented DNS querying support (DoT and DoH), and a built-in dashboard for real-time metrics.
+**DNSao** is a multi-upstream DNS forwarder written in Java, featuring caching, privacy-oriented DNS querying support (DoT and DoH), and a built-in dashboard for real-time metrics.
 
 > DNSao is currently under active development
 
