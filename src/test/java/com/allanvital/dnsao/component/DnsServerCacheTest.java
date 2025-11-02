@@ -59,8 +59,8 @@ public class DnsServerCacheTest extends TestHolder {
         for (int i = 0; i < 10; i++) {
             doRequest(resolver, domain1);
         }
-        Assertions.assertEquals(4, fakeDnsServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 13);
+        Assertions.assertEquals(4, fakeDnsServer.getCallCount());
     }
 
     @Test
