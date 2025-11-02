@@ -94,36 +94,36 @@ jobs:
           echo "jar_with_version=$JAR_WITH_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build release body (human summary + diff link)
-          id: body
-          shell: bash
-          run: |
-            set -euo pipefail
-            TAG="${{ steps.ver.outputs.tag }}"
-            VERSION="${{ steps.ver.outputs.version }}"
-            PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-            BODY_FILE="$RUNNER_TEMP/release_body.md"
+        id: body
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          VERSION="${{ steps.ver.outputs.version }}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          BODY_FILE="$RUNNER_TEMP/release_body.md"
 
-            {
-              echo "## DNSao ${VERSION}"
+          {
+            echo "## DNSao ${VERSION}"
+            echo
+            echo "### Highlights"
+            echo
+            if [ -n "${PREV_TAG}" ]; then
+              echo "### Changes since ${PREV_TAG}"
+              echo "- Compare: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
               echo
-              echo "### Highlights"
+              echo "#### Commits"
+              git log --pretty=format:'- %h %s%n%b%n' "${PREV_TAG}..${TAG}"
               echo
-              if [ -n "${PREV_TAG}" ]; then
-                echo "### Changes since ${PREV_TAG}"
-                echo "- Compare: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
-                echo
-                echo "#### Commits"
-                git log --pretty=format:'- %h %s%n%b%n' "${PREV_TAG}..${TAG}"
-                echo
-              else
-                echo "### First release on this tag"
-                echo "- Commits on this tag:"
-                git log --pretty=format:'- %h %s%n%b%n' "${TAG}"
-                echo
-              fi
-            } > "$BODY_FILE"
+            else
+              echo "### First release on this tag"
+              echo "- Commits on this tag:"
+              git log --pretty=format:'- %h %s%n%b%n' "${TAG}"
+              echo
+            fi
+          } > "$BODY_FILE"
 
-            echo "release_body=$BODY_FILE" >> "$GITHUB_OUTPUT"
+          echo "release_body=$BODY_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
