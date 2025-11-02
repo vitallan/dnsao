@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.utils;
 
+import com.allanvital.dnsao.infra.clock.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -36,7 +37,7 @@ public class DownloadUtils {
 
         if (Files.exists(target)) {
             long eightHours = 8 * 60 * 60 * 1000L;
-            long now = System.currentTimeMillis();
+            long now = Clock.currentTimeInMillis();
             long lastModified = target.toFile().lastModified();
             boolean isOlderThanEightHours = (now - lastModified) > eightHours;
             if (!isOlderThanEightHours) {

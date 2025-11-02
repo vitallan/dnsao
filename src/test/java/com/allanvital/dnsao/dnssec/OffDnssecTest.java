@@ -1,8 +1,8 @@
 package com.allanvital.dnsao.dnssec;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.helper.MessageUtils;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Flags;
@@ -23,8 +23,8 @@ public class OffDnssecTest extends DnssecTest {
 
     @Test
     void shouldAcceptNoerrorWithoutAD_evenIfClientAskedDnssec() throws Exception {
-        Message request = MessageUtils.buildARequest(domain, true);
-        Message response = MessageUtils.buildAResponse(request, responseIp, 300, false);
+        Message request = MessageHelper.buildARequest(domain, true);
+        Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
         fakeDnsServer.mockResponse(request, response);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
@@ -32,29 +32,29 @@ public class OffDnssecTest extends DnssecTest {
 
         assertEquals(Rcode.NOERROR, processed.getRcode());
         assertFalse(processed.getHeader().getFlag(Flags.AD), "OFF não exige AD; aceita sem AD");
-        String ip = MessageUtils.extractIpFromResponseMessage(processed);
+        String ip = MessageHelper.extractIpFromResponseMessage(processed);
         assertEquals(this.responseIp, ip);
     }
 
     @Test
-    void shouldPassThroughAD_whenUpstreamValidated() throws Exception {
-        Message request = MessageUtils.buildARequest(domain);
-        Message response = MessageUtils.buildAResponse(request, responseIp, 300, true);
+    void shouldNotPassThroughAD_whenUpstreamValidated() throws Exception {
+        Message request = MessageHelper.buildARequest(domain);
+        Message response = MessageHelper.buildAResponse(request, responseIp, 300, true);
         fakeDnsServer.mockResponse(request, response);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
 
         assertEquals(Rcode.NOERROR, processed.getRcode());
-        assertTrue(processed.getHeader().getFlag(Flags.AD));
-        String ip = MessageUtils.extractIpFromResponseMessage(processed);
+        assertFalse(processed.getHeader().getFlag(Flags.AD));
+        String ip = MessageHelper.extractIpFromResponseMessage(processed);
         assertEquals(this.responseIp, ip);
     }
 
     @Test
     void shouldAcceptNxdomainWithoutAD() throws Exception {
-        Message request = MessageUtils.buildARequest("doesnotexist." + domain, true);
-        Message nxdomain = MessageUtils.buildNxdomainResponseFrom(request, false);
+        Message request = MessageHelper.buildARequest("doesnotexist." + domain, true);
+        Message nxdomain = MessageHelper.buildNxdomainResponseFrom(request, false);
         fakeDnsServer.mockResponse(request, nxdomain);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
@@ -66,8 +66,8 @@ public class OffDnssecTest extends DnssecTest {
 
     @Test
     void shouldPropagateServfail() throws Exception {
-        Message request = MessageUtils.buildARequest(domain, true);
-        Message servfail = MessageUtils.buildServfailFrom(request);
+        Message request = MessageHelper.buildARequest(domain, true);
+        Message servfail = MessageHelper.buildServfailFrom(request);
         fakeDnsServer.mockResponse(request, servfail);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());

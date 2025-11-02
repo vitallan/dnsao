@@ -1,8 +1,8 @@
 package com.allanvital.dnsao.dnssec;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.helper.MessageUtils;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,9 +35,9 @@ public class SimpleDnssecTest extends DnssecTest {
 
     @Test
     void simpleShouldAcceptNoerrorWithoutADAndPropagateWithoutAD() throws Exception {
-        Message request = MessageUtils.buildARequest(domain, true);
+        Message request = MessageHelper.buildARequest(domain, true);
 
-        Message response = MessageUtils.buildAResponse(request, responseIp, 300, false);
+        Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
         fakeDnsServer.mockResponse(request, response);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
@@ -45,15 +45,15 @@ public class SimpleDnssecTest extends DnssecTest {
 
         assertEquals(Rcode.NOERROR, processed.getRcode());
         assertFalse(processed.getHeader().getFlag(Flags.AD));
-        String ip = MessageUtils.extractIpFromResponseMessage(processed);
+        String ip = MessageHelper.extractIpFromResponseMessage(processed);
         Assertions.assertEquals(this.responseIp, ip);
     }
 
     @Test
     void shouldAcceptNxdomainWithoutAD() throws Exception {
-        Message request = MessageUtils.buildARequest("doesnotexist." + domain, true);
+        Message request = MessageHelper.buildARequest("doesnotexist." + domain, true);
 
-        Message nxdomain = MessageUtils.buildNxdomainResponseFrom(request, false);
+        Message nxdomain = MessageHelper.buildNxdomainResponseFrom(request, false);
         fakeDnsServer.mockResponse(request, nxdomain);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
@@ -65,8 +65,8 @@ public class SimpleDnssecTest extends DnssecTest {
 
     @Test
     void shouldReturnSERVFAILWhenUpstreamSignalsBogus() throws Exception {
-        Message request = MessageUtils.buildARequest(domain, true);
-        Message servfail = MessageUtils.buildServfailFrom(request);
+        Message request = MessageHelper.buildARequest(domain, true);
+        Message servfail = MessageHelper.buildServfailFrom(request);
         fakeDnsServer.mockResponse(request, servfail);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());

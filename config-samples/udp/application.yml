@@ -11,6 +11,12 @@ cache:
   rewarm: true
   maxRewarmCount: 5
 
+misc:
+  timeout: 3
+  refreshLists: false
+  serveExpired: false
+  dnssec: off
+
 resolver:
   tlsPoolSize: 5
   multiplier: 3
@@ -33,7 +39,6 @@ resolver:
     - ip: "8.8.4.4"
       port: 53
       protocol: "udp" 
-    
 
   localMappings:
 

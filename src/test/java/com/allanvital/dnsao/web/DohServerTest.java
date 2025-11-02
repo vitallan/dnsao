@@ -1,14 +1,8 @@
 package com.allanvital.dnsao.web;
 
 import com.allanvital.dnsao.TestHolder;
-import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
-import com.allanvital.dnsao.dns.remote.ResolverFactory;
-import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPool;
-import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolManager;
 import com.allanvital.dnsao.exc.ConfException;
-import com.allanvital.dnsao.helper.MessageUtils;
-import com.allanvital.dnsao.notification.EventType;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,8 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Base64;
 
-import static com.allanvital.dnsao.conf.inner.DNSSecMode.SIMPLE;
-import static com.allanvital.dnsao.notification.EventType.QUERY_RESOLVED;
+import static com.allanvital.dnsao.infra.notification.EventType.QUERY_RESOLVED;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -29,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class DohServerTest extends TestHolder {
 
-    private WebServer webServer;
     private String domain = "example.com";
     private String responseIp = "5.5.5.5";
     private HttpClient client;
@@ -37,17 +29,12 @@ public class DohServerTest extends TestHolder {
 
     @BeforeEach
     public void before() throws ConfException {
-        super.loadConf("1udp-upstream-cache-web.yml", false);
-        super.startFakeDnsServer();
+        safeStart("1udp-upstream-cache-web.yml");
         super.prepareSimpleMockResponse(domain, responseIp, 10000);
-        ResolverFactory resolverFactory = new ResolverFactory(null, conf.getUpstreams());
-        QueryProcessorFactory queryProcessorFactory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, 1, SIMPLE);
-        webServer = new WebServer(conf.getServer().getWebPort(), queryProcessorFactory, 10);
-        webServer.start();
         client = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
-        query = MessageUtils.buildARequest("example.com");
+        query = MessageHelper.buildARequest("example.com");
     }
 
     @Test
@@ -56,7 +43,7 @@ public class DohServerTest extends TestHolder {
         HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
         assertHttp(response, 200);
         Message answer = new Message(response.body());
-        String responseIp = MessageUtils.extractIpFromResponseMessage(answer);
+        String responseIp = MessageHelper.extractIpFromResponseMessage(answer);
         assertEquals(this.responseIp, responseIp);
         eventListener.assertCount(QUERY_RESOLVED, 1);
     }
@@ -67,7 +54,7 @@ public class DohServerTest extends TestHolder {
         HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
         assertHttp(response, 200);
         Message answer = new Message(response.body());
-        String responseIp = MessageUtils.extractIpFromResponseMessage(answer);
+        String responseIp = MessageHelper.extractIpFromResponseMessage(answer);
         assertEquals(this.responseIp, responseIp);
         eventListener.assertCount(QUERY_RESOLVED, 1);
     }
@@ -99,7 +86,7 @@ public class DohServerTest extends TestHolder {
         HttpResponse<byte[]> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofByteArray());
         assertHttp(response, 200);
         Message answer = new Message(response.body());
-        assertEquals(this.responseIp, MessageUtils.extractIpFromResponseMessage(answer));
+        assertEquals(this.responseIp, MessageHelper.extractIpFromResponseMessage(answer));
         eventListener.assertCount(QUERY_RESOLVED, 1);
     }
 
@@ -122,7 +109,7 @@ public class DohServerTest extends TestHolder {
 
     private HttpRequest buildPostRequest(Message query, String contentType, String accept) {
         return HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + webServer.getPort() + "/dns-query"))
+                .uri(URI.create("http://127.0.0.1:" + dnsServer.getHttpPort() + "/dns-query"))
                 .header("Content-Type", contentType)
                 .header("Accept", accept)
                 .POST(HttpRequest.BodyPublishers.ofByteArray((query == null) ? (new byte[0]) : (query.toWire())))
@@ -135,17 +122,15 @@ public class DohServerTest extends TestHolder {
             b64 = "";
         }
         return HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + webServer.getPort() + "/dns-query" + b64))
+                .uri(URI.create("http://127.0.0.1:" + dnsServer.getHttpPort() + "/dns-query" + b64))
                 .header("Accept", "application/dns-message")
                 .GET()
                 .build();
     }
 
     @AfterEach
-    public void tearDown() {
-        super.stopFakeDnsServer();
-        webServer.stop();
-        eventListener.reset();
+    public void tearDown() throws InterruptedException {
+        safeStop();
     }
 
 }

@@ -24,6 +24,13 @@ cache:
   rewarm: true
   maxRewarmCount: 5
 
+misc:
+  timeout: 3
+  refreshLists: false
+  serveExpired: false
+  serveExpiredMax: 86400
+  dnssec: "simple"
+
 resolver:
   tlsPoolSize: 5
   multiplier: 3
@@ -111,13 +118,45 @@ A propriedade **cache** define o comportamento do cache da aplicação. O cache 
 | **rewarm**          | habilita o mecanismo de “cache rewarm”: quando uma entrada de cache está perto do fim do seu TTL, uma tentativa de atualização é feita automaticamente. O padrão é **true**                                                                                                                                                                                      |
 | **maxRewarmCount**  | quantas vezes o **DNSao** fará *rewarm* da entrada antes de removê-la da memória. Se chegar uma query para um domínio no cache “warm”, essa entrada é promovida para o cache “hot” e o contador de *rewarm* é reiniciado. Isso garante que domínios acessados com frequência permaneçam disponíveis, melhorando a performance da resolução DNS. O padrão é **5** |
 
+### misc 
+
+```yaml
+misc:
+  timeout: 3
+  refreshLists: false
+  serveExpired: false
+  serveExpiredMax: 86400
+  dnssec: "simple"
+```
+
+A propriedade **misc** define mecanismos de funcionamento geral do servidor.
+
+| Property | Description |
+|---------|------------|
+| **timeout** | timeout global em segundos para as queries upstream |
+| **refreshLists** | true/false, default é false. Quando habilitado o servidor irá refazer o download das listas de *allow* e *block* periodicamente para atualizar seus valores. Se muitas listas forem usadas, isso pode causar um aumento no consumo de memória. Aloque mais memória caso deseje habilitar a função |
+| **serveExpired** | true/false, default é false. Aderindo a dns rfc8767, quando habilitado, **DNSao** servirá entradas que já expiraram quando nenhuma consulta upstream resultar em uma resposta definitiva (timeout, SERVFAIL ou REFUSED) para maximizar disponibilidade DNS  |
+| **serveExpiredMax** | default é 86400 (um dia). Quando **serveExpired** está habilitado, esse é o tempo máximo de segundos que uma entrada do cache local resultará em sucesso antes da entrada ser considerada expirada e removida |
+| **dnssec** | Define o funcionamento geral sobre DNSSEC do servidor. Mais detalhes na tabela abaixo. O valor default é **simple** |
+
+#### dnssec
+
+A propriedade **dnssec** define o comportamento de **DNSao** sobre as flags e validação *DNSSEC* , e tem o valor default de **simple**. Os valores válidos são **off, simple e rigid**. **DNSao** não executa a validação crypt para as flags e chaves, mas confia na resposta dos servidores upstream para definir seu comportamento.
+
+| Level | Description |
+| ----- | ----------- |
+| **off** | a requisição do cliente será enviada para os upstreams sem manipulação das flags DNSSEC. **DNSao** não irá validar se a resposta tem validação DNSSEC antes de retornar ao cliente |
+| **simple** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** irá responder ao cliente transmitindo as flags DNSSEC respondidas pelo upstream, validadas ou não, mas não bloqueará as respostas não validadas. A query também terá um *padding* para o próximo tamanho multiplo de 128 bytes para permitir ofuscação extra, seguindo dns rfc7830 |
+| **rigid** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** só responderá ao cliente se a resposta possuir a flag DNSSEC disponível e válida. Caso contrário, será respondido um **SERVFAIL**. A query também terá *pading*, mas para o tamanho máximo permitido no pacote que será enviado ao upstream para máxima ofuscação. *Atenção: isso irá bloquear vários domínios, visto que muitos deles não possuem DNSSEC habilitado* |
+
+Independente da resposta do upstream, **DNSao** não habilita a flag *AD* na resposta, pois não executa as validações dos hashs internamente (necessário pela dns rfc4035 3.2.3)
+
 ### resolver
 
 ```yaml
 resolver:
   tlsPoolSize: 5
   multiplier: 3
-  dnssec: "simple"
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -172,14 +211,6 @@ Estas são as propriedades internas dentro de **upstreams**:
 | **path** | ao usar o protocolo **doh**, é necessário definir a propriedade **path**, que será incluida ao final de **host**. Seu valor default é **/dns-query**  |
 
 Exemplos das configurações possíveis podem ser encontradas na pasta [config-samples no github](https://github.com/vitallan/dnsao/tree/main/config-samples). Diferentes tipos de upstream podem ser usados ao mesmo tempo contanto que as propriedades necessárias para cada protocolo estejam presentes.
-
-A propriedade **dnssec** define o comportamento de **DNSao** sobre as flags e validação *DNSSEC* , e tem o valor default de **simple**. Os valores válidos são **off, simple e rigid**. **DNSao** não executa a validação crypt para as flags e chaves, mas confia na resposta dos servidores upstream para definir seu comportamento.
-
-| Level | Description |
-| ----- | ----------- |
-| **off** | a requisição do cliente será enviada para os upstreams sem manipulação das flags DNSSEC. **DNSao** não irá validar se a resposta tem validação DNSSEC antes de retornar ao cliente |
-| **simple** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** irá responder ao cliente transmitindo as flags DNSSEC respondidas pelo upstream, validadas ou não, mas não bloqueará as respostas não validadas |
-| **rigid** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** só responderá ao cliente se a resposta possuir a flag DNSSEC disponível e válida. Caso contrário, será respondido um **SERVFAIL**. *Atenção: isso irá bloquear vários domínios, visto que muitos deles não possuem DNSSEC habilitado* |
 
 Também é possível definir **localMappings**: entradas de DNS que serão resolvidas diretamente pelo **DNSao**.
 

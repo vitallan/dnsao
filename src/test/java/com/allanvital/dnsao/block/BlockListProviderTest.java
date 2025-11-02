@@ -1,8 +1,8 @@
 package com.allanvital.dnsao.block;
 
+import com.allanvital.dnsao.dns.block.BlockListProvider;
+import com.allanvital.dnsao.graph.bean.TestFileHandler;
 import com.allanvital.dnsao.utils.HashUtils;
-import com.sun.source.tree.AssertTree;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Name;
@@ -25,7 +25,7 @@ public class BlockListProviderTest {
         List<String> allowUrls = List.of("url1");
         List<String> blockUrls = List.of("url2");
         testFileHandler = new TestFileHandler();
-        blockListProvider = new BlockListProvider(allowUrls, blockUrls, testFileHandler);
+        blockListProvider = new BlockListProvider(null, allowUrls, blockUrls, testFileHandler, false);
     }
 
     @Test
@@ -38,6 +38,10 @@ public class BlockListProviderTest {
         assertTrue(blockListProvider.isBlocked(Name.fromString("another.blocked.one")));
         assertTrue(blockListProvider.isBlocked(Name.fromString("www.another.blocked.one")));
         assertFalse(blockListProvider.isBlocked(Name.fromString("this.should.be.enabled")));
+
+        assertTrue(blockListProvider.isBlocked(Name.fromString("betano.com.")));
+        assertTrue(blockListProvider.isBlocked(Name.fromString("www.betano.com.")));
+        assertFalse(blockListProvider.isBlocked(Name.fromString("soubetano.com.")));
     }
 
     @Test

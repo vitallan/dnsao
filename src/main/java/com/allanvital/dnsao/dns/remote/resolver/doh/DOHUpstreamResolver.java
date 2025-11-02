@@ -2,7 +2,6 @@ package com.allanvital.dnsao.dns.remote.resolver.doh;
 
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import com.allanvital.dnsao.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -17,7 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -86,8 +85,7 @@ public class DOHUpstreamResolver implements UpstreamResolver {
             }
             return new Message(body);
         } catch (InterruptedException e) {
-            Throwable rootCause = ExceptionUtils.findRootCause(e);
-            log.debug("query to {} failed: {}", query.getQuestion().getName(), rootCause.getMessage());
+            log.debug("request discarded because other returned faster {}", query.getQuestion().getName());
             return null;
         } finally {
             semaphore.release();

@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.cache.rewarm;
 
+import com.allanvital.dnsao.infra.clock.Clock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -41,7 +42,7 @@ public class RewarmTask implements Delayed {
 
     @Override
     public long getDelay(@NotNull TimeUnit unit) {
-        long delayMs = triggerAtMs - System.currentTimeMillis();
+        long delayMs = triggerAtMs - Clock.currentTimeInMillis();
         return unit.convert(delayMs, TimeUnit.MILLISECONDS);
     }
 

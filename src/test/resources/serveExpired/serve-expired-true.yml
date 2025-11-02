@@ -1,0 +1,3 @@
+misc:
+  serveExpired: true
+  serveExpiredMax: 1

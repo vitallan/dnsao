@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.stats;
 
-import com.allanvital.dnsao.notification.QueryEvent;
-import com.allanvital.dnsao.notification.QueryResolvedBy;
+import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.StatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,8 +14,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 import static com.allanvital.dnsao.TestHolder.t;
-import static com.allanvital.dnsao.notification.QueryResolvedBy.CACHE;
-import static com.allanvital.dnsao.notification.QueryResolvedBy.UPSTREAM;
+import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.CACHE;
+import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

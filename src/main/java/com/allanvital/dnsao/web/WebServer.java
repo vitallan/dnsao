@@ -1,10 +1,8 @@
 package com.allanvital.dnsao.web;
 
-import com.allanvital.dnsao.dns.remote.QueryProcessor;
-import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.notification.NotificationManager;
-import com.allanvital.dnsao.notification.QueryEvent;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.dns.processor.QueryProcessor;
+import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.web.json.JsonBuilder;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -16,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import java.net.UnknownHostException;
 import java.util.Objects;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static java.net.InetAddress.getByName;
 import static java.util.Base64.getUrlDecoder;
 
@@ -35,6 +33,7 @@ public class WebServer {
     private final JsonBuilder builder = new JsonBuilder(statsCollector);
     private static final String DNS_PATH = "/dns-query";
     private static final String CONTENT_TYPE = "application/dns-message";
+    private boolean running = false;
 
     public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool) {
         this.port = port;
@@ -82,6 +81,11 @@ public class WebServer {
         this.port = this.app.port();
 
         log.debug("web server running on port {}", port);
+        running = true;
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     class ErrorResult {
@@ -148,13 +152,9 @@ public class WebServer {
 
     private void processQueryAndSetResult(Context ctx, byte[] request) throws UnknownHostException {
         String ip = getIp(ctx);
-        long start = System.nanoTime();
         QueryProcessor processor = queryProcessorFactory.buildQueryProcessor();
         DnsQuery dnsQuery = processor.processQuery(getByName(ip), request);
         byte[] responseBytes = dnsQuery.getMessageBytes();
-        long elapsedNanos = System.nanoTime() - start;
-        long elapsedMillis = elapsedNanos / 1_000_000;
-        buildAndFireQueryEvent(dnsQuery, elapsedMillis);
 
         ctx.status(200).result(responseBytes);
     }
@@ -170,12 +170,6 @@ public class WebServer {
         return ip;
     }
 
-    //todo: this is HACKY AS HELL. WebServer probably should inherit from ProtocolServer as well and be handled inside the DnsServer
-    protected void buildAndFireQueryEvent(DnsQuery query, long elapsedTime) {
-        QueryEvent queryEvent = new QueryEvent(query.getClient(), query.getResponse(), query.getSource(), query.getQueryResolvedBy(), elapsedTime);
-        NotificationManager.getInstance().notifyQuery(queryEvent);
-    }
-
     public int getPort() {
         return this.port;
     }
@@ -185,6 +179,7 @@ public class WebServer {
         if (app != null) {
             app.stop();
         }
+        running = false;
         log.debug("web server stopped");
     }
 

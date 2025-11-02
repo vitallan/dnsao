@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -59,7 +59,7 @@ public class UdpUpstreamResolver extends SimpleResolver implements UpstreamResol
                 return null;
             }
             Throwable rootCause = ExceptionUtils.findRootCause(e);
-            log.error("query to {}  failed: {}", name, rootCause.getMessage());
+            log.error("query to {} failed: {}", name, rootCause.getMessage());
             return null;
         }
     }

@@ -18,7 +18,7 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPool.closeQuiet;
 
 /**

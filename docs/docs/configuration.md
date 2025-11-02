@@ -24,10 +24,16 @@ cache:
   rewarm: true
   maxRewarmCount: 5
 
+misc:
+  timeout: 3
+  refreshLists: false
+  serveExpired: false
+  serveExpiredMax: 86400
+  dnssec: "simple"
+
 resolver:
   tlsPoolSize: 5
   multiplier: 3
-  dnssec: "simple"
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -109,13 +115,45 @@ The **cache** property defines the application’s cache behavior. The cache is 
 | **rewarm** | enable the "cache rewarm" mechanism: when a cache entry is near the end of its TTL, a refresh attempt is made automatically. Default is **true** |
 | **maxRewarmCount** | how many times **DNSao** will rewarm the cache entry before removing it from memory. If a query arrives for a domain in the “warm” cache, such entry is promoted to “hot” cache and its rewarm counter resets. This ensures that frequently accessed domains stay available, improving DNS resolution performance. Default is **5** |
 
+### misc 
+
+```yaml
+misc:
+  timeout: 3
+  refreshLists: false
+  serveExpired: false
+  serveExpiredMax: 86400
+  dnssec: "simple"
+```
+
+The **misc** property defines general purposes functions in **DNSao**.
+
+| Property | Description |
+|---------|------------|
+| **timeout** | global timeout in seconds when querying upstream servers |
+| **refreshLists** | true/false, default is false. When enabled, **DNSao** will periodically redownload the block and allow list to refresh the entries. If a lot of lists are used, this might overload the available memory. Allocate more memory if this is desired |
+| **serveExpired** | true/false, default is false. Adhering to dns rfc8767, when enabled, **DNSao** will serve data that is already expired when no available upstream resulted in a definitive answer (null, SERVFAIL and REFUSED) to maximixe dns availability |
+| **serveExpiredMax** | default is 86400 (one day). When **serveExpired** is enable this is the maximum time in seconds that a local query will result in a cache hit before the entry is considered expired and removed |
+| **dnssec** | Defines the general dnssec behavior of the server. More info in the bellow table. Default value is **simple**  |
+
+#### dnssec
+
+The **dnssec** property defines **DNSao** behavior about *DNSSEC* flags, validation and query padding, and has the default value as **simple**. The valid values are **off**, **simple** and **rigid**. **DNSao** does not execute the crypt validation of dnssec flags, but rely on the upstream answer to define it's behavior.
+
+| Level | Description |
+| ----- | ----------- |
+| **off** | the request will be sent to the upstreams without adding specific DNSSEC flags. **DNSao** does not validate if the answer is DNSSEC validated |
+| **simple** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** then replies to client transmitting the DNSSEC flags replied from upstream, either validated or not, but does not block unvalidated ones. The query will also be padded to the nearest 128 byte size, to allow for extra obfuscation, following dns rfc7830 |
+| **rigid** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** only replies to client if the DNSSEC is valid, otherwise, replies as **SERVFAIL**. The query will be padded to the full size of the package sent upstream, to allow for maximum obfuscation. *This will block several domains, since a lot of then does not have DNSSEC enabled* |
+
+Regardless of the upstream answer, **DNSao** does not set the *AD* flag in the answer, since it does not execute the hash validations internally (follows dns rfc4035 3.2.3).
+
 ### resolver
 
 ```yaml
 resolver:
   tlsPoolSize: 5
   multiplier: 3
-  dnssec: "simple"
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -170,14 +208,6 @@ These are the inner properties for the "upstreams" property.
 | **path** | when using **doh** protocol, it is necessary to set the **path** property, which will be appended at the end of the **host** property. It defaults to **/dns-query** |
 
 You can find examples of the configurations on the [config-samples in the github repo](https://github.com/vitallan/dnsao/tree/main/config-samples). Upstreams of different types can be used at the same type, as long as the necessary properties for each protocol are fullfiled.
-
-The **dnssec** property defines **DNSao** behavior about *DNSSEC* flags and validation, and has the default value as **simple**. The valid values are **off**, **simple** and **rigid**. **DNSao** does not execute the crypt validation of the flags, but rely on the upstream answer to define it's behavior.
-
-| Level | Description |
-| ----- | ----------- |
-| **off** | the request will be sent to the upstreams without adding specific DNSSEC flags. **DNSao** does not validate if the answer is DNSSEC validated |
-| **simple** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** then replies to client transmitting the DNSSEC flags replied from upstream, either validated or not, but does not block unvalidated ones |
-| **rigid** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** only replies to client if the DNSSEC is valid, otherwise, replies as **SERVFAIL**. *This will block several domains, since a lot of then does not have DNSSEC enabled* |
 
 It is also possible to set **localMappings**: dns entries that will be resolved directly by **DNSao**.
 

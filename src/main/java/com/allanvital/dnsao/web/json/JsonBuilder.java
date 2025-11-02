@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.web.json;
 
-import com.allanvital.dnsao.notification.QueryEvent;
+import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.StatsCollector;
 import com.allanvital.dnsao.web.pojo.Bucket;
 import com.eclipsesource.json.Json;
@@ -12,7 +12,7 @@ import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
-import static com.allanvital.dnsao.notification.QueryResolvedBy.*;
+import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.*;
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 
 public class JsonBuilder {

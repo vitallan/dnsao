@@ -11,6 +11,12 @@ cache:
   rewarm: true
   maxRewarmCount: 5
 
+misc:
+  timeout: 3
+  dnssec: "simple"
+  refreshLists: false
+  serveExpired: false
+
 resolver:
   multiplier: 3 #how many upstreams we will reach on each active remote query
   upstreams:

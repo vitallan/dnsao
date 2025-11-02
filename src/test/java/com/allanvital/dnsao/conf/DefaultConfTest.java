@@ -45,7 +45,7 @@ public class DefaultConfTest extends TestHolder {
         assertEquals(1, resolverConf.getMultiplier());
         assertEquals(3, resolverConf.getTlsPoolSize());
 
-        assertEquals(DNSSecMode.SIMPLE, resolverConf.getDnsSecMode());
+        assertEquals(DNSSecMode.SIMPLE, conf.getMisc().getDnsSecMode());
         assertTrue(resolverConf.getAllowLists().isEmpty());
         assertTrue(resolverConf.getBlocklists().isEmpty());
         assertTrue(resolverConf.getLocalMappings().isEmpty());

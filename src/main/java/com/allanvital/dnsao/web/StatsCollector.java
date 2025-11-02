@@ -1,9 +1,10 @@
 package com.allanvital.dnsao.web;
 
-import com.allanvital.dnsao.notification.NotificationManager;
-import com.allanvital.dnsao.notification.QueryEvent;
-import com.allanvital.dnsao.notification.QueryEventListener;
-import com.allanvital.dnsao.notification.QueryResolvedBy;
+import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.infra.notification.QueryEvent;
+import com.allanvital.dnsao.infra.notification.QueryEventListener;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.pojo.Bucket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,7 @@ import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
-import static com.allanvital.dnsao.AppLoggers.DNS;
+import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -42,7 +43,7 @@ public class StatsCollector implements QueryEventListener {
     private final ConcurrentSkipListSet<String> KNOWN_UPSTREAMS = new ConcurrentSkipListSet<>();
 
     public StatsCollector() {
-        this(DEFAULT_BUCKET_INTERVAL_MS, DEFAULT_WINDOW_MS, System::currentTimeMillis);
+        this(DEFAULT_BUCKET_INTERVAL_MS, DEFAULT_WINDOW_MS, Clock::currentTimeInMillis);
     }
 
     public StatsCollector(long bucketIntervalMs, long windowMs, LongSupplier nowSupplier) {

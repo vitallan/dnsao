@@ -1,12 +1,10 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.QueryProcessor;
-import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
-import com.allanvital.dnsao.dns.remote.ResolverFactory;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.helper.MessageUtils;
 import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.dns.processor.QueryProcessor;
+import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,25 +22,23 @@ public class QueryProcessorTest extends TestHolder {
 
     @BeforeEach
     public void setup() throws Exception {
-        super.loadConf("1udp-upstream-nocache.yml", false);
-        super.startFakeDnsServer();
+        safeStart("1udp-upstream-nocache.yml");
         super.prepareSimpleMockResponse(domain, responseIp);
-        ResolverFactory resolverFactory = new ResolverFactory(null, conf.getResolver().getUpstreams());
-        QueryProcessorFactory factory = new QueryProcessorFactory(resolverFactory.getAllResolvers(), null, null, 1, DNSSecMode.OFF);
+        QueryProcessorFactory factory = assembler.getQueryProcessorFactory();
         processor = factory.buildQueryProcessor();
     }
 
     @Test
     public void shouldRequestUdpCorrectly() throws Exception {
-        Message request = MessageUtils.buildARequest(domain);
+        Message request = MessageHelper.buildARequest(domain);
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
-        String responseIp = MessageUtils.extractIpFromResponseMessage(dnsQuery.getResponse());
+        String responseIp = MessageHelper.extractIpFromResponseMessage(dnsQuery.getResponse());
         Assertions.assertEquals(this.responseIp, responseIp);
     }
 
     @AfterEach
-    public void tearDown() {
-        super.stopFakeDnsServer();
+    public void tearDown() throws InterruptedException {
+        safeStop();
     }
 
 }

@@ -1,7 +1,7 @@
 package com.allanvital.dnsao.stats;
 
-import com.allanvital.dnsao.notification.QueryEvent;
-import com.allanvital.dnsao.notification.QueryResolvedBy;
+import com.allanvital.dnsao.infra.notification.QueryEvent;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.StatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,10 @@
 package com.allanvital.dnsao.web.pojo;
 
-import com.allanvital.dnsao.notification.QueryEvent;
-import com.allanvital.dnsao.notification.QueryResolvedBy;
+import com.allanvital.dnsao.infra.notification.QueryEvent;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.LongAdder;
 

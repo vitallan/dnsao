@@ -1,8 +1,10 @@
 package com.allanvital.dnsao;
 
-import com.allanvital.dnsao.notification.EventListener;
-import com.allanvital.dnsao.notification.EventType;
-import com.allanvital.dnsao.notification.NotificationManager;
+import com.allanvital.dnsao.graph.TestTimeProvider;
+import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.notification.EventListener;
+import com.allanvital.dnsao.infra.notification.EventType;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.HashMap;
@@ -13,19 +15,23 @@ import java.util.Map;
  */
 public class TestEventListener implements EventListener {
 
-    Map<EventType, Integer> eventCounts = new HashMap<>();
+    private TestTimeProvider testTimeProvider;
+    private Map<EventType, Integer> eventCounts = new HashMap<>();
 
-    public TestEventListener() {
-        NotificationManager.getInstance().subscribe(this);
+    public TestEventListener(TestTimeProvider testTimeProvider) {
+        reset();
+        this.testTimeProvider = testTimeProvider;
     }
 
     @Override
     public void receiveNotification(EventType type) {
-        if (eventCounts.containsKey(type)) {
-            eventCounts.put(type, eventCounts.get(type) + 1);
-            return;
+        synchronized (this) {
+            if (eventCounts.containsKey(type)) {
+                eventCounts.put(type, eventCounts.get(type) + 1);
+                return;
+            }
+            eventCounts.put(type, 1);
         }
-        eventCounts.put(type, 1);
     }
 
     private int get(EventType type) {
@@ -37,19 +43,21 @@ public class TestEventListener implements EventListener {
     }
 
     public void reset() {
+        NotificationManager.getInstance().unsubscribe(this);
         eventCounts = new HashMap<>();
+        NotificationManager.getInstance().subscribe(this);
     }
 
-    public void assertCount(EventType eventType, int expectedCount) {
-        Assertions.assertEquals(expectedCount, get(eventType));
-    }
-
-    public void waitEventCount(EventType type, int countToWaitTo) throws InterruptedException {
+    public void assertCount(EventType type, int countToWaitTo) throws InterruptedException {
         Integer count = get(type);
-        int maxSleepCount = 100; //max 10 seconds
+        int maxSleepCount = 100;
         int sleepCount = 0;
         while (count != countToWaitTo) {
-            Thread.sleep(100);
+            if (countToWaitTo < count) {
+                Assertions.fail("the expected count is already gone. Expected: " + countToWaitTo + " Got: " + count );
+            }
+            testTimeProvider.walkOneSecond();
+            Thread.sleep(60);
             sleepCount++;
             count = get(type);
             if (sleepCount == maxSleepCount) {

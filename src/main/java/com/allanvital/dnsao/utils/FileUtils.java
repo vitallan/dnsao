@@ -11,7 +11,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)

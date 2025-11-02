@@ -2,10 +2,11 @@ package com.allanvital.dnsao.cache;
 
 import com.allanvital.dnsao.cache.map.LruDnsCache;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
-import com.allanvital.dnsao.cache.rewarm.RewarmScheduler;
+import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
-import com.allanvital.dnsao.notification.EventType;
-import com.allanvital.dnsao.notification.NotificationManager;
+import com.allanvital.dnsao.conf.inner.ExpiredConf;
+import com.allanvital.dnsao.infra.notification.EventType;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -13,7 +14,7 @@ import org.xbill.DNS.Message;
 import java.util.Collections;
 import java.util.Map;
 
-import static com.allanvital.dnsao.AppLoggers.CACHE;
+import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -26,17 +27,20 @@ public class CacheManager {
     private final Map<String, DnsCacheEntry> cache;
 
     private final NotificationManager notificationManager = NotificationManager.getInstance();
-    private final RewarmScheduler rewarmScheduler;
+    private final FixedTimeRewarmScheduler fixedTimeRewarmScheduler;
+    private final ExpiredConf expiredConf;
 
-    public CacheManager(CacheConf cacheConf, RewarmScheduler rewarmScheduler) {
+    public CacheManager(CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, ExpiredConf expiredConf) {
         if (cacheConf == null || !cacheConf.isEnabled()) {
             enabled = false;
             cache = null;
-            this.rewarmScheduler = null;
+            this.fixedTimeRewarmScheduler = null;
+            this.expiredConf = null;
             return;
         }
+        this.expiredConf = expiredConf;
         enabled = true;
-        this.rewarmScheduler = rewarmScheduler;
+        this.fixedTimeRewarmScheduler = fixedTimeRewarmScheduler;
         this.cache = Collections.synchronizedMap(new LruDnsCache(cacheConf.getMaxCacheEntries()));
     }
 
@@ -47,22 +51,45 @@ public class CacheManager {
         return null;
     }
 
-    public Message get(String key) {
+    public DnsCacheEntry getStale(String key) {
+        if (!enabled || !expiredConf.isServeExpired()) {
+            return null;
+        }
+        DnsCacheEntry entry = safeGet(key);
+        if (entry != null) {
+            if (!entry.isExpired(expiredConf.getServeExpiredMax())) {
+                log.info("stale cache hit for {}", key);
+                notificationManager.notify(EventType.STALE_CACHE_HIT);
+                return entry;
+            }
+            log.info("cache entry {} was found, but expired. Removing", key);
+            cache.remove(key);
+        }
+        return null;
+    }
+
+    public DnsCacheEntry get(String key) {
         if (!enabled) {
             return null;
         }
         DnsCacheEntry entry = safeGet(key);
-        if (entry != null && !entry.isExpired()) {
+        if (entry != null && !entry.isStale()) {
             log.info("cache hit for {}", key);
             entry.setRewarmCount(0);
             cache.put(key, entry);
             notificationManager.notify(EventType.CACHE_HIT);
-            return entry.getResponse();
+            return entry;
         }
 
-        if (entry != null && entry.isExpired()) {
-            log.info("cache entry {} was found, but expired. Removing", key);
-            cache.remove(key);
+        if (entry != null && entry.isStale()) {
+            log.info("cache entry {} was found, but stale ", key);
+            if (!expiredConf.isServeExpired()) {
+                cache.remove(key);
+            }
+            if (expiredConf.isServeExpired() && entry.isExpired(expiredConf.getServeExpiredMax())) {
+                log.debug("cache entry {} was found, but stale and expired ", key);
+                cache.remove(key);
+            }
             return null;
         }
 
@@ -87,7 +114,7 @@ public class CacheManager {
 
     private void addEntry(String key, DnsCacheEntry entry) {
         cache.put(key, entry);
-        rewarmScheduler.schedule(key, entry.getExpiryTime());
+        fixedTimeRewarmScheduler.schedule(key, entry.getExpiryTime());
     }
 
 }

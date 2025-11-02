@@ -11,6 +11,12 @@ cache:
   rewarm: true
   maxRewarmCount: 5
 
+misc:
+  timeout: 3
+  refreshLists: true
+  serveExpired: false
+  dnssec: simple
+
 resolver:
   tlsPoolSize: 5
   multiplier: 1 

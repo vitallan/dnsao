@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.cache.pojo;
 
+import com.allanvital.dnsao.infra.clock.Clock;
 import org.xbill.DNS.Message;
 
 import java.util.Objects;
@@ -17,11 +18,11 @@ public class DnsCacheEntry {
     public DnsCacheEntry(Message response, Long ttlInSeconds) {
         this.response = response;
         if (ttlInSeconds == null) {
-            configuredTtlInSeconds = 30;
+            this.configuredTtlInSeconds = 30;
         } else {
-            configuredTtlInSeconds = ttlInSeconds;
+            this.configuredTtlInSeconds = ttlInSeconds;
         }
-        this.expiryTime = System.currentTimeMillis() + (configuredTtlInSeconds * 1000);
+        this.expiryTime = getCurrentTimeInMillis() + (configuredTtlInSeconds * 1000);
     }
 
     public DnsCacheEntry(Message response, Long ttlInSeconds, int rewarmCount) {
@@ -37,12 +38,16 @@ public class DnsCacheEntry {
         return expiryTime;
     }
 
-    public boolean isExpired() {
-        return System.currentTimeMillis() > expiryTime;
+    public boolean isStale() {
+        return getCurrentTimeInMillis() > expiryTime;
     }
 
-    public long getRemainingTtlMillis() {
-        return expiryTime - System.currentTimeMillis();
+    public boolean isExpired(int maxServeExpiredInSeconds) {
+        return getCurrentTimeInMillis() > expiryTime + (maxServeExpiredInSeconds * 1000L);
+    }
+
+    private long getCurrentTimeInMillis() {
+        return Clock.currentTimeInMillis();
     }
 
     public int getRewarmCount() {

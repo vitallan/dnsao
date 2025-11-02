@@ -2,11 +2,12 @@ package com.allanvital.dnsao.cache.rewarm;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
-import com.allanvital.dnsao.dns.remote.QueryProcessor;
-import com.allanvital.dnsao.dns.remote.QueryProcessorFactory;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.notification.EventType;
-import com.allanvital.dnsao.notification.NotificationManager;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.dns.processor.QueryProcessor;
+import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
+import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.notification.EventType;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -18,9 +19,9 @@ import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.allanvital.dnsao.AppLoggers.CACHE;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.isWarmable;
+import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -29,16 +30,16 @@ public class RewarmWorker implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(CACHE);
 
-    private final RewarmScheduler scheduler;
+    private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
     private final QueryProcessorFactory queryProcessorFactory;
     private final int maxRewarmCount;
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private long lastBeat = System.currentTimeMillis();
+    private long lastBeat = Clock.currentTimeInMillis();
 
     private final NotificationManager notificationManager = NotificationManager.getInstance();
 
-    public RewarmWorker(RewarmScheduler scheduler, CacheManager cache, QueryProcessorFactory queryProcessorFactory, int maxRewarmCount) {
+    public RewarmWorker(FixedTimeRewarmScheduler scheduler, CacheManager cache, QueryProcessorFactory queryProcessorFactory, int maxRewarmCount) {
         this.scheduler = scheduler;
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
@@ -55,7 +56,7 @@ public class RewarmWorker implements Runnable {
     }
 
     private void heartbeat() {
-        long now = System.currentTimeMillis();
+        long now = Clock.currentTimeInMillis();
         if (now - lastBeat >= 30_000) {
             int qsize = scheduler.queue().size();
             log.debug("heartbeat: queueSize={}", qsize);
@@ -69,7 +70,7 @@ public class RewarmWorker implements Runnable {
         while (running.get()) {
             heartbeat();
             try {
-                RewarmTask task = scheduler.queue().poll(1, TimeUnit.SECONDS);
+                RewarmTask task = scheduler.queue().poll(50, TimeUnit.MILLISECONDS);
                 if (task == null) {
                     continue;
                 }
@@ -81,7 +82,7 @@ public class RewarmWorker implements Runnable {
                 }
 
                 int currentRewarmCount = entry.getRewarmCount();
-                if (currentRewarmCount > maxRewarmCount) { //better to remove scheduled afterward to ensure cache is correctly clean
+                if (currentRewarmCount >= maxRewarmCount) { //better to remove scheduled afterward to ensure cache is correctly clean
                     log.debug("max rewarm count for key={}", key);
                     notificationManager.notify(EventType.CACHE_REWARM_EXPIRED);
                     continue;
@@ -96,9 +97,10 @@ public class RewarmWorker implements Runnable {
                     log.debug("rewarm skip: not warmable (rcode/answers) key={}", key);
                     continue;
                 }
+                log.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
                 Message query = Message.newQuery(question);
-                QueryProcessor queryProcessor = queryProcessorFactory.buildCacheLessQueryProcessor();
-                DnsQuery queryResponse = queryProcessor.processQuery(InetAddress.getByName("127.0.0.1"), query.toWire());
+                QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
+                DnsQuery queryResponse = queryProcessor.processQuery(InetAddress.getLoopbackAddress(), query.toWire(), true);
                 Message newResponse = queryResponse.getResponse();
                 if (newResponse == null) {
                     log.debug("it was not possible to rewarm entry {}", key);

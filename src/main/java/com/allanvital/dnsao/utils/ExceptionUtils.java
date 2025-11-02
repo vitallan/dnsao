@@ -3,7 +3,7 @@ package com.allanvital.dnsao.utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.allanvital.dnsao.AppLoggers.INFRA;
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)

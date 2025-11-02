@@ -1,16 +1,15 @@
 package com.allanvital.dnsao.dnssec;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.remote.pojo.DnsQuery;
-import com.allanvital.dnsao.helper.MessageUtils;
+import com.allanvital.dnsao.dns.pojo.DnsQuery;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -34,8 +33,8 @@ public class RigidDnssecTest extends DnssecTest {
 
     @Test
     void shouldReturnSERVFAILWhenUpstreamDoesNotProvideDnssecOrValidation() throws Exception {
-        Message request = MessageUtils.buildARequest(domain, true);
-        Message response = MessageUtils.buildAResponse(request, responseIp, 300, false);
+        Message request = MessageHelper.buildARequest(domain, true);
+        Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
         fakeDnsServer.mockResponse(request, response);
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processedResponse = dnsQuery.getResponse();
@@ -45,21 +44,22 @@ public class RigidDnssecTest extends DnssecTest {
 
     @Test
     void shouldAcceptAuthenticatedNxdomain() throws Exception {
-        Message request = MessageUtils.buildARequest("doesnotexist." + domain, true);
-        Message nxdomainAD = MessageUtils.buildNxdomainResponseFrom(request, true);
+        Message request = MessageHelper.buildARequest("doesnotexist." + domain, true);
+        Message nxdomainAD = MessageHelper.buildNxdomainResponseFrom(request, true);
         fakeDnsServer.mockResponse(request, nxdomainAD);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message resp = dnsQuery.getResponse();
 
         assertEquals(Rcode.NXDOMAIN, resp.getRcode());
-        assertTrue(resp.getHeader().getFlag(Flags.AD));
+        assertFalse(resp.getHeader().getFlag(Flags.AD));
+        //even when requesting DO from upstream, the AD flag must be removed because dnsao does not validate the crypt signatures
     }
 
     @Test
     void shouldServfailOnUnauthenticatedNxdomain() throws Exception {
-        Message request = MessageUtils.buildARequest("doesnotexist." + domain, true);
-        Message nxdomainNoAd = MessageUtils.buildNxdomainResponseFrom(request, false);
+        Message request = MessageHelper.buildARequest("doesnotexist." + domain, true);
+        Message nxdomainNoAd = MessageHelper.buildNxdomainResponseFrom(request, false);
         fakeDnsServer.mockResponse(request, nxdomainNoAd);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());

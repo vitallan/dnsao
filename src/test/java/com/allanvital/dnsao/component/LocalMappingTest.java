@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.component;
 
 import com.allanvital.dnsao.TestHolder;
-import com.allanvital.dnsao.dns.server.DnsServer;
 import com.allanvital.dnsao.exc.ConfException;
-import com.allanvital.dnsao.helper.MessageUtils;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,32 +18,26 @@ public class LocalMappingTest extends TestHolder {
 
     private String domain1 = "karpov";
     private String domain2 = "another.internal.domain";
-    private DnsServer realServer;
 
     @BeforeEach
     public void setup() throws ConfException {
-        super.loadConf("local-mappings.yml", true);
-        realServer = systemGraph.getDnsServer();
-        realServer.start();
+        safeStart("local-mappings.yml");
     }
 
     @Test
     public void shouldAnswerWithLocalMappingsWhenAvailable() throws IOException {
-        Message response = executeRequestOnDnsao(realServer, domain1, false);
-        String responseIp = MessageUtils.extractIpFromResponseMessage(response);
+        Message response = executeRequestOnOwnServer(dnsServer, domain1, false);
+        String responseIp = MessageHelper.extractIpFromResponseMessage(response);
         Assertions.assertEquals("192.168.168.168", responseIp);
 
-        response = executeRequestOnDnsao(realServer, domain2, false);
-        responseIp = MessageUtils.extractIpFromResponseMessage(response);
+        response = executeRequestOnOwnServer(dnsServer, domain2, false);
+        responseIp = MessageHelper.extractIpFromResponseMessage(response);
         Assertions.assertEquals("192.168.168.169", responseIp);
     }
 
     @AfterEach
     public void tearDown() throws InterruptedException {
-        if (realServer != null) {
-            realServer.stop();
-            realServer = null;
-        }
+        safeStop();
     }
 
 }

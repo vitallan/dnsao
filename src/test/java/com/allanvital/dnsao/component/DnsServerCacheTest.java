@@ -1,10 +1,8 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.SystemGraph;
-import com.allanvital.dnsao.dns.server.DnsServer;
-import com.allanvital.dnsao.exc.ConfException;
-import com.allanvital.dnsao.helper.MessageUtils;
 import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,40 +13,38 @@ import org.xbill.DNS.SimpleResolver;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import static com.allanvital.dnsao.infra.notification.EventType.QUERY_RESOLVED;
+
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DnsServerCacheTest extends TestHolder {
 
     private String domain = "example.com";
-    private DnsServer realServer;
     private SimpleResolver resolver;
 
     @BeforeEach
     public void setup() throws UnknownHostException, ConfException {
-        super.loadConf("1udp-upstream-cache.yml", false);
-        super.startFakeDnsServer();
-        systemGraph = new SystemGraph(conf);
-        realServer = systemGraph.getDnsServer();
-        realServer.start();
-        resolver = buildResolver(realServer.getUdpPort());
+        safeStart("1udp-upstream-cache.yml");
+        resolver = buildResolver(dnsServer.getUdpPort());
     }
 
     @Test
-    public void shouldHitCacheWhenEnabled() throws IOException {
+    public void shouldHitCacheWhenEnabled() throws Exception {
         String expectedIp = "10.10.10.10";
         super.prepareSimpleMockResponse(domain, expectedIp, 10000);
         for (int i = 0; i < 10; i++) {
-            Message request = MessageUtils.buildARequest(domain);
+            Message request = MessageHelper.buildARequest(domain);
             Message response = resolver.send(request);
-            String responseIp = MessageUtils.extractIpFromResponseMessage(response);
+            String responseIp = MessageHelper.extractIpFromResponseMessage(response);
             Assertions.assertEquals(expectedIp, responseIp);
         }
         Assertions.assertEquals(1, fakeDnsServer.getCallCount());
+        eventListener.assertCount(QUERY_RESOLVED, 10);
     }
 
     @Test
-    public void shouldAutomaticallyRemoveOldestFromCache() throws IOException {
+    public void shouldAutomaticallyRemoveOldestFromCache() throws Exception {
         String domain1 = "domain1.com";
         String domain2 = "domain2.com";
         String domain3 = "domain3.com";
@@ -64,10 +60,11 @@ public class DnsServerCacheTest extends TestHolder {
             doRequest(resolver, domain1);
         }
         Assertions.assertEquals(4, fakeDnsServer.getCallCount());
+        eventListener.assertCount(QUERY_RESOLVED, 13);
     }
 
     @Test
-    public void shouldAutomaticallyRemoveOldestAccessedFromCache() throws IOException {
+    public void shouldAutomaticallyRemoveOldestAccessedFromCache() throws IOException, InterruptedException {
         String domain1 = "domain1.com";
         String domain2 = "domain2.com";
         String domain3 = "domain3.com";
@@ -82,25 +79,22 @@ public class DnsServerCacheTest extends TestHolder {
         doRequest(resolver, domain1);
 
         Assertions.assertEquals(3, fakeDnsServer.getCallCount());
+        eventListener.assertCount(QUERY_RESOLVED, 5);
     }
 
     @Test
     public void shouldRespectTtlLimits() throws IOException, InterruptedException {
         super.prepareSimpleMockResponse(domain, "10.10.10.10", 1);
         doRequest(resolver, domain);
-        Thread.sleep(1100);
+        testTimeProvider.walkOneSecond();
         doRequest(resolver, domain);
         Assertions.assertEquals(2, fakeDnsServer.getCallCount());
+        eventListener.assertCount(QUERY_RESOLVED, 2);
     }
 
     @AfterEach
     public void tearDown() throws InterruptedException {
-        if (realServer != null) {
-            realServer.stop();
-            realServer = null;
-        }
-        super.stopFakeDnsServer();
-        eventListener.reset();
+        safeStop();
     }
 
 }

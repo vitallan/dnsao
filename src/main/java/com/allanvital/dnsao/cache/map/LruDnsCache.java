@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static com.allanvital.dnsao.AppLoggers.CACHE;
+import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 
 /**
  * @author Allan Vital (https://allanvital.com)

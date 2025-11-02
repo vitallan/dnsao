@@ -1,10 +1,6 @@
 package com.allanvital.dnsao.conf;
 
 import com.allanvital.dnsao.conf.inner.*;
-import com.allanvital.dnsao.conf.inner.CacheConf;
-import com.allanvital.dnsao.conf.inner.ResolverConf;
-import com.allanvital.dnsao.conf.inner.ServerConf;
-import com.allanvital.dnsao.conf.inner.Upstream;
 
 import java.util.List;
 
@@ -16,6 +12,7 @@ public class Conf {
     private ServerConf server = new ServerConf();
     private ResolverConf resolver = new ResolverConf();
     private CacheConf cache = new CacheConf();
+    private MiscConf misc = new MiscConf();
 
     public ServerConf getServer() {
         return server;
@@ -48,4 +45,11 @@ public class Conf {
         return this.resolver;
     }
 
+    public MiscConf getMisc() {
+        return misc;
+    }
+
+    public void setMisc(MiscConf misc) {
+        this.misc = misc;
+    }
 }
