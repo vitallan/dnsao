@@ -17,9 +17,9 @@ import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
-import static com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPool.closeQuiet;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -31,11 +31,11 @@ public class DOTUpstreamResolver implements UpstreamResolver {
     private final String ip;
     private final String tlsAuthName;
     private final int port;
-    private final DOTConnectionPoolManager dotConnectionPoolManager;
+    private final DOTConnectionPool pool;
 
-    public DOTUpstreamResolver(DOTConnectionPoolManager dotConnectionPoolManager, Upstream upstream) throws CertificateParsingException, IOException {
+    public DOTUpstreamResolver(DOTConnectionPool pool, Upstream upstream) throws CertificateParsingException, IOException {
         log.debug("building DOTResolver for host: {}", upstream.getIp());
-        this.dotConnectionPoolManager = dotConnectionPoolManager;
+        this.pool = pool;
         this.ip = upstream.getIp();
         this.tlsAuthName = upstream.getTlsAuthName();
         if (upstream.getPort() == 0) {
@@ -48,9 +48,9 @@ public class DOTUpstreamResolver implements UpstreamResolver {
     }
 
     private void verifyTlsAuthName() throws IOException, CertificateParsingException {
-        DOTConnectionPool pool = dotConnectionPoolManager.getPoolFor(ip, port, tlsAuthName);
-        SSLSocket socket = pool.acquire();
+        SSLSocket socket = null;
         try {
+            socket = forceAcquire();
             synchronized (socket) {
                 SSLSession session = socket.getSession();
                 Certificate[] certs = session.getPeerCertificates();
@@ -75,7 +75,7 @@ public class DOTUpstreamResolver implements UpstreamResolver {
                 }
             }
         } finally {
-            socket.close();
+            DOTConnectionPool.closeQuiet(socket);
             pool.release(socket);
         }
 
@@ -91,26 +91,48 @@ public class DOTUpstreamResolver implements UpstreamResolver {
         return this.port;
     }
 
+    public String getTlsAuthName() {
+        return this.tlsAuthName;
+    }
+
+    public DOTConnectionPool getPool() {
+        return pool;
+    }
+
     @Override
     public Message send(Message query) throws IOException {
-        DOTConnectionPool pool = dotConnectionPoolManager.getPoolFor(ip, port, tlsAuthName);
-        SSLSocket socket = pool.acquire();
-        boolean ok = false;
+        SSLSocket socket = forceAcquire();
+        Message response = null;
+        int retries = 0;
+        int maxInternalRetries = 3;
         try {
-            try {
-                Message resp = sendOnSocket(socket, query);
-                ok = true;
-                return resp;
-            } catch (IOException e) {
-                // simple retry
-                socket = pool.acquire();
-                Message resp = sendOnSocket(socket, query);
-                ok = true;
-                return resp;
+            while (response == null && maxInternalRetries > retries) {
+                try {
+                    response = sendOnSocket(socket, query);
+                } catch (IOException e) {
+                    retries++;
+                    log.debug("failed to send query on TLS socket: {} for {}. Retrying", e.getMessage(), this.tlsAuthName);
+                    pool.release(socket, true);
+                    socket = forceAcquire();
+                }
             }
         } finally {
-            if (ok) pool.release(socket); else closeQuiet(socket);
+            pool.release(socket);
         }
+        return response;
+    }
+
+    private SSLSocket forceAcquire() throws IOException {
+        SSLSocket socket = null;
+        while (socket == null) {
+            try {
+                socket = pool.acquire();
+            } catch (IOException | TimeoutException e) {
+                log.warn("it was not possible to acquire a sslSocket, error was {}. Retrying...", e.getMessage());
+                throw new IOException(e);
+            }
+        }
+        return socket;
     }
 
     private Message sendOnSocket(SSLSocket socket, Message query) throws IOException {

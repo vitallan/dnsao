@@ -6,6 +6,7 @@ import com.allanvital.dnsao.dns.server.ProtocolServer;
 import com.allanvital.dnsao.dns.server.TcpServer;
 import com.allanvital.dnsao.dns.server.UdpServer;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
+import com.allanvital.dnsao.web.StatsCollector;
 import com.allanvital.dnsao.web.WebServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +30,13 @@ public class DnsServer {
     private final ProtocolServer tcpServer;
     private final WebServer webServer;
 
-    public DnsServer(ServerConf conf, QueryProcessorFactory factory, ExecutorServiceFactory executorServiceFactory) {
+    public DnsServer(ServerConf conf, QueryProcessorFactory factory, ExecutorServiceFactory executorServiceFactory, StatsCollector statsCollector) {
         this.port = conf.getPort();
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
         tcpServer = new TcpServer(tcpThreadPool, factory, port);
-        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool());
+        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), statsCollector);
     }
 
     public int getUdpPort() {

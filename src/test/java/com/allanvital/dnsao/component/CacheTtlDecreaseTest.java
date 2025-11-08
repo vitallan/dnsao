@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.exc.ConfException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +10,7 @@ import org.xbill.DNS.Message;
 import java.io.IOException;
 
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,16 +33,18 @@ public class CacheTtlDecreaseTest extends TestHolder {
         Message response = executeRequestOnOwnServer(dnsServer, domain, false);
         Long ttlFromResponse = getTtlFromDirectResponse(response);
         assertEquals(ttl, ttlFromResponse);
+        eventListener.assertCount(CACHE_ADDED, 1, false);
 
-        testTimeProvider.walkOneSecond();
+        testTimeProvider.walkNow(1000);
         response = executeRequestOnOwnServer(dnsServer, domain, false);
         ttlFromResponse = getTtlFromDirectResponse(response);
-        assertTrue(ttlFromResponse <= ttl - 1, "ttlFromResponse=" + ttlFromResponse);
+        assertEquals(ttl - 1, (long) ttlFromResponse, "ttlFromResponse=" + ttlFromResponse);
+        eventListener.assertCount(QUERY_RESOLVED, 2, false);
 
-        testTimeProvider.walkOneSecond();
+        testTimeProvider.walkNow(1000);
         response = executeRequestOnOwnServer(dnsServer, domain, false);
         ttlFromResponse = getTtlFromDirectResponse(response);
-        assertTrue(ttlFromResponse <= ttl - 2, "ttlFromResponse=" + ttlFromResponse);
+        assertEquals(ttl - 2, (long) ttlFromResponse, "ttlFromResponse=" + ttlFromResponse);
     }
 
     @AfterEach

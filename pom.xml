@@ -72,6 +72,12 @@
       <version>5.10.0</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.javalin.community.ssl</groupId>
+      <artifactId>ssl-plugin</artifactId>
+      <version>6.7.0</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -98,6 +104,13 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.1.2</version>
+          <configuration>
+              <systemPropertyVariables>
+                  <javax.net.ssl.trustStore>${project.basedir}/src/test/resources/dot-certs/truststore.p12</javax.net.ssl.trustStore>
+                  <javax.net.ssl.trustStorePassword>changeit</javax.net.ssl.trustStorePassword>
+                  <javax.net.ssl.trustStoreType>PKCS12</javax.net.ssl.trustStoreType>
+              </systemPropertyVariables>
+          </configuration>
       </plugin>
 
       <plugin>

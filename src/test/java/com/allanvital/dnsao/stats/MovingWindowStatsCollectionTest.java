@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
-import static com.allanvital.dnsao.TestHolder.t;
+import static com.allanvital.dnsao.holder.TestHolder.t;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.CACHE;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 import static org.junit.jupiter.api.Assertions.*;

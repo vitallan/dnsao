@@ -4,11 +4,8 @@ import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
-import com.allanvital.dnsao.conf.inner.MiscConf;
-import com.allanvital.dnsao.conf.inner.ResolverConf;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
-import com.allanvital.dnsao.exc.ConfException;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -17,7 +14,7 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
 
     private CacheManager cacheManager;
     private QueryProcessorFactory queryProcessorFactory;
-    private QueryProcessorDependencies dependencies;
+    private TestQueryInfraAssembler queryInfraAssembler;
 
     public TestSystemGraphAssembler() {
         super();
@@ -36,10 +33,13 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     }
 
     @Override
-    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager) throws ConfException {
-        QueryProcessorDependencies dependencies = super.queryProcessorDependencies(executorServiceFactory, resolverConf, miscConf, cacheManager);
-        this.dependencies = dependencies;
-        return dependencies;
+    QueryInfraAssembler queryInfraAssembler() {
+        this.queryInfraAssembler = new TestQueryInfraAssembler(overrideRegistry);
+        return this.queryInfraAssembler;
+    }
+
+    public TestQueryInfraAssembler getQueryInfraAssembler() {
+        return this.queryInfraAssembler;
     }
 
     public CacheManager getCacheManager() {
@@ -48,10 +48,6 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
 
     public QueryProcessorFactory getQueryProcessorFactory() {
         return queryProcessorFactory;
-    }
-
-    public QueryProcessorDependencies getQueryProcessorDependencies() {
-        return dependencies;
     }
 
 }

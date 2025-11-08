@@ -38,7 +38,7 @@ public class SimpleDnssecTest extends DnssecTest {
         Message request = MessageHelper.buildARequest(domain, true);
 
         Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
-        fakeDnsServer.mockResponse(request, response);
+        fakeUpstreamServer.mockResponse(request, response);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
@@ -54,7 +54,7 @@ public class SimpleDnssecTest extends DnssecTest {
         Message request = MessageHelper.buildARequest("doesnotexist." + domain, true);
 
         Message nxdomain = MessageHelper.buildNxdomainResponseFrom(request, false);
-        fakeDnsServer.mockResponse(request, nxdomain);
+        fakeUpstreamServer.mockResponse(request, nxdomain);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
@@ -67,7 +67,7 @@ public class SimpleDnssecTest extends DnssecTest {
     void shouldReturnSERVFAILWhenUpstreamSignalsBogus() throws Exception {
         Message request = MessageHelper.buildARequest(domain, true);
         Message servfail = MessageHelper.buildServfailFrom(request);
-        fakeDnsServer.mockResponse(request, servfail);
+        fakeUpstreamServer.mockResponse(request, servfail);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();

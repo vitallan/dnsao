@@ -28,17 +28,18 @@ public class WebServer {
     private Javalin app;
     private int port;
     private final QueryProcessorFactory queryProcessorFactory;
+    private QueuedThreadPool threadPool;
     private final int httpThreadPool;
-    private final StatsCollector statsCollector = new StatsCollector();
-    private final JsonBuilder builder = new JsonBuilder(statsCollector);
+    private final JsonBuilder builder;
     private static final String DNS_PATH = "/dns-query";
     private static final String CONTENT_TYPE = "application/dns-message";
     private boolean running = false;
 
-    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool) {
+    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, StatsCollector statsCollector) {
         this.port = port;
         this.queryProcessorFactory = queryProcessorFactory;
         this.httpThreadPool = httpThreadPool;
+        this.builder = new JsonBuilder(statsCollector);
     }
 
     public void start() {
@@ -47,7 +48,7 @@ public class WebServer {
             return;
         }
         log.debug("starting web server on port {}", port);
-        QueuedThreadPool threadPool = new QueuedThreadPool();
+        threadPool = new QueuedThreadPool();
         threadPool.setName("web");
         threadPool.setMaxThreads(httpThreadPool);
         threadPool.setMinThreads(httpThreadPool);
@@ -178,6 +179,13 @@ public class WebServer {
         log.debug("stopping web server");
         if (app != null) {
             app.stop();
+        }
+        if (threadPool != null) {
+            try {
+                threadPool.stop();
+            } catch (Exception e) {
+                log.error(e.getMessage());
+            }
         }
         running = false;
         log.debug("web server stopped");

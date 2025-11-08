@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.exc.ConfException;
@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Message;
 
-import static com.allanvital.dnsao.infra.notification.EventType.*;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -40,7 +40,7 @@ public class CacheRewarmTest extends TestHolder {
 
         eventListener.assertCount(CACHE_REWARM, 2);
 
-        assertEquals(2, fakeDnsServer.getCallCount());
+        assertEquals(2, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 2);
     }
 
@@ -54,7 +54,7 @@ public class CacheRewarmTest extends TestHolder {
         cacheManager.get(key);
         eventListener.assertCount(CACHE_REWARM, 3);
 
-        assertEquals(3, fakeDnsServer.getCallCount());
+        assertEquals(3, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(CACHE_REWARM_EXPIRED, 1);
         eventListener.assertCount(QUERY_RESOLVED, 3);
     }
@@ -77,7 +77,7 @@ public class CacheRewarmTest extends TestHolder {
         eventListener.assertCount(CACHE_HIT, 3);
         eventListener.assertCount(CACHE_REWARM, 4);
 
-        assertEquals(4, fakeDnsServer.getCallCount());
+        assertEquals(4, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 4);
     }
 
@@ -86,7 +86,7 @@ public class CacheRewarmTest extends TestHolder {
         String key = "A:" + domain;
         cacheManager.put(key, response, 1L);
         rewarmScheduler.cancel(key);
-        assertEquals(0, fakeDnsServer.getCallCount());
+        assertEquals(0, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(CACHE_REWARM, 0);
         eventListener.assertCount(QUERY_RESOLVED, 0);
     }

@@ -10,6 +10,16 @@ import java.io.IOException;
  */
 public class SlowResolver implements UpstreamResolver {
 
+    private final long sleepTime;
+
+    public SlowResolver() {
+        this.sleepTime = 200;
+    }
+
+    public SlowResolver(long sleepTime) {
+        this.sleepTime = sleepTime;
+    }
+
     @Override
     public String getIp() {
         return "";
@@ -28,7 +38,7 @@ public class SlowResolver implements UpstreamResolver {
     @Override
     public Message send(Message query) throws IOException {
         try {
-            Thread.sleep(200);
+            Thread.sleep(sleepTime);
             return MessageHelper.buildAResponse(query, "10.10.10.10", 300);
         } catch (InterruptedException e) {
             throw new IOException(e);

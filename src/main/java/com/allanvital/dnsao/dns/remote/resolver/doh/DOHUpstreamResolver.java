@@ -84,8 +84,11 @@ public class DOHUpstreamResolver implements UpstreamResolver {
                 throw new IOException("Empty DoH body for DohSource: " + getIp());
             }
             return new Message(body);
+        } catch (IOException e) {
+            log.debug("failed to execute http request on {}: {}", uri, e.getMessage());
+            return null;
         } catch (InterruptedException e) {
-            log.debug("request discarded because other returned faster {}", query.getQuestion().getName());
+            log.trace("request discarded because other returned faster {}", query.getQuestion().getName());
             return null;
         } finally {
             semaphore.release();

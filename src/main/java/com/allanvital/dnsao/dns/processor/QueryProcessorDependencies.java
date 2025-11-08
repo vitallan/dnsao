@@ -12,7 +12,6 @@ public class QueryProcessorDependencies {
     private final PreHandlerFacade preHandlerFacade;
     private final QueryEngine queryEngine;
     private final PostHandlerFacade postHandlerFacade;
-    private boolean searchInCache = true;
 
     public QueryProcessorDependencies(PreHandlerFacade preHandlerFacade, QueryEngine queryEngine, PostHandlerFacade postHandlerFacade) {
         this.preHandlerFacade = preHandlerFacade;
@@ -30,14 +29,6 @@ public class QueryProcessorDependencies {
 
     public PostHandlerFacade getPostHandlerFacade() {
         return postHandlerFacade;
-    }
-
-    public boolean searchInCache() {
-        return searchInCache;
-    }
-
-    public void setSearchInCache(boolean searchInCache) {
-        this.searchInCache = searchInCache;
     }
 
 }

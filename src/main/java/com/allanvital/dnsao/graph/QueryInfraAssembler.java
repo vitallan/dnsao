@@ -9,16 +9,19 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
+import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerProvider;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerProvider;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamResolverProvider;
-import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolManager;
+import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolFactory;
 import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.utils.DownloadUtils;
 
+import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -32,24 +35,25 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class QueryInfraAssembler {
 
-    private final OverrideRegistry overrideRegistry;
+    protected final OverrideRegistry overrideRegistry;
 
     public QueryInfraAssembler(OverrideRegistry overrideRegistry) {
         this.overrideRegistry = overrideRegistry;
     }
 
-    public QueryProcessorDependencies assemble(ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, ExecutorServiceFactory executorServiceFactory) throws ConfException {
-        DOTConnectionPoolManager poolManager = dotConnectionPoolManager(resolverConf.getTlsPoolSize());
-        ResolverProvider resolverProvider = resolverProvider(poolManager, resolverConf.getUpstreams());
-
-        UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, resolverConf, miscConf);
+    public QueryProcessorDependencies assemble(ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, ExecutorServiceFactory executorServiceFactory, NotificationManager notificationManager) throws ConfException {
+        DOTConnectionPoolFactory dotConnectionPoolFactory = dotConnectionPoolFactory((SSLSocketFactory) SSLSocketFactory.getDefault(), resolverConf.getTlsPoolSize());
+        ResolverProvider resolverProvider = resolverProvider(dotConnectionPoolFactory, resolverConf.getUpstreams());
+        QueryOrchestrator orchestrator = queryOrchestrator(miscConf);
+        UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, resolverConf, miscConf, orchestrator);
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
         FileHandler fileHandler = fileHandler();
         BlockListProvider blockListProvider = blockListProvider(executorServiceFactory.buildScheduledExecutor("block"), resolverConf.getAllowLists(), resolverConf.getBlocklists(), fileHandler, miscConf.isRefreshLists());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockListProvider, locaMappings, cacheManager, upstreamUnitConf);
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager);
+
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager);
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -58,17 +62,21 @@ public class QueryInfraAssembler {
         return new QueryProcessorDependencies(preHandlerFacade, queryEngine, postHandlerFacade);
     }
 
-    private DOTConnectionPoolManager dotConnectionPoolManager(int tlsPoolSize) {
-        return new DOTConnectionPoolManager(tlsPoolSize);
-    }
-
-    private ResolverProvider resolverProvider(DOTConnectionPoolManager dotConnectionPoolManager, List<Upstream> upstreams) {
+    ResolverProvider resolverProvider(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
         return overrideRegistry.getRegisteredModule(ResolverProvider.class)
-                .orElse(new UpstreamResolverProvider(dotConnectionPoolManager, upstreams));
+                .orElse(new UpstreamResolverProvider(connectionPoolFactory, upstreams));
     }
 
-    private UpstreamUnitConf upstreamUnitConf(ResolverProvider resolverProvider, ResolverConf resolverConf, MiscConf miscConf) {
-        return new UpstreamUnitConf(resolverProvider.getAllResolvers(), resolverConf.getMultiplier(), miscConf.getDnsSecMode(), miscConf.isServeExpired(), miscConf.getTimeout());
+    DOTConnectionPoolFactory dotConnectionPoolFactory(SSLSocketFactory socketFactory, int maxPoolSize) {
+        return new DOTConnectionPoolFactory(socketFactory, maxPoolSize);
+    }
+
+    private QueryOrchestrator queryOrchestrator(MiscConf miscConf) {
+        return new QueryOrchestrator(miscConf.getTimeout(), miscConf.getDnsSecMode(), miscConf.getRetries());
+    }
+
+    private UpstreamUnitConf upstreamUnitConf(ResolverProvider resolverProvider, ResolverConf resolverConf, MiscConf miscConf, QueryOrchestrator queryOrchestrator) {
+        return new UpstreamUnitConf(resolverProvider.getAllResolvers(), resolverConf.getMultiplier(), miscConf.getDnsSecMode(), miscConf.isServeExpired(), miscConf.getTimeout(), queryOrchestrator);
     }
 
     private Map<String, String> localMappings(List<LocalMapping> localMappings) {
@@ -122,8 +130,8 @@ public class QueryInfraAssembler {
         return new PostHandlerFacade(provider, executorServiceFactory);
     }
 
-    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager) {
-        return new PostHandlerProvider(cacheManager);
+    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager) {
+        return new PostHandlerProvider(cacheManager, notificationManager);
     }
 
 }

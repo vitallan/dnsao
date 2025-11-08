@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 
@@ -16,6 +17,8 @@ import java.util.concurrent.ExecutorService;
  * @author Allan Vital (https://allanvital.com)
  */
 public class UdpServer extends ProtocolServer {
+
+    private volatile DatagramSocket socket;
 
     public UdpServer(ExecutorService threadPool, QueryProcessorFactory factory, int port) {
         super(threadPool, factory, port);
@@ -28,12 +31,18 @@ public class UdpServer extends ProtocolServer {
                 if (socket.getLocalPort() != this.port) {
                     this.port = socket.getLocalPort();
                 }
-
+                this.socket = socket;
                 running = true;
-                while (!Thread.currentThread().isInterrupted()) {
+                while (running) {
                     byte[] buffer = new byte[4096];
                     DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    socket.receive(packet);
+                    try {
+                        socket.receive(packet);
+                    } catch (SocketException e) {
+                        log.debug("stopping udpServer because of socketException");
+                        running = false;
+                        break;
+                    }
                     int len = packet.getLength();
                     int off = packet.getOffset();
                     byte[] data = Arrays.copyOfRange(packet.getData(), off, off + len);
@@ -44,6 +53,10 @@ public class UdpServer extends ProtocolServer {
             } catch (IOException e) {
                 Throwable rootCause = ExceptionUtils.findRootCause(e);
                 log.error("Error on UDP server start: {}", rootCause.getMessage());
+            } finally {
+                if (this.socket != null && !this.socket.isClosed()) {
+                    this.socket.close();
+                }
             }
         });
     }
@@ -85,6 +98,17 @@ public class UdpServer extends ProtocolServer {
     @Override
     protected String threadName() {
         return "udp-server";
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        if (this.socket != null) {
+            this.socket.close();
+            while (!this.socket.isClosed()) {
+                Thread.yield();
+            }
+        }
     }
 
 }

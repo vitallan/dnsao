@@ -1,4 +1,4 @@
-package com.allanvital.dnsao.infra.notification;
+package com.allanvital.dnsao.infra.notification.telemetry;
 
 /**
  * @author Allan Vital (https://allanvital.com)

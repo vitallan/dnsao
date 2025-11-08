@@ -2,6 +2,7 @@ server:
   port: 0
   udpThreadPool: 1
   tcpThreadPool: 1
+  webPort: -1
 
 misc:
   dnssec: off

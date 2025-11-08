@@ -6,8 +6,7 @@ import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.infra.clock.Clock;
-import com.allanvital.dnsao.infra.notification.EventType;
-import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -22,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.isWarmable;
 import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
+import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -36,8 +36,6 @@ public class RewarmWorker implements Runnable {
     private final int maxRewarmCount;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private long lastBeat = Clock.currentTimeInMillis();
-
-    private final NotificationManager notificationManager = NotificationManager.getInstance();
 
     public RewarmWorker(FixedTimeRewarmScheduler scheduler, CacheManager cache, QueryProcessorFactory queryProcessorFactory, int maxRewarmCount) {
         this.scheduler = scheduler;
@@ -84,7 +82,7 @@ public class RewarmWorker implements Runnable {
                 int currentRewarmCount = entry.getRewarmCount();
                 if (currentRewarmCount >= maxRewarmCount) { //better to remove scheduled afterward to ensure cache is correctly clean
                     log.debug("max rewarm count for key={}", key);
-                    notificationManager.notify(EventType.CACHE_REWARM_EXPIRED);
+                    telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
                     continue;
                 }
                 Message cachedResponse = entry.getResponse();
@@ -116,7 +114,7 @@ public class RewarmWorker implements Runnable {
 
                 DnsCacheEntry updateCacheEntry = new DnsCacheEntry(newResponse, ttlFromDirectResponse, currentRewarmCount + 1);
                 cache.rewarm(key, updateCacheEntry);
-                notificationManager.notify(EventType.CACHE_REWARM);
+                telemetryNotify(EventType.CACHE_REWARM);
                 log.debug("rewarm stored (warm cache) key={} ttl={}s qname={} type={}",
                         key, ttlFromDirectResponse,
                         question.getName().toString(),

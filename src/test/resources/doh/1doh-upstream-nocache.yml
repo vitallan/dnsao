@@ -1,0 +1,19 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+cache:
+  enabled: false
+
+misc:
+  queryLog: false
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - host: "localhost"
+      port: 443
+      protocol: "doh"
+      path: "/dns-query"

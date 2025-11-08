@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.graph.bean.TestResolverProvider;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;

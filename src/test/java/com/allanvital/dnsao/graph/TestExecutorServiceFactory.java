@@ -35,7 +35,7 @@ public class TestExecutorServiceFactory extends ExecutorServiceFactory {
 
     public void stopAndRemoveAllExecutors() throws InterruptedException {
         for (ExecutorService executorService : executorServices) {
-            while (!executorService.isTerminated()) {
+            while (!executorService.isTerminated() || !executorService.isShutdown()) {
                 log.info("stopping " + executorService);
                 executorService.shutdownNow();
                 executorService.awaitTermination(3, TimeUnit.SECONDS);

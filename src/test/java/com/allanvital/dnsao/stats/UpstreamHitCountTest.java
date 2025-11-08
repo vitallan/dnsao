@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.allanvital.dnsao.TestHolder.t;
+import static com.allanvital.dnsao.holder.TestHolder.t;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 import static org.junit.jupiter.api.Assertions.*;
 

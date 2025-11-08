@@ -1,14 +1,15 @@
 package com.allanvital.dnsao;
 
 import com.allanvital.dnsao.graph.TestTimeProvider;
-import com.allanvital.dnsao.infra.clock.Clock;
-import com.allanvital.dnsao.infra.notification.EventListener;
-import com.allanvital.dnsao.infra.notification.EventType;
-import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.infra.notification.telemetry.EventListener;
+import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetrySubscribe;
+import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryUnsubscribe;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -43,21 +44,27 @@ public class TestEventListener implements EventListener {
     }
 
     public void reset() {
-        NotificationManager.getInstance().unsubscribe(this);
+        telemetryUnsubscribe(this);
         eventCounts = new HashMap<>();
-        NotificationManager.getInstance().subscribe(this);
+        telemetrySubscribe(this);
     }
 
     public void assertCount(EventType type, int countToWaitTo) throws InterruptedException {
+        assertCount(type, countToWaitTo, true);
+    }
+
+    public void assertCount(EventType type, int countToWaitTo, boolean withTimeWalk) throws InterruptedException {
         Integer count = get(type);
-        int maxSleepCount = 100;
+        int maxSleepCount = 200;
         int sleepCount = 0;
         while (count != countToWaitTo) {
             if (countToWaitTo < count) {
                 Assertions.fail("the expected count is already gone. Expected: " + countToWaitTo + " Got: " + count );
             }
-            testTimeProvider.walkOneSecond();
-            Thread.sleep(60);
+            if (withTimeWalk) {
+                testTimeProvider.walkOneSecond();
+            }
+            Thread.sleep(30);
             sleepCount++;
             count = get(type);
             if (sleepCount == maxSleepCount) {

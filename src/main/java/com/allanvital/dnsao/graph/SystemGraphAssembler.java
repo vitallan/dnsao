@@ -9,6 +9,8 @@ import com.allanvital.dnsao.dns.DnsServer;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.web.StatsCollector;
 
 import java.util.concurrent.ExecutorService;
 
@@ -17,15 +19,11 @@ import java.util.concurrent.ExecutorService;
  */
 public class SystemGraphAssembler {
 
-    private final OverrideRegistry overrideRegistry = new OverrideRegistry();
-    private final QueryInfraAssembler queryInfraAssembler;
-    private QueryProcessorDependencies queryProcessorDependencies;
-
-    public SystemGraphAssembler() {
-        queryInfraAssembler = new QueryInfraAssembler(overrideRegistry);
-    }
+    protected final OverrideRegistry overrideRegistry = new OverrideRegistry();
+    private QueryInfraAssembler queryInfraAssembler;
 
     public DnsServer assemble(Conf conf) throws ConfException {
+        queryInfraAssembler = queryInfraAssembler();
         CacheConf cacheConf = conf.getCache();
         ResolverConf resolverConf = conf.getResolver();
         ServerConf serverConf = conf.getServer();
@@ -35,24 +33,27 @@ public class SystemGraphAssembler {
         FixedTimeRewarmScheduler fixedTimeRewarmScheduler = rewarmScheduler(20_000);
         CacheManager cacheManager = cacheManager(cacheConf, fixedTimeRewarmScheduler, miscConf.getExpiredConf());
 
-        queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, resolverConf, miscConf, cacheManager);
+        NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
+        StatsCollector statsCollector = statsCollector(notificationManager);
+
+        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, resolverConf, miscConf, cacheManager, notificationManager);
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
         scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory);
-        return dnsServer(serverConf, factory, executorServiceFactory);
+        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector);
     }
 
-    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager) throws ConfException {
-        return queryInfraAssembler.assemble(resolverConf, miscConf, cacheManager, executorServiceFactory);
+    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, NotificationManager notificationManager) throws ConfException {
+        return queryInfraAssembler.assemble(resolverConf, miscConf, cacheManager, executorServiceFactory, notificationManager);
     }
 
-    public OverrideRegistry getOverrideRegistry() {
-        return this.overrideRegistry;
+    public <T> void registerOverride(T module) {
+        this.overrideRegistry.registerOverride(module);
     }
 
-    private DnsServer dnsServer(ServerConf conf, QueryProcessorFactory queryProcessorFactory, ExecutorServiceFactory executorServiceFactory) {
-        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory);
+    private DnsServer dnsServer(ServerConf conf, QueryProcessorFactory queryProcessorFactory, ExecutorServiceFactory executorServiceFactory, StatsCollector statsCollector) {
+        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector);
     }
 
     private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory, CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, CacheManager cacheManager, QueryProcessorFactory queryProcessorFactory) {
@@ -63,6 +64,10 @@ public class SystemGraphAssembler {
             return rewarmWorker;
         }
         return null;
+    }
+
+    QueryInfraAssembler queryInfraAssembler() {
+        return new QueryInfraAssembler(overrideRegistry);
     }
 
     CacheManager cacheManager(CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, ExpiredConf expiredConf) {
@@ -82,6 +87,16 @@ public class SystemGraphAssembler {
     ExecutorServiceFactory executorServiceFactory() {
         return overrideRegistry.getRegisteredModule(ExecutorServiceFactory.class)
                 .orElse(new ExecutorServiceFactory());
+    }
+
+    NotificationManager notificationManager(boolean queryLogEnabled) {
+        return new NotificationManager(queryLogEnabled);
+    }
+
+    StatsCollector statsCollector(NotificationManager notificationManager) {
+        StatsCollector statsCollector = new StatsCollector();
+        notificationManager.querySubscribe(statsCollector);
+        return statsCollector;
     }
 
 }

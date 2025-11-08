@@ -1,10 +1,10 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.dns.remote.DnsUtils;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
-import com.allanvital.dnsao.infra.notification.EventType;
+import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,36 +31,37 @@ public class DnsServeStaleTest extends TestHolder {
     private Message response = MessageHelper.buildAResponse(request, ip, 1);
 
     @BeforeEach
-    public void setup() throws IOException, ConfException {
+    public void setup() throws IOException, ConfException, InterruptedException {
         safeStart("1udp-upstream-cache-stale.yml");
 
         resolver = buildResolver(dnsServer.getUdpPort());
-        fakeDnsServer.mockResponse(request, response);
+        fakeUpstreamServer.mockResponse(request, response);
         Message response = doRequest(resolver, domain);
         assertEquals(ip, extractIpFromResponseMessage(response));
+        eventListener.assertCount(EventType.CACHE_ADDED, 1, false);
     }
 
     @Test
-    public void shouldServeStaleWhenConfiguredAndUpstreamFails() throws IOException, InterruptedException {
-        fakeDnsServer.stop();
-        testTimeProvider.walkOneSecond();
+    public void shouldServeStaleWhenConfiguredAndUpstreamFails() throws Exception {
+        fakeUpstreamServer.stop();
+        testTimeProvider.walkNow(1300);
         response = doRequest(resolver, domain);
-        assertEquals(30, DnsUtils.getTtlFromDirectResponse(response));
         assertEquals(ip, extractIpFromResponseMessage(response));
-        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1);
+        assertEquals(30, DnsUtils.getTtlFromDirectResponse(response));
+        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1, false);
     }
 
     @Test
     public void shouldServeStaleWhenConfiguredAndUpstreamReturnsServfail() throws IOException, InterruptedException {
         Message servfail = MessageHelper.buildServfailFrom(request);
-        fakeDnsServer.mockResponse(request, servfail);
-        testTimeProvider.walkOneSecond();
+        fakeUpstreamServer.mockResponse(request, servfail);
+        testTimeProvider.walkNow(1010);
 
         response = doRequest(resolver, domain);
         assertEquals(ip, extractIpFromResponseMessage(response));
-        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1);
+        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1, false);
 
-        testTimeProvider.walkOneSecond();
+        testTimeProvider.walkNow(1010);
         response = doRequest(resolver, domain);
 
         assertEquals(SERVFAIL, response.getHeader().getRcode());
@@ -70,11 +71,11 @@ public class DnsServeStaleTest extends TestHolder {
     @Test
     public void shouldServeStaleWhenConfiguredAndUpstreamReturnsRefused() throws IOException, InterruptedException {
         Message refused = MessageHelper.buildRefused(request);
-        fakeDnsServer.mockResponse(request, refused);
-        testTimeProvider.walkOneSecond();
+        fakeUpstreamServer.mockResponse(request, refused);
+        testTimeProvider.walkNow(1010);
         response = doRequest(resolver, domain);
         assertEquals(ip, extractIpFromResponseMessage(response));
-        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1);
+        eventListener.assertCount(EventType.STALE_CACHE_HIT, 1, false);
     }
 
     @AfterEach

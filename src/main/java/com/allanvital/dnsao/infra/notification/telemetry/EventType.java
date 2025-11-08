@@ -1,4 +1,4 @@
-package com.allanvital.dnsao.infra.notification;
+package com.allanvital.dnsao.infra.notification.telemetry;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -6,6 +6,7 @@ package com.allanvital.dnsao.infra.notification;
 public enum EventType {
 
     CACHE_HIT,
+    CACHE_ADDED,
     CACHE_REWARM,
     CACHE_REWARM_EXPIRED,
     STALE_CACHE_HIT,

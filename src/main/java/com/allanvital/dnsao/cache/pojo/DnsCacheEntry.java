@@ -1,18 +1,26 @@
 package com.allanvital.dnsao.cache.pojo;
 
 import com.allanvital.dnsao.infra.clock.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import java.util.Objects;
+
+import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
+import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
+import static com.allanvital.dnsao.utils.TimeUtils.formatMillisTime;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DnsCacheEntry {
 
+    private static final Logger log = LoggerFactory.getLogger(CACHE);
+
     private final Message response;
-    private volatile long expiryTime;
-    private long configuredTtlInSeconds;
+    private final long expiryTime;
+    private final long configuredTtlInSeconds;
     private int rewarmCount = 0;
 
     public DnsCacheEntry(Message response, Long ttlInSeconds) {
@@ -22,7 +30,14 @@ public class DnsCacheEntry {
         } else {
             this.configuredTtlInSeconds = ttlInSeconds;
         }
-        this.expiryTime = getCurrentTimeInMillis() + (configuredTtlInSeconds * 1000);
+        long ttlMs = Math.multiplyExact(configuredTtlInSeconds, 1000L);
+        long currentTimeInMillis = getCurrentTimeInMillis();
+        this.expiryTime = Math.addExact(currentTimeInMillis, ttlMs);
+        log.trace("cacheEntry ttlInSecs={} : ttlInMs={} : currentTime={} : expiryTime={} ",
+                ttlInSeconds,
+                ttlMs,
+                formatMillisTime(currentTimeInMillis),
+                formatMillisTime(this.expiryTime));
     }
 
     public DnsCacheEntry(Message response, Long ttlInSeconds, int rewarmCount) {

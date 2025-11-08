@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.dnssec;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
-import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
@@ -38,7 +37,7 @@ public class DnssecTest extends TestHolder {
             request = MessageHelper.buildARequest(domain, true);
         }
         Message response = MessageHelper.buildAResponse(request, responseIp, 300, true);
-        fakeDnsServer.mockResponse(request, response);
+        fakeUpstreamServer.mockResponse(request, response);
 
         DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
         Message processedResponse = dnsQuery.getResponse();

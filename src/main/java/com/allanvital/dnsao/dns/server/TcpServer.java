@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 
@@ -21,6 +22,8 @@ import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 public class TcpServer extends ProtocolServer {
 
     private static final Logger log = LoggerFactory.getLogger(DNS);
+
+    private volatile ServerSocket serverSocket;
 
     public TcpServer(ExecutorService threadPool, QueryProcessorFactory factory, int port) {
         super(threadPool, factory, port);
@@ -34,16 +37,23 @@ public class TcpServer extends ProtocolServer {
                     TcpServer.this.port = serverSocket.getLocalPort();
                 }
                 running = true;
-                while (!Thread.currentThread().isInterrupted()) {
-                    Socket client = serverSocket.accept();
-                    client.setSoTimeout(1000);
-                    client.setTcpNoDelay(true);
-                    client.setKeepAlive(true);
-                    threadPool.submit(() -> TcpServer.this.handleClientTcp(client, factory.buildQueryProcessor()));
+                this.serverSocket = serverSocket;
+                while (running) {
+                    try {
+                        Socket client = serverSocket.accept();
+                        client.setSoTimeout(1000);
+                        client.setTcpNoDelay(true);
+                        client.setKeepAlive(true);
+                        threadPool.submit(() -> TcpServer.this.handleClientTcp(client, factory.buildQueryProcessor()));
+                    } catch (SocketException e) {
+                        break;
+                    }
                 }
             } catch (IOException e) {
                 Throwable rootCause = ExceptionUtils.findRootCause(e);
                 log.error("Error on TCP server start: {}", rootCause.getMessage());
+            } finally {
+                safeCloseSocket();
             }
         });
     }
@@ -109,6 +119,27 @@ public class TcpServer extends ProtocolServer {
             log.error("TCP: Error handling client {}", client.getInetAddress(), e);
         } finally {
             try { client.close(); } catch (IOException ignore) {}
+        }
+    }
+
+    private void safeCloseSocket() {
+        if (this.serverSocket != null) {
+            try {
+                this.serverSocket.close();
+            } catch (IOException e) {
+                log.error("failed to close tcp socket {}", e.getMessage());
+            }
+        }
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        if (this.serverSocket != null) {
+            safeCloseSocket();
+            while (!this.serverSocket.isClosed()) {
+                Thread.yield();
+            }
         }
     }
 

@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.web;
 
 import com.allanvital.dnsao.infra.clock.Clock;
-import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryEventListener;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
@@ -50,7 +49,6 @@ public class StatsCollector implements QueryEventListener {
         this.bucketIntervalMs = bucketIntervalMs;
         this.nowSupplier = nowSupplier;
         this.maxBuckets = Math.max(1, (int) (windowMs / bucketIntervalMs));
-        NotificationManager.getInstance().querySubscribe(this);
     }
 
     @Override

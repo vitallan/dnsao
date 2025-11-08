@@ -16,4 +16,8 @@ public class TimeUtils {
                 .format(formatter);
     }
 
+    public static String formatMillisTime(long millis) {
+        return formatMillis(millis, "HH:mm:ss.SSS");
+    }
+
 }

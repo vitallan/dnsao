@@ -1,0 +1,20 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+cache:
+  enabled: false
+
+misc:
+  queryLog: false
+
+resolver:
+  multiplier: 1
+  tlsPoolSize: 3
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      tlsAuthName: "localhost"
+      protocol: "dot"

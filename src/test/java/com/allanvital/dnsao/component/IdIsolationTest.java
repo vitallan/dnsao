@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -32,7 +32,7 @@ public class IdIsolationTest extends TestHolder {
         Message request = MessageHelper.buildARequest(domain);
         int clientRequestId = request.getHeader().getID();
         Message mockResponse = MessageHelper.buildAResponse(request, ip, 10);
-        fakeDnsServer.mockResponse(request, mockResponse);
+        fakeUpstreamServer.mockResponse(request, mockResponse);
 
         Resolver resolver = super.buildResolver(dnsServer.getUdpPort());
         Message response = resolver.send(request);
@@ -40,7 +40,7 @@ public class IdIsolationTest extends TestHolder {
         String responseIp = MessageHelper.extractIpFromResponseMessage(response);
         assertEquals(ip, responseIp);
 
-        int lastIdOnRemoteServer = fakeDnsServer.getLastRequestId();
+        int lastIdOnRemoteServer = fakeUpstreamServer.getLastRequestId();
         assertNotEquals(0, lastIdOnRemoteServer);
         assertNotEquals(clientRequestId, lastIdOnRemoteServer, "the original query id should not be propagated upstream");
     }

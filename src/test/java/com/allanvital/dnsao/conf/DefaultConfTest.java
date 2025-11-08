@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.conf;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.exc.ConfException;
 import org.junit.jupiter.api.BeforeEach;

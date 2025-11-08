@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
@@ -56,6 +57,11 @@ public abstract class ProtocolServer {
 
     public void stop() {
         threadPool.shutdownNow();
+        try {
+            threadPool.awaitTermination(3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.error("interrupted while terminating server thredPool {}", e.getMessage());
+        }
         serverThread.interrupt();
         running = false;
         log.debug("Stopped {}", threadName());

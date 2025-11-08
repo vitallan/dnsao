@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.web;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -14,7 +14,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Base64;
 
-import static com.allanvital.dnsao.infra.notification.EventType.QUERY_RESOLVED;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.QUERY_RESOLVED;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

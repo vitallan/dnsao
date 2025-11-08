@@ -5,8 +5,7 @@ import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
-import com.allanvital.dnsao.infra.notification.EventType;
-import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
@@ -15,6 +14,8 @@ import java.util.Collections;
 import java.util.Map;
 
 import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.CACHE_ADDED;
+import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -26,7 +27,6 @@ public class CacheManager {
     private final boolean enabled;
     private final Map<String, DnsCacheEntry> cache;
 
-    private final NotificationManager notificationManager = NotificationManager.getInstance();
     private final FixedTimeRewarmScheduler fixedTimeRewarmScheduler;
     private final ExpiredConf expiredConf;
 
@@ -59,7 +59,7 @@ public class CacheManager {
         if (entry != null) {
             if (!entry.isExpired(expiredConf.getServeExpiredMax())) {
                 log.info("stale cache hit for {}", key);
-                notificationManager.notify(EventType.STALE_CACHE_HIT);
+                telemetryNotify(EventType.STALE_CACHE_HIT);
                 return entry;
             }
             log.info("cache entry {} was found, but expired. Removing", key);
@@ -77,7 +77,7 @@ public class CacheManager {
             log.info("cache hit for {}", key);
             entry.setRewarmCount(0);
             cache.put(key, entry);
-            notificationManager.notify(EventType.CACHE_HIT);
+            telemetryNotify(EventType.CACHE_HIT);
             return entry;
         }
 
@@ -114,6 +114,7 @@ public class CacheManager {
 
     private void addEntry(String key, DnsCacheEntry entry) {
         cache.put(key, entry);
+        telemetryNotify(CACHE_ADDED);
         fixedTimeRewarmScheduler.schedule(key, entry.getExpiryTime());
     }
 

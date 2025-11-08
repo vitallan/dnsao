@@ -16,6 +16,9 @@ public class MiscConf {
     private boolean refreshLists = false;
     private DNSSecMode dnsSecMode = DNSSecMode.SIMPLE;
     private ExpiredConf expiredConf = new ExpiredConf();
+    private int retries = 5;
+    private boolean queryLog = true;
+    private boolean enableTelemetry = false;
 
     public String getDnssec() {
         return this.dnsSecMode.name();
@@ -71,4 +74,27 @@ public class MiscConf {
         this.refreshLists = refreshLists;
     }
 
+    public int getRetries() {
+        return retries;
+    }
+
+    public void setRetries(int retries) {
+        this.retries = retries;
+    }
+
+    public boolean isQueryLog() {
+        return queryLog;
+    }
+
+    public void setQueryLog(boolean queryLog) {
+        this.queryLog = queryLog;
+    }
+
+    public boolean isEnableTelemetry() {
+        return enableTelemetry;
+    }
+
+    public void setEnableTelemetry(boolean enableTelemetry) {
+        this.enableTelemetry = enableTelemetry;
+    }
 }

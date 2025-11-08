@@ -4,12 +4,14 @@ import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.dns.processor.post.handler.PostHandler;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
+import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 
 import static com.allanvital.dnsao.infra.AppLoggers.DNS;
+import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -33,6 +35,7 @@ public class PostHandlerFacade {
             return;
         }
         response.markFinishTime();
+        telemetryNotify(EventType.QUERY_RESOLVED);
         for (PostHandler postHandler : provider.getPostHandlers()) {
             threadPool.execute(() -> postHandler.handle(request, response));
         }

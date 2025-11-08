@@ -2,7 +2,6 @@ package com.allanvital.dnsao.dns.processor.post.handler;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
-import com.allanvital.dnsao.infra.notification.EventType;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 
@@ -11,11 +10,14 @@ import com.allanvital.dnsao.infra.notification.QueryEvent;
  */
 public class NotificationPostHandler implements PostHandler {
 
+    private final NotificationManager notifier;
+
+    public NotificationPostHandler(NotificationManager notificationManager) {
+        this.notifier = notificationManager;
+    }
+
     @Override
     public void handle(DnsQueryRequest request, DnsQueryResponse response) {
-        NotificationManager notifier = NotificationManager.getInstance();
-        notifier.notify(EventType.QUERY_RESOLVED);
-
         if (!request.isLocalQuery()) {
             long elapsedNanos = response.getFinishTime() - request.getStart();
             long elapsedMillis = elapsedNanos / 1_000_000;

@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.TestHolder;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
@@ -13,7 +13,7 @@ import org.xbill.DNS.SimpleResolver;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
-import static com.allanvital.dnsao.infra.notification.EventType.QUERY_RESOLVED;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.*;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -36,10 +36,11 @@ public class DnsServerCacheTest extends TestHolder {
         for (int i = 0; i < 10; i++) {
             Message request = MessageHelper.buildARequest(domain);
             Message response = resolver.send(request);
+            eventListener.assertCount(CACHE_HIT, i, false);
             String responseIp = MessageHelper.extractIpFromResponseMessage(response);
             Assertions.assertEquals(expectedIp, responseIp);
         }
-        Assertions.assertEquals(1, fakeDnsServer.getCallCount());
+        Assertions.assertEquals(1, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 10);
     }
 
@@ -59,8 +60,8 @@ public class DnsServerCacheTest extends TestHolder {
         for (int i = 0; i < 10; i++) {
             doRequest(resolver, domain1);
         }
-        eventListener.assertCount(QUERY_RESOLVED, 13);
-        Assertions.assertEquals(4, fakeDnsServer.getCallCount());
+        eventListener.assertCount(QUERY_RESOLVED, 13, false);
+        Assertions.assertEquals(4, fakeUpstreamServer.getCallCount());
     }
 
     @Test
@@ -78,7 +79,7 @@ public class DnsServerCacheTest extends TestHolder {
         doRequest(resolver, domain3);
         doRequest(resolver, domain1);
 
-        Assertions.assertEquals(3, fakeDnsServer.getCallCount());
+        Assertions.assertEquals(3, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 5);
     }
 
@@ -86,10 +87,11 @@ public class DnsServerCacheTest extends TestHolder {
     public void shouldRespectTtlLimits() throws IOException, InterruptedException {
         super.prepareSimpleMockResponse(domain, "10.10.10.10", 1);
         doRequest(resolver, domain);
-        testTimeProvider.walkOneSecond();
+        eventListener.assertCount(CACHE_ADDED, 1, false);
+        testTimeProvider.walkNow(1100);
         doRequest(resolver, domain);
-        Assertions.assertEquals(2, fakeDnsServer.getCallCount());
-        eventListener.assertCount(QUERY_RESOLVED, 2);
+        eventListener.assertCount(QUERY_RESOLVED, 2, false);
+        Assertions.assertEquals(2, fakeUpstreamServer.getCallCount());
     }
 
     @AfterEach
