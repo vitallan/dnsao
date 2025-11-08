@@ -2,8 +2,8 @@ name: Release - Build & Publish Docker image (GHCR)
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
 
 permissions:
   contents: read
