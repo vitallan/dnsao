@@ -2,7 +2,13 @@ name: CI - Tests on main
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - '**'
+    tags-ignore:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
