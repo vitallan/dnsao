@@ -80,7 +80,7 @@ mvn exec:java
 
 A branch main deve ser considerada estável.
 
-Releases novas e novas imagens docker são geradas a partir do commit/push de uma nova tag no formato v0.0.0. A tag "latest" do docker sempre aponta para a tag "prod" do código e é disponibilizada diariamente.
+Releases novas e novas imagens docker são geradas a partir do commit/push de uma nova tag no formato v0.0.0. 
 
 ## Configuração
 
