@@ -130,4 +130,5 @@ O DNSao utiliza bibliotecas open-source, incluindo:
 
 ---
 
-Licenciado sob a Licença MIT © 2025 Allan Vital
+Licenciado sob a MIT © 2025 Allan Vital
+
