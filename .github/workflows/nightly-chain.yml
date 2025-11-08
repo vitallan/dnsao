@@ -11,7 +11,6 @@ permissions:
 
 jobs:
   docker-delete-untagged:
-    needs: docker-publish-latest
     uses: ./.github/workflows/z_docker-delete-untagged.yml
     secrets: inherit
 

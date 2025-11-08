@@ -75,45 +75,13 @@ jobs:
           result-encoding: string
           tag: ${{ steps.ver.outputs.tag }}
 
-      - name: Build release notes (prev tag -> current tag) preserving newlines
-        id: notes
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.ver.outputs.tag }}" 
-          REL="${{ steps.ver.outputs.release }}"
-          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-
-          {
-            echo "## DNSao ${REL}"
-            echo
-            if [ -n "${PREV_TAG}" ]; then
-              echo "### Changes since ${PREV_TAG}"
-              echo
-              echo "- Compare: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
-              echo
-              echo "#### Commits"
-
-              git log --no-decorate --pretty=format:'- %h %s%n%b' "${PREV_TAG}..${TAG}" | sed -e 's/\r$//'
-            else
-              echo "### First release on this line"
-              echo
-              echo "#### Commits"
-              git log --no-decorate --pretty=format:'- %h %s%n%b' "${TAG}" -n 200 | sed -e 's/\r$//'
-            fi
-            echo
-          } > RELEASE_BODY.md
-
-          echo "body_path=RELEASE_BODY.md" >> "$GITHUB_OUTPUT"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
           name: DNSao ${{ steps.ver.outputs.release }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: false
-          body_path: ${{ steps.notes.outputs.body_path }}
+          generate_release_notes: true
 
       - name: Upload dnsao.jar to the release (rename asset)
         uses: svenstaro/upload-release-action@v2
