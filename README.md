@@ -81,7 +81,7 @@ mvn exec:java
 
 The main branch should be stable. 
 
-New releases and docker images are generated based on commit/push of a new tag in the format v0.0.0. The "latest" docker tag always points to the "prod" source tag and is built nightly.
+New releases and docker images are generated based on commit/push of a new tag in the format v0.0.0.
 
 ## Configuration
 
