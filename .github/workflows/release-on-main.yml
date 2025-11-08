@@ -1,4 +1,4 @@
-name: Release - Release on tag
+name: Release on main
 
 on:
   push:
@@ -8,11 +8,16 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-on-main
+  cancel-in-progress: false
+
 jobs:
-  test:
+  release:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout (full history)
+      - name: Checkout (full history + tags)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -22,176 +27,94 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
           cache: maven
 
-      - name: Extract tag/version (strip -SNAPSHOT and compute next)
+      - name: Read revision from POM (may be -SNAPSHOT)
+        id: readrev
+        run: |
+          echo "REVISION=$(mvn -q -DforceStdout help:evaluate -Dexpression=revision)" >> "$GITHUB_OUTPUT"
+
+      - name: Compute release version (strip -SNAPSHOT)
         id: ver
         shell: bash
         run: |
           set -euo pipefail
-          CURR="$(mvn -q -Dexec.executable=echo -Dexec.args='${revision}' --non-recursive exec:exec)"
-
+          CURR="${{ steps.readrev.outputs.REVISION }}"
           if [[ ! "$CURR" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-SNAPSHOT)?$ ]]; then
             echo "Unexpected revision '$CURR'"; exit 1
           fi
-          major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
-          RELEASE="${major}.${minor}.${patch}"
-          NEXT="${major}.${minor}.$((patch+1))-SNAPSHOT"
+          REL="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          echo "release=$REL" >> "$GITHUB_OUTPUT"
+          echo "tag=v$REL"     >> "$GITHUB_OUTPUT"
 
-          echo "version=${RELEASE}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${RELEASE}" >> "$GITHUB_OUTPUT"
-          echo "next_version=${NEXT}" >> "$GITHUB_OUTPUT"
+      - name: Build & Test
+        run: mvn -B -q clean install
 
-          echo "Releasing ${RELEASE} (tag v${RELEASE}); next dev ${NEXT}"
-
-      - name: Set ${revision} to release version
-        run: |
-          mvn -B -q versions:set-property \
-            -Dproperty=revision \
-            -DnewVersion="${{ steps.ver.outputs.version }}" \
-            -DgenerateBackupPoms=false
-
-      - name: Run tests
-        run: mvn -B test
-
-  release:
-    needs: test
-    runs-on: ubuntu-latest
-    env:
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-    steps:
-      - name: Checkout (full history)
-        uses: actions/checkout@v4
+      - name: Create git tag vX.Y.Z (lightweight)
+        uses: actions/github-script@v7
         with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Setup Java 17 (Temurin) + cache Maven
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: maven
-
-      - name: Extract tag/version
-        id: ver
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(mvn -q -Dexec.executable=echo -Dexec.args='${revision}' --non-recursive exec:exec)"
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Unexpected version '$VERSION' from Maven property 'revision'"; exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Set ${revision} to release version
-        run: |
-          mvn -B -q versions:set-property \
-            -Dproperty=revision \
-            -DnewVersion="${{ steps.ver.outputs.version }}" \
-            -DgenerateBackupPoms=false
-
-      - name: Build (skip tests)
-        run: mvn -B -DskipTests clean package
-
-      - name: Collect jars
-        id: jars
-        shell: bash
-        run: |
-          set -euo pipefail
-          JAR_WITH_VERSION="$(ls target/*-"${{ steps.ver.outputs.version }}".jar | head -n 1)"
-          if [ -z "${JAR_WITH_VERSION:-}" ]; then
-            echo "Jar not found at target/*-${{ steps.ver.outputs.version }}.jar"
-            exit 1
-          fi
-          cp "$JAR_WITH_VERSION" dnsao.jar
-          echo "jar_with_version=$JAR_WITH_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Create and push tag
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        shell: bash
-        run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Refusing to tag: invalid TAG '$TAG' (expected vX.Y.Z)"; exit 1
-          fi
-          git tag -f "${TAG}"
-          git push origin "refs/tags/${TAG}"
-
-      - name: Build release body (human summary + diff link)
-        id: body
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.ver.outputs.tag }}"
-          VERSION="${{ steps.ver.outputs.version }}"
-          PREV_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-          BODY_FILE="$RUNNER_TEMP/release_body.md"
-
-          {
-            echo "## DNSao ${VERSION}"
-            echo
-            echo "### Highlights"
-            echo
-            if [ -n "${PREV_TAG}" ]; then
-              echo "### Changes since ${PREV_TAG}"
-              echo "- Compare: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}"
-              echo
-              echo "#### Commits"
-              git log --pretty=format:'- %h %s%n%b%n' "${PREV_TAG}..${TAG}"
-              echo
-            else
-              echo "### First release on this tag"
-              echo "- Commits on this tag:"
-              git log --pretty=format:'- %h %s%n%b%n' "${TAG}"
-              echo
-            fi
-          } > "$BODY_FILE"
-
-          echo "release_body=$BODY_FILE" >> "$GITHUB_OUTPUT"
+          script: |
+            const tag  = core.getInput('tag');
+            const sha  = process.env.GITHUB_SHA;
+            const ref  = `refs/tags/${tag}`;
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                ref,
+                sha
+              });
+            } catch (e) {
+              if (e.status === 422 && /Reference already exists/.test(e.message)) {
+                core.info(`Tag ${tag} already exists; skipping createRef`);
+              } else {
+                throw e;
+              }
+            }
+          result-encoding: string
+          tag: ${{ steps.ver.outputs.tag }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.ver.outputs.tag }}
-          name: DNSao ${{ steps.ver.outputs.version }}
-          body_path: ${{ steps.body.outputs.release_body }}
+          name: DNSao ${{ steps.ver.outputs.release }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          make_latest: true
-          fail_on_unmatched_files: true
-          files: |
-            ${{ steps.jars.outputs.jar_with_version }}
-            dnsao.jar
 
-      - name: Move 'prod' tag to this release's commit
+      - name: Upload dnsao.jar to the release (rename asset)
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.ver.outputs.tag }}
+          file: target/dnsao-${{ steps.readrev.outputs.REVISION }}.jar
+          asset_name: dnsao.jar
+          overwrite: true
+
+      - name: Compute next SNAPSHOT (patch+1)
+        id: next
         shell: bash
         run: |
           set -euo pipefail
-          COMMIT=$(git rev-list -n 1 "${{ steps.ver.outputs.tag }}")
-          git tag -f prod "$COMMIT"
-          git push -f origin refs/tags/prod
+          REL="${{ steps.ver.outputs.release }}"   # e.g., 0.1.5
+          if [[ ! "$REL" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Unexpected release '$REL'"; exit 1
+          fi
+          echo "next_version=${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3]+1))-SNAPSHOT" >> "$GITHUB_OUTPUT"
 
-      - name: Fresh checkout of default branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEFAULT_BRANCH }}
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Set ${revision} to next SNAPSHOT and commit
+      - name: Bump POM revision to next SNAPSHOT and push
         shell: bash
         run: |
+          set -euo pipefail
           mvn -B -q versions:set-property \
             -Dproperty=revision \
-            -DnewVersion="${{ steps.ver.outputs.next_version }}" \
+            -DnewVersion="${{ steps.next.outputs.next_version }}" \
             -DgenerateBackupPoms=false
-
+          
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "chore(release): bump revision to ${{ steps.next.outputs.next_version }} [skip ci]" || echo "nothing to commit"
-          git push origin HEAD:refs/heads/${DEFAULT_BRANCH}
+          # push explicitamente para a branch main (evita ambiguidade com tags)
+          git push origin HEAD:refs/heads/main
