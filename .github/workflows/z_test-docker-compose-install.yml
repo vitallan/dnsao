@@ -14,7 +14,7 @@ env:
   ADMIN_PORT: "8044"
   CONFIG_DIR: config
   CONTAINER_NAME: dnsao
-  APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/prod/config-samples/docker/application.yml
+  APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/main/config-samples/docker/application.yml
 
 jobs:
   docker-compose-test:

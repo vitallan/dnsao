@@ -10,9 +10,9 @@ permissions:
 env:
   DNSAO_PORT: "8053"
   SERVICE_NAME: dnsao
-  INSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/install.sh
-  UNINSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/scripts/uninstall.sh
-  DOCKER_APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/prod/config-samples/docker/application.yml
+  INSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/scripts/install.sh
+  UNINSTALL_URL: https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/scripts/uninstall.sh
+  DOCKER_APP_YML_URL: https://raw.githubusercontent.com/vitallan/dnsao/main/config-samples/docker/application.yml
 
 jobs:
   install-uninstall-test:

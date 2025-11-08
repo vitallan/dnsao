@@ -11,8 +11,8 @@ LOG_DIR="/var/log/${APP_NAME}"
 SERVICE_FILE="/etc/systemd/system/${APP_NAME}.service"
 
 JAR_URL="https://github.com/vitallan/dnsao/releases/latest/download/dnsao.jar"
-LOGBACK_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/balanced/logback.xml"
-APP_YML_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/balanced/application.yml"
+LOGBACK_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/balanced/logback.xml"
+APP_YML_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/balanced/application.yml"
 
 JAVA_BIN="$(command -v java || true)"
 CURL_BIN="$(command -v curl || true)"
