@@ -54,6 +54,7 @@ jobs:
       - name: Create git tag vX.Y.Z (lightweight)
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.RELEASE_PAT }}
           script: |
             const tag  = core.getInput('tag');
             const sha  = process.env.GITHUB_SHA;
