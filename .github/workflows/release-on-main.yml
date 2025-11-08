@@ -25,17 +25,25 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Extract tag/version
+      - name: Extract tag/version (strip -SNAPSHOT and compute next)
         id: ver
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(mvn -q -Dexec.executable=echo -Dexec.args='${revision}' --non-recursive exec:exec)"
-          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Unexpected version '$VERSION' from Maven property 'revision'"; exit 1
+          CURR="$(mvn -q -Dexec.executable=echo -Dexec.args='${revision}' --non-recursive exec:exec)"
+
+          if [[ ! "$CURR" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-SNAPSHOT)?$ ]]; then
+            echo "Unexpected revision '$CURR'"; exit 1
           fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          major="${BASH_REMATCH[1]}"; minor="${BASH_REMATCH[2]}"; patch="${BASH_REMATCH[3]}"
+          RELEASE="${major}.${minor}.${patch}"
+          NEXT="${major}.${minor}.$((patch+1))-SNAPSHOT"
+
+          echo "version=${RELEASE}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${RELEASE}" >> "$GITHUB_OUTPUT"
+          echo "next_version=${NEXT}" >> "$GITHUB_OUTPUT"
+
+          echo "Releasing ${RELEASE} (tag v${RELEASE}); next dev ${NEXT}"
 
       - name: Set ${revision} to release version
         run: |
@@ -174,20 +182,12 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Calc next version SNAPSHOT (patch +1)
-        id: next
-        shell: bash
-        run: |
-          IFS='.' read -r MA MI PA <<< "${{ steps.ver.outputs.version }}"
-          NEXT_PATCH=$((PA + 1))
-          echo "next_version=${MA}.${MI}.${NEXT_PATCH}-SNAPSHOT" >> "$GITHUB_OUTPUT"
-
       - name: Set ${revision} to next SNAPSHOT and commit
         shell: bash
         run: |
           mvn -B -q versions:set-property \
             -Dproperty=revision \
-            -DnewVersion="${{ steps.next.outputs.next_version }}" \
+            -DnewVersion="${{ steps.ver.outputs.next_version }}" \
             -DgenerateBackupPoms=false
 
           git config user.name  "github-actions[bot]"
