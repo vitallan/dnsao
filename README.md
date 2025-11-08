@@ -133,3 +133,4 @@ DNSao makes use of open-source libraries, including:
 ---
 
 Licensed under the MIT License © 2025 Allan Vital
+
