@@ -124,6 +124,7 @@ A propriedade **cache** define o comportamento do cache da aplicação. O cache 
 | **rewarm**          | habilita o mecanismo de “cache rewarm”: quando uma entrada de cache está perto do fim do seu TTL, uma tentativa de atualização é feita automaticamente. O padrão é **true**                                                                                                                                                                                      |
 | **maxRewarmCount**  | quantas vezes o **DNSao** fará *rewarm* da entrada antes de removê-la da memória. Se chegar uma query para um domínio no cache “warm”, essa entrada é promovida para o cache “hot” e o contador de *rewarm* é reiniciado. Isso garante que domínios acessados com frequência permaneçam disponíveis, melhorando a performance da resolução DNS. O padrão é **5** |
 | **keep**            | uma lista de urls para realizar um precache antes de servidor iniciar e também sempre manter em memória. Essas urls sempre serão mantidas quentes mesmo após atingirem o limite estabelecido em **maxRewarmCount**. O objetivo é manter essas entradas sempre disponíveis em cache                                                                               |
+
 ### misc 
 
 ```yaml
