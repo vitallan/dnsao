@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.cache.rewarm;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
@@ -14,7 +15,6 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
-import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,14 +33,21 @@ public class RewarmWorker implements Runnable {
     private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
     private final QueryProcessorFactory queryProcessorFactory;
+    private final KeepProvider keepProvider;
     private final int maxRewarmCount;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private long lastBeat = Clock.currentTimeInMillis();
 
-    public RewarmWorker(FixedTimeRewarmScheduler scheduler, CacheManager cache, QueryProcessorFactory queryProcessorFactory, int maxRewarmCount) {
+    public RewarmWorker(FixedTimeRewarmScheduler scheduler,
+                        CacheManager cache,
+                        QueryProcessorFactory queryProcessorFactory,
+                        KeepProvider keepProvider,
+                        int maxRewarmCount) {
+
         this.scheduler = scheduler;
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
+        this.keepProvider = keepProvider;
         this.maxRewarmCount = maxRewarmCount;
         log.debug("starting RewarWorker");
     }
@@ -62,6 +69,10 @@ public class RewarmWorker implements Runnable {
         }
     }
 
+    private void requeue(Message message) {
+
+    }
+
     @Override
     public void run() {
         String key = "";
@@ -79,12 +90,6 @@ public class RewarmWorker implements Runnable {
                     continue;
                 }
 
-                int currentRewarmCount = entry.getRewarmCount();
-                if (currentRewarmCount >= maxRewarmCount) { //better to remove scheduled afterward to ensure cache is correctly clean
-                    log.debug("max rewarm count for key={}", key);
-                    telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
-                    continue;
-                }
                 Message cachedResponse = entry.getResponse();
                 Record question = cachedResponse.getQuestion();
                 if (question == null) {
@@ -95,23 +100,31 @@ public class RewarmWorker implements Runnable {
                     log.debug("rewarm skip: not warmable (rcode/answers) key={}", key);
                     continue;
                 }
+                int currentRewarmCount = entry.getRewarmCount();
+                boolean isInCacheKeep = keepProvider.contain(question);
+                if (currentRewarmCount >= maxRewarmCount && !isInCacheKeep) { //better to remove scheduled afterward to ensure cache is correctly clean
+                    log.debug("max rewarm count for key={}", key);
+                    telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
+                    continue;
+                }
                 log.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
                 Message query = Message.newQuery(question);
                 QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
-                DnsQuery queryResponse = queryProcessor.processQuery(InetAddress.getLoopbackAddress(), query.toWire(), true);
+                DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
                 Message newResponse = queryResponse.getResponse();
                 if (newResponse == null) {
+                    telemetryNotify(EventType.CACHE_REWARM_FAILED);
                     log.debug("it was not possible to rewarm entry {}", key);
                     continue;
                 }
                 Long ttlFromDirectResponse = getTtlFromDirectResponse(newResponse);
 
                 if (ttlFromDirectResponse == null) {
+                    telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
                     log.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
                             key, Rcode.string(newResponse.getRcode()));
                     continue;
                 }
-
                 DnsCacheEntry updateCacheEntry = new DnsCacheEntry(newResponse, ttlFromDirectResponse, currentRewarmCount + 1);
                 cache.rewarm(key, updateCacheEntry);
                 telemetryNotify(EventType.CACHE_REWARM);

@@ -39,7 +39,7 @@ public class DnssecTest extends TestHolder {
         Message response = MessageHelper.buildAResponse(request, responseIp, 300, true);
         fakeUpstreamServer.mockResponse(request, response);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message processedResponse = dnsQuery.getResponse();
 
         assertEquals(Rcode.NOERROR, processedResponse.getRcode());

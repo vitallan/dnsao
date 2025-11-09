@@ -154,7 +154,7 @@ public class WebServer {
     private void processQueryAndSetResult(Context ctx, byte[] request) throws UnknownHostException {
         String ip = getIp(ctx);
         QueryProcessor processor = queryProcessorFactory.buildQueryProcessor();
-        DnsQuery dnsQuery = processor.processQuery(getByName(ip), request);
+        DnsQuery dnsQuery = processor.processExternalQuery(getByName(ip), request);
         byte[] responseBytes = dnsQuery.getMessageBytes();
 
         ctx.status(200).result(responseBytes);

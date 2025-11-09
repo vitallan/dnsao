@@ -102,7 +102,7 @@ public class TcpServer extends ProtocolServer {
                     break;
                 }
 
-                DnsQuery dnsQuery = processor.processQuery(client.getInetAddress(), data);
+                DnsQuery dnsQuery = processor.processExternalQuery(client.getInetAddress(), data);
                 byte[] responseBytes = dnsQuery.getMessageBytes();
 
                 if (responseBytes == null) {

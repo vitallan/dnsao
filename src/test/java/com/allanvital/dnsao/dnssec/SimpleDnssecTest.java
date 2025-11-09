@@ -40,7 +40,7 @@ public class SimpleDnssecTest extends DnssecTest {
         Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
         fakeUpstreamServer.mockResponse(request, response);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
 
         assertEquals(Rcode.NOERROR, processed.getRcode());
@@ -56,7 +56,7 @@ public class SimpleDnssecTest extends DnssecTest {
         Message nxdomain = MessageHelper.buildNxdomainResponseFrom(request, false);
         fakeUpstreamServer.mockResponse(request, nxdomain);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
 
         assertEquals(Rcode.NXDOMAIN, processed.getRcode());
@@ -69,7 +69,7 @@ public class SimpleDnssecTest extends DnssecTest {
         Message servfail = MessageHelper.buildServfailFrom(request);
         fakeUpstreamServer.mockResponse(request, servfail);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message processed = dnsQuery.getResponse();
 
         assertEquals(Rcode.SERVFAIL, processed.getRcode());

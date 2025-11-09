@@ -1,0 +1,5 @@
+cache:
+  keep:
+    - "url1.com"
+    - "url2.com"
+    - "url3.com"
