@@ -8,7 +8,6 @@ import org.xbill.DNS.Message;
 import java.util.Objects;
 
 import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
-import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillisTime;
 
 /**
@@ -33,7 +32,7 @@ public class DnsCacheEntry {
         long ttlMs = Math.multiplyExact(configuredTtlInSeconds, 1000L);
         long currentTimeInMillis = getCurrentTimeInMillis();
         this.expiryTime = Math.addExact(currentTimeInMillis, ttlMs);
-        log.trace("cacheEntry ttlInSecs={} : ttlInMs={} : currentTime={} : expiryTime={} ",
+        log.trace("new cacheEntry ttlInSecs={} : ttlInMs={} : currentTime={} : expiryTime={} ",
                 ttlInSeconds,
                 ttlMs,
                 formatMillisTime(currentTimeInMillis),

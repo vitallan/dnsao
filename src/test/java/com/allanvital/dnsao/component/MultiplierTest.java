@@ -47,7 +47,7 @@ public class MultiplierTest extends TestHolder {
     @Test
     public void singleQueryShouldResultInMultiplierNumberOfUpstreamRequests() throws Exception {
         Message request = MessageHelper.buildARequest(domain);
-        processor.processQuery(getClient(), request.toWire());
+        processor.processExternalQuery(getClient(), request.toWire());
         Assertions.assertEquals(3, counter.get());
     }
 

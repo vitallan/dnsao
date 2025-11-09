@@ -36,7 +36,7 @@ public class RigidDnssecTest extends DnssecTest {
         Message request = MessageHelper.buildARequest(domain, true);
         Message response = MessageHelper.buildAResponse(request, responseIp, 300, false);
         fakeUpstreamServer.mockResponse(request, response);
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message processedResponse = dnsQuery.getResponse();
 
         assertEquals(Rcode.SERVFAIL, processedResponse.getRcode());
@@ -48,7 +48,7 @@ public class RigidDnssecTest extends DnssecTest {
         Message nxdomainAD = MessageHelper.buildNxdomainResponseFrom(request, true);
         fakeUpstreamServer.mockResponse(request, nxdomainAD);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message resp = dnsQuery.getResponse();
 
         assertEquals(Rcode.NXDOMAIN, resp.getRcode());
@@ -62,7 +62,7 @@ public class RigidDnssecTest extends DnssecTest {
         Message nxdomainNoAd = MessageHelper.buildNxdomainResponseFrom(request, false);
         fakeUpstreamServer.mockResponse(request, nxdomainNoAd);
 
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         Message resp = dnsQuery.getResponse();
 
         assertEquals(Rcode.SERVFAIL, resp.getRcode());

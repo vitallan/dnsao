@@ -31,6 +31,9 @@ public class Conf {
     }
 
     public CacheConf getCache() {
+        if (cache == null) {
+            cache = new CacheConf();
+        }
         return cache;
     }
 

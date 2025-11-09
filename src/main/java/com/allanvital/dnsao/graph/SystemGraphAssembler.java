@@ -1,6 +1,8 @@
 package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.cache.keep.KeepKickstarter;
+import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
 import com.allanvital.dnsao.conf.Conf;
@@ -30,7 +32,7 @@ public class SystemGraphAssembler {
         MiscConf miscConf = conf.getMisc();
         ExecutorServiceFactory executorServiceFactory = executorServiceFactory();
 
-        FixedTimeRewarmScheduler fixedTimeRewarmScheduler = rewarmScheduler(20_000);
+        FixedTimeRewarmScheduler fixedTimeRewarmScheduler = rewarmScheduler(cacheConf.getSecsBeforeTtlToRewarm());
         CacheManager cacheManager = cacheManager(cacheConf, fixedTimeRewarmScheduler, miscConf.getExpiredConf());
 
         NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
@@ -40,8 +42,20 @@ public class SystemGraphAssembler {
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
-        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory);
+        KeepProvider keepProvider = keepProvider(cacheConf);
+        KeepKickstarter kickstarter = keepKickStarter(keepProvider, factory);
+        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
+        kickstarter.kickStartKeep();
+
         return dnsServer(serverConf, factory, executorServiceFactory, statsCollector);
+    }
+
+    KeepKickstarter keepKickStarter(KeepProvider keepProvider, QueryProcessorFactory queryProcessorFactory) {
+        return new KeepKickstarter(keepProvider, queryProcessorFactory);
+    }
+
+    KeepProvider keepProvider(CacheConf cacheConf) {
+        return new KeepProvider(cacheConf);
     }
 
     public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, NotificationManager notificationManager) throws ConfException {
@@ -56,10 +70,15 @@ public class SystemGraphAssembler {
         return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector);
     }
 
-    private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory, CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, CacheManager cacheManager, QueryProcessorFactory queryProcessorFactory) {
+    private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,
+                                                     CacheConf cacheConf,
+                                                     FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
+                                                     CacheManager cacheManager,
+                                                     QueryProcessorFactory queryProcessorFactory,
+                                                     KeepProvider keepProvider) {
         if (cacheConf.isRewarm()) {
             ExecutorService rewarmExecutorService = executorServiceFactory.buildExecutor("rewarm", 1);
-            RewarmWorker rewarmWorker = new RewarmWorker(fixedTimeRewarmScheduler, cacheManager, queryProcessorFactory, cacheConf.getMaxRewarmCount());
+            RewarmWorker rewarmWorker = new RewarmWorker(fixedTimeRewarmScheduler, cacheManager, queryProcessorFactory, keepProvider, cacheConf.getMaxRewarmCount());
             rewarmExecutorService.submit(rewarmWorker);
             return rewarmWorker;
         }

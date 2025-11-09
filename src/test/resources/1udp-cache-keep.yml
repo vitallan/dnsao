@@ -4,15 +4,22 @@ server:
   tcpThreadPool: 1
   webPort: -1
 
+misc:
+  timeout: 1
+  retries: 1
+
 cache:
   enabled: true
   maxCacheEntries: 2
   rewarm: true
   secsBeforeTtlToRewarm: 1
   maxRewarmCount: 2
+  keep:
+    - "url-to-keep1.com"
+    - "url-to-keep2.com"
 
 resolver:
-  multiplier: 1
+  multiplier: 2
   upstreams:
     - ip: "127.0.0.1"
       port: 0

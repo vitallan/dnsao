@@ -65,17 +65,23 @@ public class TestHolder {
         }
     }
 
-    protected void safeStartWithPresetConf() throws ConfException {
+    protected void safeStartWithPresetConf(boolean fakeServerAlreadySetup) throws ConfException {
         setupSslStore();
         testTimeProvider.setNow(Instant.parse("2025-11-08T10:00:00Z").toEpochMilli());
         Clock.setNewTimeProvider(testTimeProvider);
         enableTelemetry(true);
         eventListener = new TestEventListener(testTimeProvider);
-        startFakeServer();
+        if (!fakeServerAlreadySetup) {
+            startFakeServer();
+        }
         registerOverride(this.testExecutorServiceFactory);
         dnsServer = assembler.assemble(this.conf);
         queryInfraAssembler = assembler.getQueryInfraAssembler();
         dnsServer.start();
+    }
+
+    protected void safeStartWithPresetConf() throws ConfException {
+        safeStartWithPresetConf(false);
     }
 
     protected void safeStart(String confFile) throws ConfException {
@@ -156,6 +162,10 @@ public class TestHolder {
         Message request = MessageHelper.buildARequest(domain);
         resolver.setTimeout(Duration.ofSeconds(3));
         return resolver.send(request);
+    }
+
+    protected Message executeRequestOnOwnServer(String domain) throws IOException {
+        return executeRequestOnOwnServer(dnsServer, domain, false);
     }
 
     protected Message executeRequestOnOwnServer(DnsServer realServer, String domain, boolean tcp) throws IOException {

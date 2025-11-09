@@ -24,9 +24,12 @@ public abstract class AbstractCacheUnit implements EngineUnit {
     protected abstract Message getFromCache(String key);
 
     public static String key(Message message) {
-        Record question = message.getQuestion();
-        Name name = question.getName();
-        int type = question.getType();
+        return key(message.getQuestion());
+    }
+
+    public static String key(Record record) {
+        Name name = record.getName();
+        int type = record.getType();
         return key(name, type);
     }
 

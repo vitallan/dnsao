@@ -27,7 +27,12 @@ public class FixedTimeRewarmScheduler {
 
     public void schedule(String key, long entryTtl) {
         long now = Clock.currentTimeInMillis();
-        long triggerAt = Math.max(now, entryTtl - thresholdToFire);
+        long triggerAt = entryTtl - thresholdToFire;
+        if (triggerAt <= now) {
+            log.debug("the ttl entry for key {} is immediate. Ignoring entry ", key);
+            remove(key);
+            return;
+        }
         RewarmTask task = new RewarmTask(key, triggerAt);
         log.debug("scheduling {} to rewarm at {}", key, TimeUtils.formatMillis(triggerAt, "HH:mm:ss"));
         remove(key);

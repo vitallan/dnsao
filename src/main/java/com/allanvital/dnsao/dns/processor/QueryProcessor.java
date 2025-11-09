@@ -9,6 +9,7 @@ import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
 import com.allanvital.dnsao.exc.PreHandlerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xbill.DNS.Message;
 
 import java.net.InetAddress;
 
@@ -44,7 +45,11 @@ public class QueryProcessor {
         return new DnsQuery(request, response);
     }
 
-    public DnsQuery processQuery(InetAddress clientAddress, byte[] data) {
+    public DnsQuery processInternalQuery(Message message) {
+        return processQuery(InetAddress.getLoopbackAddress(), message.toWire(), true);
+    }
+
+    public DnsQuery processExternalQuery(InetAddress clientAddress, byte[] data) {
         return this.processQuery(clientAddress, data, false);
     }
 

@@ -76,7 +76,7 @@ public class UdpServer extends ProtocolServer {
                 return;
             }
 
-            DnsQuery dnsQuery = processor.processQuery(clientAddress, data);
+            DnsQuery dnsQuery = processor.processExternalQuery(clientAddress, data);
             byte[] responseBytes = dnsQuery.getMessageBytes();
 
             if (responseBytes == null) {

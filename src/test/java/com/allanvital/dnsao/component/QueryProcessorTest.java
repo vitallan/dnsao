@@ -31,7 +31,7 @@ public class QueryProcessorTest extends TestHolder {
     @Test
     public void shouldRequestUdpCorrectly() throws Exception {
         Message request = MessageHelper.buildARequest(domain);
-        DnsQuery dnsQuery = processor.processQuery(getClient(), request.toWire());
+        DnsQuery dnsQuery = processor.processExternalQuery(getClient(), request.toWire());
         String responseIp = MessageHelper.extractIpFromResponseMessage(dnsQuery.getResponse());
         Assertions.assertEquals(this.responseIp, responseIp);
     }
