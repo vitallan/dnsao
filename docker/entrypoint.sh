@@ -8,9 +8,8 @@ APP_JAR="${DNSAO_HOME}/dnsao.jar"
 APP_YML="${DNSAO_CONFIG}/application.yml"
 LOGBACK_XML="${DNSAO_CONFIG}/logback.xml"
 
-# the default urls are pointing to 'prod' tag in github in default 
-APP_YML_URL="${APP_YML_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/docker/application.yml}"
-LOGBACK_URL="${LOGBACK_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/tags/prod/config-samples/docker/logback.xml}"
+APP_YML_URL="${APP_YML_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/docker/application.yml}"
+LOGBACK_URL="${LOGBACK_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/docker/logback.xml}"
 
 if [ "$(id -u)" -eq 0 ]; then
   RUN_USER="${RUN_USER:-dnsao}"
