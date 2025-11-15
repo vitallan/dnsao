@@ -16,6 +16,7 @@ public class Main {
 
     public static void main( String[] args ) {
         Conf conf = ConfLoader.load();
+        conf.sanitizeGroups();
         SystemGraph systemGraph = null;
         try {
             systemGraph = new SystemGraph(conf);

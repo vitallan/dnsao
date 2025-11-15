@@ -48,6 +48,6 @@ resolver:
 
   localMappings:
 
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-
+lists:
+  blockLists:
+    block: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"

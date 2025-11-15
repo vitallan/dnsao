@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.dns.processor.engine.unit;
 
-import com.allanvital.dnsao.dns.block.BlockListProvider;
+import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.infra.clock.Clock;
@@ -12,29 +12,30 @@ import org.xbill.DNS.Record;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.baseResponse;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.formErr;
+import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.BLOCKED;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class BlockListUnit implements EngineUnit {
+public class BlockUnit implements EngineUnit {
 
     private static final Logger log = LoggerFactory.getLogger(DNS);
 
-    private final BlockListProvider blockListProvider;
+    private final BlockDecider blockDecider;
 
-    public BlockListUnit(BlockListProvider blockListProvider) {
-        this.blockListProvider = blockListProvider;
+    public BlockUnit(BlockDecider blockDecider) {
+        this.blockDecider = blockDecider;
     }
 
     @Override
     public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
         Message request = dnsQueryRequest.getRequest();
+        InetAddress client = dnsQueryRequest.getClientAddress();
         Name question = getQuestionName(request);
-        if (blockListProvider == null || !blockListProvider.isBlocked(question)) {
+        if (blockDecider == null || !blockDecider.isBlocked(client, question)) {
             return null;
         }
         try {

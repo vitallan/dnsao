@@ -52,6 +52,10 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
+    - host: "dns.quad9.net"
+      port: 443
+      protocol: "doh"
+      path: "/dns-query"
     - ip: "149.112.112.112"
       port: 853
       protocol: "dot"
@@ -67,10 +71,28 @@ resolver:
     - domain: "ma-cool-2.domain.com"
       ip: "192.168.150.151"
 
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+lists:
+  blockLists:
+    steven: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    bets: "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/refs/heads/main/Bets.txt"
+  allowLists:
+    allowList1: "http://url.of.allow.lists.com"
 
+groups:
+  group1:
+    members:
+      - "192.168.68.55"
+      - "192.168.68.40"
+    allows:
+      - allowList1
+    blocks:
+      - steven
+  group2:
+    members:
+      - "192.168.68.10"
 ```
+
+---
 
 ### server
 
@@ -150,7 +172,7 @@ The **dnssec** property defines **DNSao** behavior about *DNSSEC* flags, validat
 | Level | Description |
 | ----- | ----------- |
 | **off** | the request will be sent to the upstreams without adding specific DNSSEC flags. **DNSao** does not validate if the answer is DNSSEC validated |
-| **simple** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** then replies to client transmitting the DNSSEC flags replied from upstream, either validated or not, but does not block unvalidated ones. The query will also be padded to the nearest 128 byte size, to allow for extra obfuscation, following dns rfc7830 |
+| **simple** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** then replies to client, either validated or not, but does not block unvalidated ones. The query will also be padded to the nearest 128 byte size, to allow for extra obfuscation, following dns rfc7830 |
 | **rigid** | the request will be sent to the upstreams adding DNSSEC flag. **DNSao** only replies to client if the DNSSEC is valid, otherwise, replies as **SERVFAIL**. The query will be padded to the full size of the package sent upstream, to allow for maximum obfuscation. *This will block several domains, since a lot of then does not have DNSSEC enabled* |
 
 Regardless of the upstream answer, **DNSao** does not set the *AD* flag in the answer, since it does not execute the hash validations internally (follows dns rfc4035 3.2.3).
@@ -191,8 +213,6 @@ resolver:
     - domain: "ma-cool-2.domain.com"
       ip: "192.168.150.151"
 
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 ```
 
 The **resolver** property defines the upstreams to be queried. You must specify the necessary configs for each protocol ("dot", "doh" or "udp"). These are the top level properties:
@@ -223,7 +243,20 @@ It is also possible to set **localMappings**: dns entries that will be resolved 
 | **domain** | the domain to be mapped |
 | **ip** | the ipv4 that will be sent as response. Only ipv4 is available at the moment |
 
-You can also set **blocklists**: these are remote URLs that **DNSao** will download and parse to block certain domains. Any domain mapped in these lists will be answered with the **0.0.0.0** ip, following the DNS Sink Hole standards. Lists supported can be in hosts format:
+### lists
+
+```yaml
+lists:
+  blockLists:
+    steven: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    bets: "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/refs/heads/main/Bets.txt"
+  allowLists:
+    allowList1: "http://url.of.allow.lists.com"
+```
+
+This config is optional, but can be used to set domain lists to be blocked. The expected parameter is a URL where **DNSao** can download such list. Any domain mapped in these lists will be answered with the **0.0.0.0** ip, following the DNS Sink Hole standards.
+
+Lists supported can be in hosts format:
 
 ```txt
 87.123.55.32 domain.to.be.blocked       # the ip is ignored, all domains will go to 0.0.0.0
@@ -237,9 +270,40 @@ domain2.to.be.blocked
 domain3.to.be.blocked
 ```
 
-A common usecase is to use [StevenBlack](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts), which is a regularly updated famous block list. The links are downloaded at server start and are updated hourly.
+A common usecase is to use [StevenBlack](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts), which is a regularly updated famous block list. The links are downloaded at server start and are updated every 12 hour, if the **refreshLists** property is set as **true**.
 
 It is also possible to configure **allowLists**: the download and reload behavior is similar to **blockLists**, but work as a list of domains that you do **not** want to block even when present in one of the **blockLists**. It is useful to allow access in scenarios where one blocklist blocks a domain that is actually useful to you.
+
+Both **blockLists** and **allowLists** demand a name for each list (in the above example, the names are steven, bets and allowList1).
+
+Names must be unique among both blockLists and allowLists to work effectively.
+
+### groups
+
+```yaml
+groups:
+  group1:
+    members:
+      - "192.168.68.55"
+      - "192.168.68.40"
+    allows:
+      - allowList1
+    blocks:
+      - steven
+  group2:
+    members:
+      - "192.168.68.10"
+```
+
+This config is also optional but can be used to selectively block or allow domains based on the client. That way, domains can be blocked for some devices, but not for all network.
+
+In the above example, the group named **group1** will have two members (ips ending in 55 and 40), and will only block the domains on the "steven" list and allows only the "allowList1" list.
+
+The group named **group2** will have a single member, and will not block or allow any specific list.
+
+All clients not defined in a group will enter the default **MAIN** group, which is an internal group that will block all blockLists defined in the **blockLists** property, and allow all lists in **allowLists**.
+
+The **MAIN** group cannot be manually setup, and trying to do so will be ignored.
 
 ## Logback XML
 

@@ -69,10 +69,6 @@ public class RewarmWorker implements Runnable {
         }
     }
 
-    private void requeue(Message message) {
-
-    }
-
     @Override
     public void run() {
         String key = "";

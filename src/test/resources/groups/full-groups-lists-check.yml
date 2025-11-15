@@ -1,0 +1,27 @@
+lists:
+  allowLists:
+    allow1: "urlAllow1"
+    allow2: "urlAllow2"
+  blockLists:
+    block1: "urlBlock1"
+    block2: "urlBlock2"
+
+groups:
+  group1:
+    members:
+      - "192.168.68.3"
+      - "192.168.68.4"
+      - "192.168.68.5"
+    allows:
+      - allow1
+      - allow2
+    blocks:
+      - block1
+      - block4
+  group2:
+    members:
+      - "192.168.68.6"
+    allows:
+      - allow5
+    blocks:
+      - block1

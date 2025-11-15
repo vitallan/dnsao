@@ -38,7 +38,7 @@ public class SystemGraphAssembler {
         NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
         StatsCollector statsCollector = statsCollector(notificationManager);
 
-        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, resolverConf, miscConf, cacheManager, notificationManager);
+        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, conf, cacheManager, notificationManager);
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
@@ -58,8 +58,8 @@ public class SystemGraphAssembler {
         return new KeepProvider(cacheConf);
     }
 
-    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, NotificationManager notificationManager) throws ConfException {
-        return queryInfraAssembler.assemble(resolverConf, miscConf, cacheManager, executorServiceFactory, notificationManager);
+    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, Conf conf, CacheManager cacheManager, NotificationManager notificationManager) throws ConfException {
+        return queryInfraAssembler.assemble(conf, cacheManager, executorServiceFactory, notificationManager);
     }
 
     public <T> void registerOverride(T module) {

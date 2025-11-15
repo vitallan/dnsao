@@ -1,0 +1,4 @@
+lists:
+  allowLists:
+    allow1: "url1"
+    allow2: "url2"

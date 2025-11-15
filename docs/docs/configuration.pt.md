@@ -53,6 +53,10 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
+    - host: "dns.quad9.net"
+      port: 443
+      protocol: "doh"
+      path: "/dns-query"
     - ip: "149.112.112.112"
       port: 853
       protocol: "dot"
@@ -68,11 +72,25 @@ resolver:
     - domain: "ma-cool-2.domain.com"
       ip: "192.168.150.151"
 
+lists:
+  blockLists:
+    steven: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    bets: "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/refs/heads/main/Bets.txt"
   allowLists:
-    - "https://raw.githubusercontent.com/Allow/hosts/master/hosts"
+    allowList1: "http://url.of.allow.lists.com"
 
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+groups:
+  group1:
+    members:
+      - "192.168.68.55"
+      - "192.168.68.40"
+    allows:
+      - allowList1
+    blocks:
+      - steven
+  group2:
+    members:
+      - "192.168.68.10"
 ```
 
 ### server
@@ -153,7 +171,7 @@ A propriedade **dnssec** define o comportamento de **DNSao** sobre as flags e va
 | Level | Description |
 | ----- | ----------- |
 | **off** | a requisição do cliente será enviada para os upstreams sem manipulação das flags DNSSEC. **DNSao** não irá validar se a resposta tem validação DNSSEC antes de retornar ao cliente |
-| **simple** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** irá responder ao cliente transmitindo as flags DNSSEC respondidas pelo upstream, validadas ou não, mas não bloqueará as respostas não validadas. A query também terá um *padding* para o próximo tamanho multiplo de 128 bytes para permitir ofuscação extra, seguindo dns rfc7830 |
+| **simple** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** irá responder ao cliente mas não bloqueará as respostas não validadas. A query também terá um *padding* para o próximo tamanho multiplo de 128 bytes para permitir ofuscação extra, seguindo dns rfc7830 |
 | **rigid** | a requisição do cliente será enviada para os upstreams adicionando a flag DNSSEC. **DNSao** só responderá ao cliente se a resposta possuir a flag DNSSEC disponível e válida. Caso contrário, será respondido um **SERVFAIL**. A query também terá *pading*, mas para o tamanho máximo permitido no pacote que será enviado ao upstream para máxima ofuscação. *Atenção: isso irá bloquear vários domínios, visto que muitos deles não possuem DNSSEC habilitado* |
 
 Independente da resposta do upstream, **DNSao** não habilita a flag *AD* na resposta, pois não executa as validações dos hashs internamente (necessário pela dns rfc4035 3.2.3)
@@ -193,9 +211,6 @@ resolver:
       ip: "192.168.150.150"
     - domain: "ma-cool-2.domain.com"
       ip: "192.168.150.151"
-
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 ```
 
 A propriedade **resolver** define os *upstreams* que serão consultados. Você deve especificar as configs respectivas para cada protocolo ("dot", "doh" ou "udp"). Estas são as propriedades de alto nível:
@@ -226,7 +241,20 @@ Também é possível definir **localMappings**: entradas de DNS que serão resol
 | **domain**  | o domínio a ser mapeado                                                       |
 | **ip**      | o IPv4 que será enviado como resposta. Apenas IPv4 está disponível no momento |
 
-Você também pode configurar **blocklists**: são URLs remotas que o **DNSao** fará download e parse para bloquear certos domínios. Qualquer domínio mapeado nessas listas será respondido com o IP **0.0.0.0**, seguindo o padrão de *DNS Sink Hole*. As listas suportadas podem estar no formato *hosts*:
+### lists
+
+```yaml
+lists:
+  blockLists:
+    steven: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    bets: "https://raw.githubusercontent.com/zangadoprojets/pi-hole-blocklist/refs/heads/main/Bets.txt"
+  allowLists:
+    allowList1: "http://url.of.allow.lists.com"
+```
+
+Essa config é opcional, mas pode ser usada para configurar listas de domínios a serem bloqueados. O parâmetro esperado é a url onde o servidor pode fazer o download das listas. Qualquer domínio mapeado nas listas de **blockLists** será respondido com o IP **0.0.0.0**, seguindo o padrão de *DNS Sink Hole*.
+
+As listas podem estar no formato *hosts*:
 
 ```txt
 87.123.55.32 domain.to.be.blocked       # o IP é ignorado, todos os domínios irão para 0.0.0.0
@@ -240,9 +268,40 @@ domain2.to.be.blocked
 domain3.to.be.blocked
 ```
 
-Um caso de uso comum é usar [StevenBlack](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts), uma blocklist famosa e atualizada regularmente. Os links são baixados quando **DNSao** inicia e são atualizados a cada hora.
+Um caso de uso comum é usar [StevenBlack](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts), uma blocklist famosa e atualizada regularmente. Os links são baixados quando **DNSao** inicia e são atualizados a cada 8 horas, caso a config **refreshLists** estiver habilitada.
 
 Também é possível configurar **allowLists**: possuem o mesmo comportamento de download e releitura que as **blockLists**, mas servem como um indicativo de domínios que você **não** quer bloquear mesmo se estiverem presentes nas **blockLists**. É útil para evitar falsos-positivo, e cenários onde algum item de alguma blocklist que é de seu interesse. 
+
+Tanto as **blockLists** e **allowLists** exigem um nome para cada lista (no exemplo acima, os nomes são "steven", "bets" e "allowList1").
+
+Nomes precisam ser únicos entre as blockLists e allowLists para funcionarem efetivamente.
+
+### groups
+
+```yaml
+groups:
+  group1:
+    members:
+      - "192.168.68.55"
+      - "192.168.68.40"
+    allows:
+      - allowList1
+    blocks:
+      - steven
+  group2:
+    members:
+      - "192.168.68.10"
+```
+
+Essa config é opcional, mas pode ser usada para seletivamente bloquear ou permitir domínios baseado no cliente. Dessa forma, domínios específicos podem ser bloqueados para alguns devices, mas não para toda a rede.
+
+No exemplo acima, o grupo nomeado **group1** terá dois membros (os ips terminando em 55 e 40), e só bloqueará os domínios da lista em "steven", e permitirá os domínios da lista "allowList1".                                  
+
+O grupo **group2** terá um único membro e não bloqueará ou permitirá nenhuma lista específica.
+
+Todo os clientes não definidos individualmente em um grupo entrarão no grupo **MAIN**, que é um grupo interno que bloqueia todas as listas definidas como **blockLists** e permite todos os domínios das listas **allowLists**.
+
+O grupo **MAIN** não pode ser manualmente configurado, e tentativas de sua configuração serão ignoradas.
 
 ## Logback XML
 
