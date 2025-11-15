@@ -40,7 +40,7 @@ public class DotConnectionPoolTest extends DotTestHolder {
     }
 
     @Test
-    public void shouldNotReturnSameSocketWhenNotifiedItIsBad() throws IOException, TimeoutException {
+    public void shouldNotReturnSameSocketWhenNotifiedItIsBad() throws Exception {
         s1 = pool.acquire();
         pool.release(s1, true);
         s2 = pool.acquire();
@@ -70,7 +70,18 @@ public class DotConnectionPoolTest extends DotTestHolder {
         s3 = pool.acquire();
         pool.release(s2);
         s4 = pool.acquire();
-        assertEquals(s2, s4);
+        assertSame(s2, s4);
+    }
+
+    @Test
+    public void shouldNotReturnSocketThatIsClosed() throws Exception {
+        s1 = pool.acquire();
+        s2 = pool.acquire();
+        s3 = pool.acquire();
+        closeQuiet(s3);
+        pool.release(s3);
+        s4 = pool.acquire();
+        assertNotSame(s3, s4);
     }
 
     @Test

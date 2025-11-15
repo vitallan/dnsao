@@ -1,0 +1,17 @@
+groups:
+  group1:
+    members:
+      - "192.168.68.3"
+      - "192.168.68.4"
+      - "192.168.68.5"
+    allows:
+      - allow1
+      - allow2
+    blocks:
+      - block1
+      - block2
+  group2:
+    members:
+      - "192.168.68.6"
+    allows:
+      - allow1

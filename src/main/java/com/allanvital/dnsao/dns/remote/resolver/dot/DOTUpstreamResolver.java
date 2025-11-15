@@ -124,13 +124,13 @@ public class DOTUpstreamResolver implements UpstreamResolver {
 
     private SSLSocket forceAcquire() throws IOException {
         SSLSocket socket = null;
-        while (socket == null) {
-            try {
-                socket = pool.acquire();
-            } catch (IOException | TimeoutException e) {
-                log.warn("it was not possible to acquire a sslSocket, error was {}. Retrying...", e.getMessage());
-                throw new IOException(e);
-            }
+        try {
+            socket = pool.acquire();
+        } catch (IOException | TimeoutException e) {
+            log.debug("it was not possible to acquire a sslSocket, error was {}", e.getMessage());
+            throw new IOException(e);
+        } catch (InterruptedException e) {
+            throw new IOException(e);
         }
         return socket;
     }

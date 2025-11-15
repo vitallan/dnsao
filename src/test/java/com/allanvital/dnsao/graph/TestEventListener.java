@@ -1,6 +1,5 @@
-package com.allanvital.dnsao;
+package com.allanvital.dnsao.graph;
 
-import com.allanvital.dnsao.graph.TestTimeProvider;
 import com.allanvital.dnsao.infra.notification.telemetry.EventListener;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.junit.jupiter.api.Assertions;
@@ -25,14 +24,12 @@ public class TestEventListener implements EventListener {
     }
 
     @Override
-    public void receiveNotification(EventType type) {
-        synchronized (this) {
-            if (eventCounts.containsKey(type)) {
-                eventCounts.put(type, eventCounts.get(type) + 1);
-                return;
-            }
-            eventCounts.put(type, 1);
+    public synchronized void receiveNotification(EventType type) {
+        if (eventCounts.containsKey(type)) {
+            eventCounts.put(type, eventCounts.get(type) + 1);
+            return;
         }
+        eventCounts.put(type, 1);
     }
 
     private int get(EventType type) {
@@ -40,7 +37,7 @@ public class TestEventListener implements EventListener {
         if (count == null) {
             return 0;
         }
-        return count.intValue();
+        return count;
     }
 
     public void reset() {

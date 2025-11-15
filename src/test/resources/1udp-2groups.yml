@@ -1,0 +1,50 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+misc:
+  timeout: 1
+  retries: 1
+
+cache:
+  enabled: false
+  rewarm: false
+
+resolver:
+  multiplier: 2
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
+
+lists:
+  allowLists:
+    allow1: "urlAllow1"
+    allow2: "urlAllow2"
+  blockLists:
+    block1: "urlBlock1"
+    block2: "urlBlock2"
+
+groups:
+  group1:
+    members:
+      - "127.0.0.5"
+    allows:
+      - allow1
+    blocks:
+      - block1
+      - block2
+  group2:
+    members:
+      - "127.0.0.10"
+    allows:
+      - allow1
+    blocks:
+      - block1
+  group3:
+    members:
+      - "127.0.0.8"
+    allows:
+    blocks:

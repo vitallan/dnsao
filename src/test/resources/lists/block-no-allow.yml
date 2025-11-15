@@ -1,0 +1,4 @@
+lists:
+  blockLists:
+    block1: "url1"
+    block2: "url2"

@@ -42,8 +42,4 @@ resolver:
       ip: "192.168.68.113"
     - domain: "cronicle.intranet"
       ip: "192.168.68.126"
-  allowLists:
-
-  blocklists:
-    - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 

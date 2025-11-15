@@ -64,13 +64,9 @@ public class DOTConnectionPool {
         return socket;
     }
 
-    public SSLSocket acquire() throws IOException, TimeoutException {
-        try {
-            if (!permits.tryAcquire(ACQUIRE_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new TimeoutException("Timed out waiting for a free connection");
-            }
-        } catch (InterruptedException e) {
-            throw new IOException(e);
+    public SSLSocket acquire() throws IOException, TimeoutException, InterruptedException {
+        if (!permits.tryAcquire(ACQUIRE_TIMEOUT, TimeUnit.MILLISECONDS)) {
+            throw new TimeoutException("Timed out waiting for a free connection");
         }
         boolean success = false;
         try {

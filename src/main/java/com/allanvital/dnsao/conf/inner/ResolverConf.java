@@ -1,13 +1,8 @@
 package com.allanvital.dnsao.conf.inner;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -17,8 +12,6 @@ public class ResolverConf {
     private List<Upstream> upstreams = buildDefault();
     private int multiplier = 1;
     private int tlsPoolSize = 3;
-    private List<String> blocklists = new LinkedList<>();
-    private List<String> allowLists = new LinkedList<>();
     private List<LocalMapping> localMappings = new LinkedList<>();
 
     public List<Upstream> getUpstreams() {
@@ -45,14 +38,6 @@ public class ResolverConf {
         this.tlsPoolSize = tlsPoolSize;
     }
 
-    public List<String> getBlocklists() {
-        return blocklists;
-    }
-
-    public void setBlocklists(List<String> blocklists) {
-        this.blocklists = blocklists;
-    }
-
     public List<LocalMapping> getLocalMappings() {
         if (this.localMappings == null) {
             return new LinkedList<>();
@@ -72,14 +57,6 @@ public class ResolverConf {
         upstream.setProtocol("udp");
         upstreams.add(upstream);
         return upstreams;
-    }
-
-    public List<String> getAllowLists() {
-        return allowLists;
-    }
-
-    public void setAllowLists(List<String> allowLists) {
-        this.allowLists = allowLists;
     }
 
 }

@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.holder;
 
-import com.allanvital.dnsao.TestEventListener;
+import com.allanvital.dnsao.graph.TestEventListener;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.ConfLoader;
 import com.allanvital.dnsao.conf.inner.Upstream;

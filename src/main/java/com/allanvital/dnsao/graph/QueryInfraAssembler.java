@@ -1,10 +1,10 @@
 package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.inner.*;
-import com.allanvital.dnsao.dns.block.BlockListProvider;
-import com.allanvital.dnsao.dns.block.DownloadFileHandler;
-import com.allanvital.dnsao.dns.block.FileHandler;
+import com.allanvital.dnsao.conf.inner.pojo.GroupInnerConf;
+import com.allanvital.dnsao.dns.block.*;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
@@ -19,16 +19,11 @@ import com.allanvital.dnsao.dns.remote.UpstreamResolverProvider;
 import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolFactory;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
-import com.allanvital.dnsao.utils.DownloadUtils;
 
 import javax.net.ssl.SSLSocketFactory;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -41,17 +36,23 @@ public class QueryInfraAssembler {
         this.overrideRegistry = overrideRegistry;
     }
 
-    public QueryProcessorDependencies assemble(ResolverConf resolverConf, MiscConf miscConf, CacheManager cacheManager, ExecutorServiceFactory executorServiceFactory, NotificationManager notificationManager) throws ConfException {
+    public QueryProcessorDependencies assemble(Conf conf, CacheManager cacheManager, ExecutorServiceFactory executorServiceFactory, NotificationManager notificationManager) throws ConfException {
+        ResolverConf resolverConf = conf.getResolver();
+        MiscConf miscConf = conf.getMisc();
+        ListsConf listsConf = conf.getLists();
+
         DOTConnectionPoolFactory dotConnectionPoolFactory = dotConnectionPoolFactory((SSLSocketFactory) SSLSocketFactory.getDefault(), resolverConf.getTlsPoolSize());
         ResolverProvider resolverProvider = resolverProvider(dotConnectionPoolFactory, resolverConf.getUpstreams());
         QueryOrchestrator orchestrator = queryOrchestrator(miscConf);
         UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, resolverConf, miscConf, orchestrator);
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
-        FileHandler fileHandler = fileHandler();
-        BlockListProvider blockListProvider = blockListProvider(executorServiceFactory.buildScheduledExecutor("block"), resolverConf.getAllowLists(), resolverConf.getBlocklists(), fileHandler, miscConf.isRefreshLists());
+        DomainListFileReader domainListFileReader = domainListFileReader();
+        Refresher refresher = refresher(executorServiceFactory);
+        FileListsProvider fileListsProvider = fileListsProvider(refresher, listsConf, domainListFileReader, miscConf.isRefreshLists());
+        BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockListProvider, locaMappings, cacheManager, upstreamUnitConf);
+        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager);
 
@@ -60,6 +61,26 @@ public class QueryInfraAssembler {
         PostHandlerFacade postHandlerFacade = postHandlerFacade(postHandlerProvider, executorServiceFactory);
 
         return new QueryProcessorDependencies(preHandlerFacade, queryEngine, postHandlerFacade);
+    }
+
+    private Refresher refresher(ExecutorServiceFactory executorServiceFactory) {
+        return overrideRegistry.getRegisteredModule(Refresher.class)
+                .orElse(new ListRefresher(executorServiceFactory.buildScheduledExecutor("refresh-lists")));
+    }
+
+    private DomainListFileReader domainListFileReader() {
+        return overrideRegistry.getRegisteredModule(DomainListFileReader.class)
+                .orElse(new DownloadListFileReader());
+    }
+
+    private FileListsProvider fileListsProvider(Refresher refresher, ListsConf listsConf, DomainListFileReader domainListFileReader, boolean refreshLists) {
+        return overrideRegistry.getRegisteredModule(FileListsProvider.class)
+                .orElse(new FileListsProvider(refresher, listsConf, domainListFileReader, refreshLists));
+    }
+
+    private BlockDecider blockDecider(FileListsProvider fileListsProvider, ListsConf listsConf, Map<String, GroupInnerConf> groups) {
+        return overrideRegistry.getRegisteredModule(BlockDecider.class)
+                .orElse(new BlockDecider(fileListsProvider, listsConf, groups));
     }
 
     ResolverProvider resolverProvider(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
@@ -87,24 +108,6 @@ public class QueryInfraAssembler {
         return mappings;
     }
 
-    private FileHandler fileHandler() throws ConfException {
-        Optional<FileHandler> registeredModule = overrideRegistry.getRegisteredModule(FileHandler.class);
-        if (registeredModule.isPresent()) {
-            return registeredModule.get();
-        }
-        Path workDir = null;
-        try {
-            workDir = DownloadUtils.getAppDir();
-            return new DownloadFileHandler(workDir);
-        } catch (IOException e) {
-            throw new ConfException(e.getMessage());
-        }
-    }
-
-    public BlockListProvider blockListProvider(ScheduledExecutorService scheduledExecutorService, List<String> blockList, List<String> allowList, FileHandler fileHandler, boolean refreshLists) {
-        return new BlockListProvider(scheduledExecutorService, blockList, allowList, fileHandler, refreshLists);
-    }
-
     private PreHandlerFacade preHandlerFacade(PreHandlerProvider preHandlerProvider) {
         return new PreHandlerFacade(preHandlerProvider);
     }
@@ -118,12 +121,12 @@ public class QueryInfraAssembler {
     }
 
     private EngineUnitProvider engineUnitProvider(ExecutorServiceFactory executorServiceFactory,
-                                                  BlockListProvider blockListProvider,
+                                                  BlockDecider blockDecider,
                                                   Map<String, String> localMappings,
                                                   CacheManager cacheManager,
                                                   UpstreamUnitConf upstreamUnitConf) {
 
-        return new EngineUnitProvider(executorServiceFactory, blockListProvider, localMappings, cacheManager, upstreamUnitConf);
+        return new EngineUnitProvider(executorServiceFactory, blockDecider, localMappings, cacheManager, upstreamUnitConf);
     }
 
     private PostHandlerFacade postHandlerFacade(PostHandlerProvider provider, ExecutorServiceFactory executorServiceFactory) {
