@@ -1,3 +1,9 @@
+[![Deploy with Docker](https://img.shields.io/badge/Deploy%20with-Docker-2496ED?logo=docker&logoColor=white)](https://vitallan.github.io/dnsao/pt/installation/#instalacao-via-docker)
+[![Deploy with systemd](https://img.shields.io/badge/Deploy%20with-systemd-000000?logo=systemd&logoColor=white)](https://vitallan.github.io/dnsao/pt/installation/#instalacao-por-script)
+
+[![Tests](https://github.com/vitallan/dnsao/actions/workflows/ci.yml/badge.svg)](https://github.com/vitallan/dnsao/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/vitallan/dnsao)](https://github.com/vitallan/dnsao/releases)
+
 <p align="center">
   <img src="https://github.com/vitallan/dnsao/blob/main/docs/docs/assets/logo.svg?raw=true" width="150" alt="DNSao logo">
 </p>
