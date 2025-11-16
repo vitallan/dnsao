@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.processor.engine.unit;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
@@ -15,9 +16,14 @@ import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.SERVFAIL;
 public class ServFailUnit implements EngineUnit {
 
     @Override
-    public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
+    public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         Message servfail = buildServFail(dnsQueryRequest.getRequest());
-        return new DnsQueryResponse(dnsQueryRequest, servfail, SERVFAIL);
+        return new DnsQueryResponse(dnsQueryRequest, servfail);
+    }
+
+    @Override
+    public QueryResolvedBy unitResolvedBy() {
+        return SERVFAIL;
     }
 
     private Message buildServFail(Message query) {

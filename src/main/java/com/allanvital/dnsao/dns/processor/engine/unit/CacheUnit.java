@@ -2,12 +2,12 @@ package com.allanvital.dnsao.dns.processor.engine.unit;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
+import com.allanvital.dnsao.infra.AppLoggers;
 import com.allanvital.dnsao.infra.clock.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 
 /**
@@ -15,7 +15,7 @@ import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
  */
 public class CacheUnit extends AbstractCacheUnit {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
+    private static final Logger log = LoggerFactory.getLogger(AppLoggers.CACHE);
 
     public CacheUnit(CacheManager cacheManager) {
         super(cacheManager);

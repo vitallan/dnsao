@@ -4,6 +4,7 @@ import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
@@ -31,7 +32,7 @@ public class BlockUnit implements EngineUnit {
     }
 
     @Override
-    public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
+    public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         Message request = dnsQueryRequest.getRequest();
         InetAddress client = dnsQueryRequest.getClientAddress();
         Name question = getQuestionName(request);
@@ -40,7 +41,7 @@ public class BlockUnit implements EngineUnit {
         }
         try {
             Message response = buildBlocked(request);
-            return new DnsQueryResponse(dnsQueryRequest, response, BLOCKED);
+            return new DnsQueryResponse(dnsQueryRequest, response);
         } catch (UnknownHostException | TextParseException e) {
             log.error("it was not possible to build a blocked response: {}", e.getMessage());
             if (log.isDebugEnabled()) {
@@ -48,6 +49,11 @@ public class BlockUnit implements EngineUnit {
             }
         }
         return null;
+    }
+
+    @Override
+    public QueryResolvedBy unitResolvedBy() {
+        return BLOCKED;
     }
 
     public static Message buildBlocked(Message query) throws UnknownHostException, TextParseException {
