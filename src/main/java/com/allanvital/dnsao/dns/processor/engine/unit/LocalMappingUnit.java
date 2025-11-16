@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.processor.engine.unit;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
@@ -10,7 +11,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 
-import static com.allanvital.dnsao.dns.remote.DnsUtils.*;
+import static com.allanvital.dnsao.dns.remote.DnsUtils.baseResponse;
+import static com.allanvital.dnsao.dns.remote.DnsUtils.formErr;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.LOCAL;
 
 /**
@@ -25,7 +27,7 @@ public class LocalMappingUnit implements EngineUnit {
     }
 
     @Override
-    public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
+    public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         Message request = dnsQueryRequest.getRequest();
         String name = getQuestionName(request).toString().toLowerCase();
         if (!localMappings.containsKey(name)) {
@@ -33,7 +35,12 @@ public class LocalMappingUnit implements EngineUnit {
         }
         String responseIp = localMappings.get(name);
         Message response = buildLocalResponse(request, responseIp);
-        return new DnsQueryResponse(dnsQueryRequest, response, LOCAL);
+        return new DnsQueryResponse(dnsQueryRequest, response);
+    }
+
+    @Override
+    public QueryResolvedBy unitResolvedBy() {
+        return LOCAL;
     }
 
     public static Message buildLocalResponse(Message request, String targetIpv4Ip) {

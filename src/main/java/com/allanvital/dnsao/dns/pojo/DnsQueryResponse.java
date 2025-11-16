@@ -15,17 +15,15 @@ public class DnsQueryResponse {
     private String responseSource;
     private long finishTime;
 
-    public DnsQueryResponse(DnsQueryRequest dnsQueryRequest, Message response, QueryResolvedBy queryResolvedBy) {
+    public DnsQueryResponse(DnsQueryRequest dnsQueryRequest, Message response) {
         this.dnsQueryRequest = dnsQueryRequest;
         this.response = response;
-        this.queryResolvedBy = queryResolvedBy;
     }
 
     public DnsQueryResponse(DnsQueryRequest dnsQueryRequest, DnsQueryResult upstreamResult) {
         this.dnsQueryRequest = dnsQueryRequest;
         this.response = upstreamResult.message();
         this.responseSource = upstreamResult.resolver().name();
-        this.queryResolvedBy = QueryResolvedBy.UPSTREAM;
     }
 
     public DnsQueryRequest getDnsQueryRequest() {

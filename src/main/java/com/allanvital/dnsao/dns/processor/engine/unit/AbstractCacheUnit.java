@@ -3,6 +3,7 @@ package com.allanvital.dnsao.dns.processor.engine.unit;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
@@ -39,7 +40,7 @@ public abstract class AbstractCacheUnit implements EngineUnit {
     }
 
     @Override
-    public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
+    public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         if (dnsQueryRequest.isLocalQuery()) {
             return null; //queries coming from dnsao itself should not hit cache to allow for rewarm
         }
@@ -49,7 +50,7 @@ public abstract class AbstractCacheUnit implements EngineUnit {
             Header header = cached.getHeader();
             header.setID(query.getHeader().getID());
             cached.setHeader(header);
-            return new DnsQueryResponse(dnsQueryRequest, cached, CACHE);
+            return new DnsQueryResponse(dnsQueryRequest, cached);
         }
         return null;
     }
@@ -98,6 +99,11 @@ public abstract class AbstractCacheUnit implements EngineUnit {
             }
         }
         return copy;
+    }
+
+    @Override
+    public QueryResolvedBy unitResolvedBy() {
+        return CACHE;
     }
 
 }

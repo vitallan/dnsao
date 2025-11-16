@@ -21,7 +21,6 @@ public class QueryEngine {
             if (response != null) {
                 //the first valid one is answered to client
                 //thats why it is important to validate the ordering of the engine units
-                response.resetToOriginalId(dnsQueryRequest);
                 return response;
             }
         }

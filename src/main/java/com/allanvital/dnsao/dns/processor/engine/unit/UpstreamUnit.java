@@ -7,6 +7,7 @@ import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
+import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Header;
@@ -18,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.allanvital.dnsao.infra.AppLoggers.DNS;
+import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 import static org.xbill.DNS.Rcode.REFUSED;
 import static org.xbill.DNS.Rcode.SERVFAIL;
 
@@ -44,7 +46,7 @@ public class UpstreamUnit implements EngineUnit {
     }
 
     @Override
-    public DnsQueryResponse process(DnsQueryRequest dnsQueryRequest) {
+    public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         List<UpstreamResolver> upstreamsToBeUsed = resolversToUse();
         String threadName = Thread.currentThread().getName();
         ExecutorService executor = executorServiceFactory.buildExecutor(threadName + "-res", resolvers.size());
@@ -66,6 +68,11 @@ public class UpstreamUnit implements EngineUnit {
             executor.shutdown();
         }
         return null;
+    }
+
+    @Override
+    public QueryResolvedBy unitResolvedBy() {
+        return UPSTREAM;
     }
 
     private List<UpstreamResolver> resolversToUse() {
