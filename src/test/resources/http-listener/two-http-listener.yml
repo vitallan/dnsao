@@ -1,0 +1,4 @@
+listeners:
+  http:
+    - "http://someurl.com/endpoint"
+    - "https://anotherurl.com/other"

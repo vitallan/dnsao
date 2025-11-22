@@ -24,6 +24,7 @@ import javax.net.ssl.SSLSocketFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -54,7 +55,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
 
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager);
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp());
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -133,8 +134,8 @@ public class QueryInfraAssembler {
         return new PostHandlerFacade(provider, executorServiceFactory);
     }
 
-    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager) {
-        return new PostHandlerProvider(cacheManager, notificationManager);
+    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify) {
+        return new PostHandlerProvider(cacheManager, notificationManager, urlsToNotify);
     }
 
 }
