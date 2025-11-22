@@ -21,6 +21,7 @@ public class Conf {
     private MiscConf misc = new MiscConf();
     private ListsConf lists = new ListsConf();
     private Map<String, GroupInnerConf> groups = new HashMap<>();
+    private HttpListenerConf listeners = new HttpListenerConf();
 
     public ServerConf getServer() {
         return server;
@@ -100,4 +101,11 @@ public class Conf {
         groups.put(MAIN, mainInnerConf);
     }
 
+    public HttpListenerConf getListeners() {
+        return listeners;
+    }
+
+    public void setListeners(HttpListenerConf listeners) {
+        this.listeners = listeners;
+    }
 }
