@@ -93,8 +93,8 @@ groups:
       - "192.168.68.10"
 
 listeners:
-http:
-  - "http://host:port/listener"  
+  http:
+    - "http://host:port/listener"  
 
 ```
 
@@ -312,8 +312,8 @@ O grupo **MAIN** não pode ser manualmente configurado, e tentativas de sua conf
 
 ```yaml
 listeners:
-http:
-- "http://host:port/listener"
+  http:
+    - "http://host:port/listener"
 ```
 
 Config opcional que pode ser usada para informar serviços http externos para receber as queries DNS via POST. Após cada requisição dns ser recebida e processada, **DNSao** irá executar um POST para cada url da lista com o body no formato abaixo:

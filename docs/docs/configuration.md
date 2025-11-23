@@ -313,8 +313,8 @@ The **MAIN** group cannot be manually setup, and trying to do so will be ignored
 
 ```yaml
 listeners:
-http:
-- "http://host:port/listener"
+  http:
+    - "http://host:port/listener"
 ```
 
 Optional config that can be used to set external http listeners to receive the dns queries as POST requests. After each query is received and processed, **DNSao** will execute a POST request to that URL with the following body format:
