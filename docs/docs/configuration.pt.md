@@ -91,6 +91,11 @@ groups:
   group2:
     members:
       - "192.168.68.10"
+
+listeners:
+http:
+  - "http://host:port/listener"  
+
 ```
 
 ### server
@@ -302,6 +307,30 @@ O grupo **group2** terá um único membro e não bloqueará ou permitirá nenhum
 Todo os clientes não definidos individualmente em um grupo entrarão no grupo **MAIN**, que é um grupo interno que bloqueia todas as listas definidas como **blockLists** e permite todos os domínios das listas **allowLists**.
 
 O grupo **MAIN** não pode ser manualmente configurado, e tentativas de sua configuração serão ignoradas.
+
+### listeners
+
+```yaml
+listeners:
+http:
+- "http://host:port/listener"
+```
+
+Config opcional que pode ser usada para informar serviços http externos para receber as queries DNS via POST. Após cada requisição dns ser recebida e processada, **DNSao** irá executar um POST para cada url da lista com o body no formato abaixo:
+
+```json
+{
+  "requestTime" : "2025-11-08 00:00:00.000",
+  "queryResolvedBy" : "UPSTREAM",
+  "client" : "192.168.66.123",
+  "type" : "A",
+  "domain" : "example.com",
+  "answer" : "10.10.10.10",
+  "source" : "9.9.9.9",
+  "elapsedTimeInMs" : "1000"
+}
+```
+O campo **source** informa qual upstream respondeu a query, caso ela tenha sido resolvida por um upstream, caso contrário, virá nulo.
 
 ## Logback XML
 
