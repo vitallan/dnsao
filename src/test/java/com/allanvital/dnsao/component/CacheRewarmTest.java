@@ -49,33 +49,42 @@ public class CacheRewarmTest extends TestHolder {
         String key = "A:" + domain;
         cacheManager.put(key, response, 1L);
 
-        eventListener.assertCount(CACHE_REWARM, 1);
+        testTimeProvider.walkNow(1100);
+        eventListener.assertCount(CACHE_REWARM, 1, false);
 
         cacheManager.get(key);
-        eventListener.assertCount(CACHE_REWARM, 3);
+        testTimeProvider.walkNow(1100);
+        eventListener.assertCount(CACHE_REWARM, 2, false);
+        testTimeProvider.walkNow(1100);
+        eventListener.assertCount(CACHE_REWARM, 3, false);
 
+        testTimeProvider.walkNow(1100);
         assertEquals(3, fakeUpstreamServer.getCallCount());
-        eventListener.assertCount(CACHE_REWARM_EXPIRED, 1);
-        eventListener.assertCount(QUERY_RESOLVED, 3);
+        eventListener.assertCount(CACHE_REWARM_EXPIRED, 1, false);
+        eventListener.assertCount(QUERY_RESOLVED, 3, false);
     }
 
     @Test
     public void shouldResetTtlAndRewarmCountWhenHittingRewarmed() throws InterruptedException {
         String key = "A:" + domain;
         cacheManager.put(key, response, 1L);
-        eventListener.assertCount(CACHE_REWARM, 1);
+        testTimeProvider.walkNow(1100L);
+        eventListener.assertCount(CACHE_REWARM, 1, false);
 
         cacheManager.get(key);
-        eventListener.assertCount(CACHE_HIT, 1);
-        eventListener.assertCount(CACHE_REWARM, 2);
+        eventListener.assertCount(CACHE_HIT, 1, false);
+        testTimeProvider.walkNow(1100L);
+        eventListener.assertCount(CACHE_REWARM, 2, false);
 
         cacheManager.get(key);
-        eventListener.assertCount(CACHE_HIT, 2);
-        eventListener.assertCount(CACHE_REWARM, 3);
+        eventListener.assertCount(CACHE_HIT, 2, false);
+        testTimeProvider.walkNow(1100L);
+        eventListener.assertCount(CACHE_REWARM, 3, false);
 
         cacheManager.get(key);
-        eventListener.assertCount(CACHE_HIT, 3);
-        eventListener.assertCount(CACHE_REWARM, 4);
+        eventListener.assertCount(CACHE_HIT, 3, false);
+        testTimeProvider.walkNow(1100L);
+        eventListener.assertCount(CACHE_REWARM, 4, false);
 
         assertEquals(4, fakeUpstreamServer.getCallCount());
         eventListener.assertCount(QUERY_RESOLVED, 4);

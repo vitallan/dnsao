@@ -10,5 +10,9 @@ import java.util.List;
 public interface ResolverProvider {
 
     List<UpstreamResolver> getAllResolvers();
+    List<UpstreamResolver> getResolversToUse();
+    default void notifyLastWinner(UpstreamResolver resolver) {
+
+    }
 
 }

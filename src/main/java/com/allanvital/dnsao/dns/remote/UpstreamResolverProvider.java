@@ -1,20 +1,14 @@
 package com.allanvital.dnsao.dns.remote;
 
-import com.allanvital.dnsao.conf.inner.Upstream;
+import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import com.allanvital.dnsao.dns.remote.resolver.doh.DOHUpstreamResolver;
-import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolFactory;
-import com.allanvital.dnsao.dns.remote.resolver.dot.DOTUpstreamResolver;
-import com.allanvital.dnsao.dns.remote.resolver.udp.UdpUpstreamResolver;
-import com.allanvital.dnsao.utils.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateParsingException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
@@ -25,28 +19,55 @@ public class UpstreamResolverProvider implements ResolverProvider {
 
     private static final Logger log = LoggerFactory.getLogger(INFRA);
 
-    private final List<UpstreamResolver> resolvers  = new LinkedList<>();
+    private final AtomicInteger index = new AtomicInteger(0);
+    private final AtomicReference<UpstreamResolver> lastWinner = new AtomicReference<>();
+    private final int multiplier;
+    private final UpstreamResolverBuilder resolverBuilder;
 
-    public UpstreamResolverProvider(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
-        for (Upstream upstream : upstreams) {
-            String lowerCaseProtocol = upstream.getProtocol().toLowerCase();
-            try {
-                switch (lowerCaseProtocol) {
-                    case "udp" -> this.resolvers.add(new UdpUpstreamResolver(upstream.getIp(), upstream.getPort()));
-                    case "dot" -> this.resolvers.add(new DOTUpstreamResolver(connectionPoolFactory.build(upstream), upstream));
-                    case "doh" -> this.resolvers.add(new DOHUpstreamResolver(upstream));
-                    default -> log.warn("no Resolver possible for protocol {}", upstream.getProtocol());
-                }
-            } catch (CertificateParsingException | IOException | NoSuchAlgorithmException e) {
-                Throwable rootCause = ExceptionUtils.findRootCause(e);
-                log.error("failed to create resolver {}: {}", upstream.getIp(), rootCause.getMessage());
-            }
-        }
+    public UpstreamResolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier) {
+        this.multiplier = multiplier;
+        this.resolverBuilder = resolverBuilder;
     }
 
     @Override
     public List<UpstreamResolver> getAllResolvers() {
-        return resolvers;
+        return resolverBuilder.getAllResolvers();
+    }
+
+    @Override
+    public List<UpstreamResolver> getResolversToUse() {
+        List<UpstreamResolver> resolvers = getAllResolvers();
+        List<UpstreamResolver> resolversToUse = new LinkedList<>();
+        int i = 0;
+        int maxResolvers = Math.min(multiplier, resolvers.size());
+        UpstreamResolver lastWinner = getLastWinner();
+        if (maxResolvers > 1 && lastWinner != null) {
+            resolversToUse.add(lastWinner);
+            i++;
+        }
+        while (i < maxResolvers) {
+            int position = Math.floorMod(index.getAndIncrement(), resolvers.size());
+            UpstreamResolver upstreamResolver = resolvers.get(position);
+            if (upstreamResolver.equals(lastWinner)) {
+                continue;
+            }
+            resolversToUse.add(upstreamResolver);
+            i++;
+        }
+        return resolversToUse;
+    }
+
+    private UpstreamResolver getLastWinner() {
+        List<UpstreamResolver> resolvers = getAllResolvers();
+        if (lastWinner.get() == null || multiplier >= resolvers.size()) {
+            return null;
+        }
+        return lastWinner.get();
+    }
+
+    @Override
+    public void notifyLastWinner(UpstreamResolver resolver) {
+        lastWinner.set(resolver);
     }
 
 }

@@ -21,4 +21,9 @@ public class TestResolverProvider implements ResolverProvider {
         return resolvers;
     }
 
+    @Override
+    public List<UpstreamResolver> getResolversToUse() {
+        return resolvers;
+    }
+
 }
