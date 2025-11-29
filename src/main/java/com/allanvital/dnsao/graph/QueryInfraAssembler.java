@@ -4,6 +4,7 @@ import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.conf.inner.pojo.GroupInnerConf;
+import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.block.*;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
@@ -43,9 +44,10 @@ public class QueryInfraAssembler {
         ListsConf listsConf = conf.getLists();
 
         DOTConnectionPoolFactory dotConnectionPoolFactory = dotConnectionPoolFactory((SSLSocketFactory) SSLSocketFactory.getDefault(), resolverConf.getTlsPoolSize());
-        ResolverProvider resolverProvider = resolverProvider(dotConnectionPoolFactory, resolverConf.getUpstreams());
+        UpstreamResolverBuilder resolverBuilder = upstreamResolverBuilder(dotConnectionPoolFactory, resolverConf.getUpstreams());
+        ResolverProvider resolverProvider = resolverProvider(resolverBuilder, resolverConf.getMultiplier());
         QueryOrchestrator orchestrator = queryOrchestrator(miscConf);
-        UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, resolverConf, miscConf, orchestrator);
+        UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, miscConf, orchestrator);
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
         DomainListFileReader domainListFileReader = domainListFileReader();
         Refresher refresher = refresher(executorServiceFactory);
@@ -55,7 +57,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
 
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp());
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider);
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -84,9 +86,14 @@ public class QueryInfraAssembler {
                 .orElse(new BlockDecider(fileListsProvider, listsConf, groups));
     }
 
-    ResolverProvider resolverProvider(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
+    ResolverProvider resolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier) {
         return overrideRegistry.getRegisteredModule(ResolverProvider.class)
-                .orElse(new UpstreamResolverProvider(connectionPoolFactory, upstreams));
+                .orElse(new UpstreamResolverProvider(resolverBuilder, multiplier));
+    }
+
+    UpstreamResolverBuilder upstreamResolverBuilder(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
+        return overrideRegistry.getRegisteredModule(UpstreamResolverBuilder.class)
+                .orElse(new UpstreamResolverBuilder(connectionPoolFactory, upstreams));
     }
 
     DOTConnectionPoolFactory dotConnectionPoolFactory(SSLSocketFactory socketFactory, int maxPoolSize) {
@@ -97,8 +104,8 @@ public class QueryInfraAssembler {
         return new QueryOrchestrator(miscConf.getTimeout(), miscConf.getDnsSecMode(), miscConf.getRetries());
     }
 
-    private UpstreamUnitConf upstreamUnitConf(ResolverProvider resolverProvider, ResolverConf resolverConf, MiscConf miscConf, QueryOrchestrator queryOrchestrator) {
-        return new UpstreamUnitConf(resolverProvider.getAllResolvers(), resolverConf.getMultiplier(), miscConf.getDnsSecMode(), miscConf.isServeExpired(), miscConf.getTimeout(), queryOrchestrator);
+    private UpstreamUnitConf upstreamUnitConf(ResolverProvider resolverProvider, MiscConf miscConf, QueryOrchestrator queryOrchestrator) {
+        return new UpstreamUnitConf(miscConf.getDnsSecMode(), miscConf.isServeExpired(), miscConf.getTimeout(), queryOrchestrator, resolverProvider);
     }
 
     private Map<String, String> localMappings(List<LocalMapping> localMappings) {
@@ -134,8 +141,8 @@ public class QueryInfraAssembler {
         return new PostHandlerFacade(provider, executorServiceFactory);
     }
 
-    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify) {
-        return new PostHandlerProvider(cacheManager, notificationManager, urlsToNotify);
+    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify, ResolverProvider resolverProvider) {
+        return new PostHandlerProvider(cacheManager, notificationManager, resolverProvider, urlsToNotify);
     }
 
 }

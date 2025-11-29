@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.dns.pojo;
 
 import com.allanvital.dnsao.dns.processor.engine.pojo.DnsQueryResult;
+import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.xbill.DNS.Message;
 
@@ -14,6 +15,7 @@ public class DnsQueryResponse {
     private QueryResolvedBy queryResolvedBy;
     private String responseSource;
     private long finishTime;
+    private UpstreamResolver resolver;
 
     public DnsQueryResponse(DnsQueryRequest dnsQueryRequest, Message response) {
         this.dnsQueryRequest = dnsQueryRequest;
@@ -24,6 +26,7 @@ public class DnsQueryResponse {
         this.dnsQueryRequest = dnsQueryRequest;
         this.response = upstreamResult.message();
         this.responseSource = upstreamResult.resolver().name();
+        this.resolver = upstreamResult.resolver();
     }
 
     public DnsQueryRequest getDnsQueryRequest() {
@@ -70,4 +73,7 @@ public class DnsQueryResponse {
         this.response.getHeader().setID(dnsQueryRequest.getOriginalRequestId());
     }
 
+    public UpstreamResolver getResolver() {
+        return resolver;
+    }
 }
