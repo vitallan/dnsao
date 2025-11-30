@@ -42,7 +42,7 @@ public class DnsServeStaleTest extends TestHolder {
     }
 
     @Test
-    public void shouldServeStaleWhenConfiguredAndUpstreamFails() throws Exception {
+    public void shouldServeStaleWhenConfiguredUpstreamFails() throws Exception {
         fakeUpstreamServer.stop();
         testTimeProvider.walkNow(1300);
         response = doRequest(resolver, domain);
