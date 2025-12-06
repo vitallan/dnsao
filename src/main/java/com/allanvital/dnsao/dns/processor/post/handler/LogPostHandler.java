@@ -28,12 +28,11 @@ public class LogPostHandler implements PostHandler {
         int type = question.getType();
         String typeName = Type.string(type);
         String client = clientAddress.getHostAddress();
-
+        String solvedBy = response.getQueryResolvedBy().name();
         if (UPSTREAM.equals(response.getQueryResolvedBy())) {
-            log.debug("Query {} from {} to {} solved by {}", typeName, client, name, response.getResponseSource());
-        } else {
-            log.debug("Query {} from {} to {} solved by {}", typeName, client, name, response.getQueryResolvedBy());
+            solvedBy = response.getResponseSource();
         }
+        log.debug("Query {} from {} to {} solved by {}", typeName, client, name, solvedBy);
 
     }
 
