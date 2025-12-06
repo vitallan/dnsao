@@ -20,6 +20,14 @@ public class RequestLogger implements PreHandler {
     @Override
     public Message prepare(Message message) throws PreHandlerException {
         if (log.isTraceEnabled()) {
+            Record question = message.getQuestion();
+            String questionName = "";
+            if (question != null) {
+                Name name = question.getName();
+                if (name != null) {
+                    questionName = name.toString();
+                }
+            }
             boolean ad = message.getHeader().getFlag(Flags.AD);
             boolean cd = message.getHeader().getFlag(Flags.CD);
             List<org.xbill.DNS.Record> section = message.getSection(Section.ADDITIONAL);
@@ -31,7 +39,7 @@ public class RequestLogger implements PreHandler {
                 }
             }
             boolean doFlag = (opt != null) && ((opt.getFlags() & ExtendedFlags.DO) != 0);
-            log.trace("REQ flags -> AD={}, CD={}, DO={}", ad, cd, doFlag);
+            log.trace("REQ flags -> Question={} AD={}, CD={}, DO={}", questionName, ad, cd, doFlag);
         }
         return message;
     }
