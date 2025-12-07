@@ -150,4 +150,22 @@ public class MessageHelper {
         return (opt.getFlags() & ExtendedFlags.DO) != 0;
     }
 
+    public static Long getTtlFromResponse(Message message) {
+        if (message == null || message.getRcode() != Rcode.NOERROR) {
+            Assertions.fail("message should not be null");
+        }
+        List<Record> section = message.getSection(Section.ANSWER);
+        if (section == null || section.isEmpty()) {
+            Assertions.fail("message should contain answer to getTtl from");
+        }
+        List<Integer> directAnswerTypes = List.of(Type.A, Type.AAAA, Type.CNAME, Type.HTTPS, Type.SVCB);
+        for (Record r : section) {
+            if (directAnswerTypes.contains(r.getType())) {
+                return r.getTTL();
+            }
+        }
+        Assertions.fail("no valid response section was found on message");
+        return 0L;
+    }
+
 }

@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
-import static com.allanvital.dnsao.dns.remote.DnsUtils.isWarmable;
 import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
@@ -141,4 +140,9 @@ public class RewarmWorker implements Runnable {
             }
         }
     }
+
+    private boolean isWarmable(Message msg) {
+        return getTtlFromDirectResponse(msg) != null;
+    }
+
 }

@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.component;
 
-import com.allanvital.dnsao.holder.TestHolder;
-import com.allanvital.dnsao.dns.remote.DnsUtils;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
+import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +13,7 @@ import org.xbill.DNS.SimpleResolver;
 import java.io.IOException;
 
 import static com.allanvital.dnsao.graph.bean.MessageHelper.extractIpFromResponseMessage;
+import static com.allanvital.dnsao.graph.bean.MessageHelper.getTtlFromResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.xbill.DNS.Rcode.SERVFAIL;
 
@@ -47,7 +47,7 @@ public class DnsServeStaleTest extends TestHolder {
         testTimeProvider.walkNow(1300);
         response = doRequest(resolver, domain);
         assertEquals(ip, extractIpFromResponseMessage(response));
-        assertEquals(30, DnsUtils.getTtlFromDirectResponse(response));
+        assertEquals(30, getTtlFromResponse(response));
         eventListener.assertCount(EventType.STALE_CACHE_HIT, 1, false);
     }
 

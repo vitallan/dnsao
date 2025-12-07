@@ -33,17 +33,6 @@ public class DnsUtils {
         return resp;
     }
 
-    public static boolean isDirectAnswer(int type) {
-        return switch (type) {
-            case Type.A, Type.AAAA, Type.CNAME, Type.HTTPS, Type.SVCB -> true;
-            default -> false;
-        };
-    }
-
-    public static boolean isWarmable(Message msg) {
-        return getTtlFromDirectResponse(msg) != null;
-    }
-
     public static Long getTtlFromDirectResponse(Message message) {
         if (message == null || message.getRcode() != Rcode.NOERROR) {
             return null;
@@ -52,8 +41,9 @@ public class DnsUtils {
         if (section == null || section.isEmpty()) {
             return null;
         }
+        List<Integer> directAnswerTypes = List.of(Type.A, Type.AAAA, Type.CNAME, Type.HTTPS, Type.SVCB);
         for (Record r : section) {
-            if (isDirectAnswer(r.getType())) {
+            if (directAnswerTypes.contains(r.getType())) {
                 return r.getTTL();
             }
         }
