@@ -13,12 +13,12 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class TestEventListener implements EventListener {
+public class TestTelemetryListener implements EventListener {
 
     private TestTimeProvider testTimeProvider;
     private Map<EventType, Integer> eventCounts = new HashMap<>();
 
-    public TestEventListener(TestTimeProvider testTimeProvider) {
+    public TestTelemetryListener(TestTimeProvider testTimeProvider) {
         reset();
         this.testTimeProvider = testTimeProvider;
     }

@@ -1,6 +1,6 @@
 package com.allanvital.dnsao.holder;
 
-import com.allanvital.dnsao.graph.TestEventListener;
+import com.allanvital.dnsao.graph.TestTelemetryListener;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.ConfLoader;
 import com.allanvital.dnsao.conf.inner.Upstream;
@@ -40,7 +40,7 @@ public class TestHolder {
     protected DnsServer dnsServer;
     protected FakeServer fakeUpstreamServer;
     protected final String LOCAL = "127.0.0.1";
-    protected TestEventListener eventListener;
+    protected TestTelemetryListener eventListener;
 
     protected void fixUpstreamPorts() {
         List<Upstream> upstreams = conf.getResolver().getUpstreams();
@@ -70,7 +70,7 @@ public class TestHolder {
         testTimeProvider.setNow(Instant.parse("2025-11-08T10:00:00Z").toEpochMilli());
         Clock.setNewTimeProvider(testTimeProvider);
         enableTelemetry(true);
-        eventListener = new TestEventListener(testTimeProvider);
+        eventListener = new TestTelemetryListener(testTimeProvider);
         if (!fakeServerAlreadySetup) {
             startFakeServer();
         }

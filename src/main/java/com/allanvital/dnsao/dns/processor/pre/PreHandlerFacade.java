@@ -26,31 +26,16 @@ public class PreHandlerFacade {
         this.handlers = preHandlerProvider.getOrderedPreHandlers();
     }
 
-    public DnsQueryRequest prepare(InetAddress clientAddress, byte[] request, boolean isInternalQuery) throws PreHandlerException {
+    public DnsQueryRequest prepare(InetAddress clientAddress, Message request, boolean isInternalQuery) throws PreHandlerException {
         DnsQueryRequest dnsQueryRequest = new DnsQueryRequest(clientAddress);
-        Message clientQuery = buildMessage(request);
-        if (clientQuery == null) {
-            throw new PreHandlerException("It was not possible to parse the clients query from " + clientAddress);
-        }
-        dnsQueryRequest.setOriginalRequest(clientQuery);
-        Message internalQuery = clientQuery.clone();
+        dnsQueryRequest.setOriginalRequest(request);
+        Message internalQuery = request.clone();
         for (PreHandler preHandler : handlers) {
             internalQuery = preHandler.prepare(internalQuery);
         }
         dnsQueryRequest.setRequest(internalQuery);
         dnsQueryRequest.setIsLocalQuery(isInternalQuery);
         return dnsQueryRequest;
-    }
-
-    private Message buildMessage(byte[] rawMessage) {
-        Message clientQuery = null;
-        try {
-            clientQuery = new Message(rawMessage);
-        } catch (IOException e) {
-            Throwable rootCause = findRootCause(e);
-            log.error("Failed to build query for processing: {} - {}", rootCause, rootCause.getMessage());
-        }
-        return clientQuery;
     }
 
 }
