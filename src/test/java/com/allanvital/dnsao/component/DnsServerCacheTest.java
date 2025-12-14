@@ -75,9 +75,13 @@ public class DnsServerCacheTest extends TestHolder {
         super.prepareSimpleMockResponse(domain3, "10.10.10.30", 10000);
 
         doRequest(resolver, domain1);
+        eventListener.assertCount(QUERY_RESOLVED, 1, false);
         doRequest(resolver, domain2);
+        eventListener.assertCount(QUERY_RESOLVED, 2, false);
         doRequest(resolver, domain1);
+        eventListener.assertCount(QUERY_RESOLVED, 3, false);
         doRequest(resolver, domain3);
+        eventListener.assertCount(QUERY_RESOLVED, 4, false);
         doRequest(resolver, domain1);
 
         Assertions.assertEquals(3, fakeUpstreamServer.getCallCount());

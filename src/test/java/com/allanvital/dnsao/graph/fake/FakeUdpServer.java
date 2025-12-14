@@ -30,10 +30,10 @@ public class FakeUdpServer extends FakeServer {
                         } catch (SocketException e) {
                             break;
                         }
-                        callCounter.incrementAndGet();
 
                         byte[] response = handleRequest(packet.getData(), packet.getLength());
                         if (response != null) {
+                            callCounter.incrementAndGet();
                             DatagramPacket responsePacket = new DatagramPacket(
                                     response, response.length, packet.getAddress(), packet.getPort());
                             socket.send(responsePacket);
