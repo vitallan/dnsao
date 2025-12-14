@@ -35,10 +35,10 @@ public class PostHandlerFacade {
             return;
         }
         response.markFinishTime();
-        telemetryNotify(EventType.QUERY_RESOLVED);
         for (PostHandler postHandler : provider.getPostHandlers()) {
             threadPool.execute(() -> postHandler.handle(request, response));
         }
+        telemetryNotify(EventType.QUERY_RESOLVED);
     }
 
 }
