@@ -18,7 +18,7 @@ public class PreHandlerProvider {
         orderedPreHandlers.add(new IdSwapper());
         orderedPreHandlers.add(new HeaderCleaner(dnsSecMode));
         orderedPreHandlers.add(new OptCleaner());
-        orderedPreHandlers.add(new DnssecShaper(dnsSecMode));
+        orderedPreHandlers.add(new DnsPrivacyShaper(dnsSecMode));
         orderedPreHandlers.add(new RequestLogger());
     }
 

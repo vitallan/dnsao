@@ -128,7 +128,7 @@ public class QueryInfraAssembler {
         return new QueryEngine(engineUnitProvider);
     }
 
-    private EngineUnitProvider engineUnitProvider(ExecutorServiceFactory executorServiceFactory,
+    EngineUnitProvider engineUnitProvider(ExecutorServiceFactory executorServiceFactory,
                                                   BlockDecider blockDecider,
                                                   Map<String, String> localMappings,
                                                   CacheManager cacheManager,
