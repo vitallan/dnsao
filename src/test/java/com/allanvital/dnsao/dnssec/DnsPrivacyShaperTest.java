@@ -1,7 +1,7 @@
 package com.allanvital.dnsao.dnssec;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
-import com.allanvital.dnsao.dns.processor.pre.handler.DnssecShaper;
+import com.allanvital.dnsao.dns.processor.pre.handler.DnsPrivacyShaper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.*;
@@ -10,8 +10,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import static com.allanvital.dnsao.conf.inner.DNSSecMode.*;
-import static com.allanvital.dnsao.dns.processor.pre.handler.PreHandler.DEFAULT_BLOCK_SIZE;
-import static com.allanvital.dnsao.dns.processor.pre.handler.PreHandler.DEFAULT_UDP_PAYLOAD;
+import static com.allanvital.dnsao.dns.processor.pre.handler.opt.Constants.DEFAULT_BLOCK_SIZE;
+import static com.allanvital.dnsao.dns.processor.pre.handler.opt.Constants.DEFAULT_UDP_PAYLOAD;
 import static com.allanvital.dnsao.graph.bean.MessageHelper.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.xbill.DNS.EDNSOption.Code.NSID;
@@ -20,14 +20,14 @@ import static org.xbill.DNS.EDNSOption.Code.PADDING;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class DnssecShaperTest {
+public class DnsPrivacyShaperTest {
 
     private static final String domain = "example.com";
-    private DnssecShaper shaper;
+    private DnsPrivacyShaper shaper;
 
     @Test
     public void offModeShouldNotAddPaddingAndShouldNotSetDO() throws Exception {
-        shaper = new DnssecShaper(OFF);
+        shaper = new DnsPrivacyShaper(OFF);
 
         Message msg = buildARequest(domain, false);
         Message out = shaper.prepare(msg);
@@ -66,7 +66,7 @@ public class DnssecShaperTest {
         assertEquals(7, nsid.toWire().length);
 
         msg.addRecord(preOpt, Section.ADDITIONAL);
-        DnssecShaper shaper = new DnssecShaper(SIMPLE);
+        DnsPrivacyShaper shaper = new DnsPrivacyShaper(SIMPLE);
         Message out = shaper.prepare(msg);
 
         OPTRecord opt = out.getOPT();
@@ -86,7 +86,7 @@ public class DnssecShaperTest {
 
     private void testWithMessage(DNSSecMode mode, Message msg, int expectedPad) throws Exception {
         int cap = 96;
-        DnssecShaper shaper = new DnssecShaper(mode);
+        DnsPrivacyShaper shaper = new DnsPrivacyShaper(mode);
 
         Message out = shaper.prepare(msg);
         int totalMessageLength = out.toWire().length;
@@ -103,7 +103,7 @@ public class DnssecShaperTest {
         if (RIGID.equals(mode)) {
             assertEquals(1232, totalMessageLength, "in rigid, should always fill the package");
         }
-        assertTrue(isDO(opt), "dnssec SIMPLE must set DO");
+        assertTrue(isDO(opt), "dnssec SIMPLE/RIGID must set DO");
         assertEquals(expectedPad, actualPaddingLength);
     }
 
