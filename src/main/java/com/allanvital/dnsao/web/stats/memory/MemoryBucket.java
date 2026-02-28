@@ -1,7 +1,8 @@
-package com.allanvital.dnsao.web.pojo;
+package com.allanvital.dnsao.web.stats.memory;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
+import com.allanvital.dnsao.web.stats.Bucket;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -11,7 +12,7 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class Bucket {
+public class MemoryBucket implements Bucket {
 
     private final LongAdder totalCounter = new LongAdder();
 
@@ -63,6 +64,7 @@ public class Bucket {
         return this.upstreamsHit.clone();
     }
 
+    @Override
     public long getCounter(QueryResolvedBy queryResolvedBy) {
         long count = 0;
         if (queryResolvedBy == null) {
@@ -83,6 +85,7 @@ public class Bucket {
         return this.elapsedTimeSum.sum();
     }
 
+    @Override
     public long getTotalCounter()  {
         return totalCounter.sum();
     }

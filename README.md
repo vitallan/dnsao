@@ -87,7 +87,7 @@ mvn exec:java
 
 The main branch should be stable. 
 
-New releases and docker images are generated based on commit/push of a new tag in the format v0.0.0.
+New releases and docker images are generated based on commit/push on main.
 
 ## Configuration
 

@@ -4,6 +4,8 @@ import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.web.json.JsonBuilder;
+import com.allanvital.dnsao.web.stats.StatsCollector;
+import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
@@ -71,8 +73,17 @@ public class WebServer {
         });
 
         app.get("/queries", ctx -> {
+            String pageParam = ctx.queryParam("page");
+            int page = 0;
+            if (pageParam != null) {
+                try {
+                    page = Integer.parseInt(pageParam);
+                } catch (NumberFormatException e) {
+                    //ignored
+                }
+            }
             ctx.contentType("application/json; charset=utf-8").result(
-                    builder.buildQueriesArray().toString()
+                    builder.buildQueriesArray(page).toString()
             );
         });
         
