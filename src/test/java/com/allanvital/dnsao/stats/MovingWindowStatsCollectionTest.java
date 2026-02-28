@@ -1,7 +1,7 @@
 package com.allanvital.dnsao.stats;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
-import com.allanvital.dnsao.web.StatsCollector;
+import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -9,9 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAdder;
 
 import static com.allanvital.dnsao.holder.TestHolder.t;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.CACHE;
@@ -24,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class MovingWindowStatsCollectionTest {
 
     AtomicLong nowRef = new AtomicLong(t("2025-10-02T10:10:00Z"));
-    StatsCollector statsCollector;
+    MemoryStatsCollector memoryStatsCollector;
 
     @BeforeEach
     public void setup() {
         // 60 min / 5 min window = 12 buckets
-        this.statsCollector = new StatsCollector(5 * 60_000L, 60 * 60_000L, nowRef::get);
+        this.memoryStatsCollector = new MemoryStatsCollector(5 * 60_000L, 60 * 60_000L, nowRef::get);
     }
 
     @Test
@@ -37,39 +35,39 @@ public class MovingWindowStatsCollectionTest {
         long e1 = t("2025-10-02T10:07:12Z");
         long e2 = t("2025-10-02T10:09:59Z");
 
-        statsCollector.receiveNewQuery(new QueryEvent(e1));
-        statsCollector.receiveNewQuery(new QueryEvent(e2));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(e1));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(e2));
 
-        NavigableMap<Long, Long> raw = statsCollector.getCountsRaw();
+        NavigableMap<Long, Long> raw = memoryStatsCollector.getCountsRaw();
         assertEquals(1, raw.size(), "there should be only one bucket");
         long bucketStart = raw.firstKey();
         assertEquals(2L, raw.get(bucketStart), "there should be count = 2 on available bucket");
-        long expectedStart = StatsCollector.truncateToWindow(e1, 5 * 60_000L);
+        long expectedStart = MemoryStatsCollector.truncateToWindow(e1, 5 * 60_000L);
         assertEquals(expectedStart, bucketStart);
     }
 
     @Test
     public void trimHappensOnReadWhenNowMovesPastWindow() {
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z")));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z")));
 
-        assertFalse(statsCollector.getCountsRaw().isEmpty());
+        assertFalse(memoryStatsCollector.getCountsRaw().isEmpty());
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
 
-        NavigableMap<Long, Long> rawAfter = statsCollector.getCountsRaw();
+        NavigableMap<Long, Long> rawAfter = memoryStatsCollector.getCountsRaw();
         assertTrue(rawAfter.isEmpty(), "should be trimmed out of the 60-min window");
-        NavigableMap<Long, Long> counts = statsCollector.getCountsFilledAnchoredToNow();
+        NavigableMap<Long, Long> counts = memoryStatsCollector.getCountsFilledAnchoredToNow();
         assertEquals(12, counts.size());
     }
 
     @Test
     public void filledAnchoredToNowReturnsContinuousSeriesWithZeros() {
         AtomicLong customRef = new AtomicLong(t("2025-10-02T10:25:00Z"));
-        StatsCollector statsCollector = new StatsCollector(5 * 60_000L, 20 * 60_000L, customRef::get);
+        MemoryStatsCollector memoryStatsCollector = new MemoryStatsCollector(5 * 60_000L, 20 * 60_000L, customRef::get);
 
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:10:01Z")));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:10:01Z")));
 
-        NavigableMap<Long, Long> filled = statsCollector.getCountsFilledAnchoredToNow();
+        NavigableMap<Long, Long> filled = memoryStatsCollector.getCountsFilledAnchoredToNow();
         assertEquals(4, filled.size());
 
         long[] expectedStarts = {
@@ -91,55 +89,55 @@ public class MovingWindowStatsCollectionTest {
 
     @Test
     public void shouldKeepCountOnlyOnCurrentWindow() {
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z")));
-        assertEquals(1, statsCollector.getQueryCount());
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z")));
+        assertEquals(1, memoryStatsCollector.getQueryCount(null));
 
         nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
-        assertEquals(1, statsCollector.getQueryCount());
+        assertEquals(1, memoryStatsCollector.getQueryCount(null));
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        assertEquals(0, statsCollector.getQueryCount());
+        assertEquals(0, memoryStatsCollector.getQueryCount(null));
     }
 
     @Test
     public void shouldKeepCountOnlyOnCurrentWindowBySource() {
-        statsCollector.receiveNewQuery(new QueryEvent(CACHE, null, t("2025-10-02T10:07:00Z")));
-        assertEquals(1, statsCollector.getQueryCount(CACHE));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(CACHE, null, t("2025-10-02T10:07:00Z")));
+        assertEquals(1, memoryStatsCollector.getQueryCount(CACHE));
 
         nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
-        assertEquals(1, statsCollector.getQueryCount(CACHE));
+        assertEquals(1, memoryStatsCollector.getQueryCount(CACHE));
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        assertEquals(0, statsCollector.getQueryCount(CACHE));
+        assertEquals(0, memoryStatsCollector.getQueryCount(CACHE));
     }
 
     @Test
     public void shouldKeepElapsedTimeOnlyOnCurrentWindow() {
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z"), 100));
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:01Z"), 200));
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:02Z"), 300));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:00Z"), 100));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:01Z"), 200));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T10:07:02Z"), 300));
 
-        assertEquals(200, statsCollector.getQueryElapsedTime());
+        assertEquals(200, memoryStatsCollector.getQueryElapsedTime());
 
         nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to 30 minutes later
-        assertEquals(200, statsCollector.getQueryElapsedTime());
+        assertEquals(200, memoryStatsCollector.getQueryElapsedTime());
 
-        statsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T12:07:02Z"), 300));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(t("2025-10-02T12:07:02Z"), 300));
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        assertEquals(300, statsCollector.getQueryElapsedTime());
+        assertEquals(300, memoryStatsCollector.getQueryElapsedTime());
     }
 
     @Test
     public void shouldCountGeneralByUpstreamOnlyOnCurrentWindowByUpstream() {
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:07:00Z")));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:08:00Z")));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:07:00Z")));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", t("2025-10-02T10:08:00Z")));
 
-        ConcurrentHashMap<String, LongAdder> upstreamHits = statsCollector.getUpstreamIndividualHits();
-        assertEquals(2, upstreamHits.get("1.1.1.1").sum());
+        Map<String, Long> upstreamHits = memoryStatsCollector.getUpstreamIndividualHits();
+        assertEquals(2, upstreamHits.get("1.1.1.1"));
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        upstreamHits = statsCollector.getUpstreamIndividualHits();
-        assertEquals(0, upstreamHits.get("1.1.1.1").sum());
+        upstreamHits = memoryStatsCollector.getUpstreamIndividualHits();
+        assertEquals(0, upstreamHits.get("1.1.1.1"));
     }
 
     @Test
@@ -149,12 +147,12 @@ public class MovingWindowStatsCollectionTest {
         QueryEvent q3 = new QueryEvent(t("2025-10-02T09:41:00Z"), 100);
         QueryEvent q4 = new QueryEvent(t("2025-10-02T09:51:00Z"), 100);
 
-        statsCollector.receiveNewQuery(q1);
-        statsCollector.receiveNewQuery(q2);
-        statsCollector.receiveNewQuery(q3);
-        statsCollector.receiveNewQuery(q4);
+        memoryStatsCollector.receiveNewQuery(q1);
+        memoryStatsCollector.receiveNewQuery(q2);
+        memoryStatsCollector.receiveNewQuery(q3);
+        memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
         assertTrue(orderedQueryEvents.containsAll(List.of(q1, q2, q3, q4)));
         assertEquals(q4, orderedQueryEvents.get(0));
         assertEquals(q3, orderedQueryEvents.get(1));
@@ -163,7 +161,7 @@ public class MovingWindowStatsCollectionTest {
 
         nowRef.set(t("2025-10-02T10:30:00Z")); // walk the "now" to half an hour later
 
-        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
         assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
         assertTrue(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
@@ -173,7 +171,7 @@ public class MovingWindowStatsCollectionTest {
 
         nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to half an hour later
 
-        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
         assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
@@ -181,7 +179,7 @@ public class MovingWindowStatsCollectionTest {
         assertEquals(q4, orderedQueryEvents.get(0));
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        orderedQueryEvents = statsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
         assertFalse(orderedQueryEvents.contains(q1));
         assertFalse(orderedQueryEvents.contains(q2));
         assertFalse(orderedQueryEvents.contains(q3));

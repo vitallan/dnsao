@@ -269,20 +269,27 @@
       async function fetchData() {
         try {
           setStatus('Loading…');
-          const res = await fetch('/queries', { cache: 'no-store' });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const json = await res.json();
 
-          const rows = (json.queries || []).map(a => ({
-            time: a[0],
-            resolvedBy: a[1],
-            client: a[2],
-            type: a[3],
-            domain: a[4],
-            answers: a[5],
-            source: a[6],
-            elapsed: a[7]
-          }));
+          const rows = [];
+          for (let page = 0; ; page++) {
+            const res = await fetch(`/queries?page=${page}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+
+            const chunk = (json.queries || []).map(a => ({
+              time: a[0],
+              resolvedBy: a[1],
+              client: a[2],
+              type: a[3],
+              domain: a[4],
+              answers: a[5],
+              source: a[6],
+              elapsed: a[7]
+            }));
+
+            if (chunk.length === 0) break;
+            rows.push(...chunk);
+          }
 
           allRows = rows;
           currentPage = 1;

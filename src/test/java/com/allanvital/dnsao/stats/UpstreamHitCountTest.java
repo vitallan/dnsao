@@ -1,7 +1,7 @@
 package com.allanvital.dnsao.stats;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
-import com.allanvital.dnsao.web.StatsCollector;
+import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,12 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 public class UpstreamHitCountTest {
 
     AtomicLong nowRef = new AtomicLong(t("2025-10-02T10:00:00Z"));
-    StatsCollector statsCollector;
+    MemoryStatsCollector memoryStatsCollector;
 
     @BeforeEach
     public void setup() {
         // 60 min / 5 min window = 12 buckets
-        this.statsCollector = new StatsCollector(5 * 60_000L, 60 * 60_000L, nowRef::get);
+        this.memoryStatsCollector = new MemoryStatsCollector(5 * 60_000L, 60 * 60_000L, nowRef::get);
     }
 
     @Test
@@ -33,21 +33,21 @@ public class UpstreamHitCountTest {
         long e4 = t("2025-10-02T10:09:19Z");
         long e5 = t("2025-10-02T10:09:52Z");
 
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e1));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e2));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.2", e3));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e4));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.3", e5));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e1));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e2));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.2", e3));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e4));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.3", e5));
 
-        NavigableMap<Long, Map<String, Long>> upstreamBucketsRaw = statsCollector.getUpstreamBucketsRaw();
-        long expectedStart = StatsCollector.truncateToWindow(e1, 5 * 60_000L);
+        NavigableMap<Long, Map<String, Long>> upstreamBucketsRaw = memoryStatsCollector.getUpstreamBucketsRaw();
+        long expectedStart = MemoryStatsCollector.truncateToWindow(e1, 5 * 60_000L);
         Map<String, Long> upstreamHits = upstreamBucketsRaw.get(expectedStart);
         assertTrue(upstreamHits.containsKey("1.1.1.1"));
         assertFalse(upstreamHits.containsKey("1.1.1.2"));
         assertFalse(upstreamHits.containsKey("1.1.1.3"));
         assertEquals(2, upstreamHits.get("1.1.1.1"));
 
-        expectedStart = StatsCollector.truncateToWindow(e3, 5 * 60_000L);
+        expectedStart = MemoryStatsCollector.truncateToWindow(e3, 5 * 60_000L);
         upstreamHits = upstreamBucketsRaw.get(expectedStart);
         assertTrue(upstreamHits.containsKey("1.1.1.1"));
         assertTrue(upstreamHits.containsKey("1.1.1.2"));
@@ -60,19 +60,19 @@ public class UpstreamHitCountTest {
     @Test
     public void testCountOnUpstreamSummarizationAnchored() {
         AtomicLong customRef = new AtomicLong(t("2025-10-02T10:30:00Z"));
-        statsCollector = new StatsCollector(5 * 60_000L, 40 * 60_000L, customRef::get);
+        memoryStatsCollector = new MemoryStatsCollector(5 * 60_000L, 40 * 60_000L, customRef::get);
 
         long e1 = t("2025-10-02T10:03:12Z");
         long e2 = t("2025-10-02T10:04:12Z");
         long e3 = t("2025-10-02T10:13:59Z");
         long e4 = t("2025-10-02T10:23:12Z");
 
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e1));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e2));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e3));
-        statsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e4));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e1));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e2));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e3));
+        memoryStatsCollector.receiveNewQuery(new QueryEvent(UPSTREAM, "1.1.1.1", e4));
 
-        NavigableMap<Long, Map<String, Long>> upstreamBuckets = statsCollector.getUpstreamBucketsAnchoredToNow();
+        NavigableMap<Long, Map<String, Long>> upstreamBuckets = memoryStatsCollector.getUpstreamBucketsAnchoredToNow();
 
         assertEquals(8, upstreamBuckets.size(), upstreamBuckets.toString());
 
