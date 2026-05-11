@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.processor.post.handler;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.dns.remote.DnsUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Name;
@@ -32,7 +33,8 @@ public class LogPostHandler implements PostHandler {
         if (UPSTREAM.equals(response.getQueryResolvedBy())) {
             solvedBy = response.getResponseSource();
         }
-        log.debug("Query {} from {} to {} solved by {}", typeName, client, name, solvedBy);
+        String ip = DnsUtils.extractIpFromResponseMessage(response.getResponse());
+        log.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\"", typeName, client, name, solvedBy, ip);
 
     }
 

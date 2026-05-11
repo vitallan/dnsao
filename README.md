@@ -44,7 +44,7 @@ It handles UDP, TCP and HTTP queries, and supports modern encrypted upstreams (D
 - Multiple upstream DNS resolvers (UDP/DoT/DoH)
 - TTL-aware caching system with asynchronous rewarm
 - DNSSEC aware with configurable policies
-- Query logging (optional)
+- Query history and metrics (in-memory by default; optional SQLite persistence via `server.statsDbPath`)
 - Real-time metrics dashboard built with Bulma + Chart.js
 - Pluggable blocklists and local mappings/overrides
 - Configuration via a single `application.yml`
@@ -93,6 +93,13 @@ New releases and docker images are generated based on commit/push on main.
 
 All app configuration options are defined in a single `application.yml`.
 
+To persist metrics and query history across restarts, configure:
+
+```yaml
+server:
+  statsDbPath: "/etc/dnsao/stats.db"
+```
+
 More detailed info can be found at the [documentation](https://vitallan.github.io/dnsao/configuration/).
 
 ---
@@ -128,6 +135,7 @@ DNSao makes use of open-source libraries, including:
 * [SnakeYAML](https://bitbucket.org/asomov/snakeyaml) — YAML configuration
 * [Minimal-json](https://github.com/ralfstx/minimal-json) - JSON manipulation
 * [Logback](https://logback.qos.ch) — logging framework
+* [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) — embedded SQLite JDBC driver
 
 ---
 

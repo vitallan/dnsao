@@ -1,4 +1,4 @@
-package com.allanvital.dnsao.stats;
+package com.allanvital.dnsao.stats.memory;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;

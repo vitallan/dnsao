@@ -42,6 +42,7 @@ public class CacheKeepTest extends TestHolder {
 
     @Test
     public void cacheKeepEntriesShouldBeKeptOnCacheEvenAfterRewarmTimesAreReached() throws InterruptedException, IOException {
+        eventListener.assertCount(CACHE_ADDED, 2, false);
         executeRequestOnOwnServer(KEEP1);
         executeRequestOnOwnServer(KEEP2);
         eventListener.assertCount(CACHE_HIT, 2, false);

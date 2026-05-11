@@ -16,6 +16,7 @@ server:
   port: 53 
   udpThreadPool: 10
   tcpThreadPool: 3
+  statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
 
 cache:
@@ -106,6 +107,7 @@ server:
   udpThreadPool: 10
   tcpThreadPool: 3
   httpThreadPool: 10
+  statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
 ```
 
@@ -118,12 +120,15 @@ A propriedade **server** define as propriedades de alto nível da aplicação.
 | **tcpThreadPool** | quantas *threads* estarão disponíveis para o protocolo TCP, no **server**. O valor padrão é 3                       |
 | **httpThreadPool** | quantas *threads* estarão disponíveis para o protocolo HTTP, no **server**. O valod padrão é 10 |
 | **webPort**       | porta onde o dashboard de métricas ficará disponível. O padrão é 8044                                               |
+| **statsDbPath**   | caminho opcional para um arquivo de banco SQLite usado para persistir métricas e eventos de query. Quando não definido/vazio, o **DNSao** mantém as métricas em memória (padrão). O diretório pai precisa existir e ter permissão de escrita (o DNSao não cria diretórios) |
 
 Para queries http, o endpoint é **http://serverIp:webPort/dns-query**, seguindo os padrões de servidor dns via HTTP. Note que a resposta será em HTTP aberto, não em HTTPS. Essa é uma decisão consciente para evitar o manuseio de certificados TLS, de forma que o usuário possa usar os próprios certificados. Caso https seja desejado, é recomendado usar um proxy reverso que possibilite a comunicação remota a ocorrer via HTTPS (como traeffic ou nginx) e fazer o proxy reverso interno para **DNSao**.
 
 Na interface web **http://serverIp:webPort/** você pode observar as métricas do servidor e buscar queries individualmente. O gráfico contém uma janela das últimas 24 horas dividida em segmentos de 10 minutos.
 
-Os segmentos também são usados para conter os eventos de query buscáveis no endpoint */query*, porém, um máximo de 5000 queries será mantida em um dado segmento. Os totais e contadores terão o número correto, mas as queries não serão buscáveis na tabela de query.
+No modo padrão **em memória**, os segmentos também são usados para conter os eventos de query buscáveis no endpoint */query*, porém, um máximo de 5000 queries será mantida em um dado segmento. Os totais e contadores terão o número correto, mas as queries não serão buscáveis na tabela de query.
+
+Se **server.statsDbPath** estiver configurado, o **DNSao** irá persistir tanto os buckets quanto os eventos individuais de query em um arquivo SQLite local, fazendo com que as métricas e o histórico sobrevivam reinícios. As escritas são agrupadas a cada 500ms; se o banco não acompanhar, o DNSao descartará os eventos mais antigos do buffer para evitar crescimento ilimitado de memória.
 
 ### cache
 

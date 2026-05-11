@@ -23,8 +23,8 @@ title: Início
 - **Dashboard de métricas**: disponibiliza um dashboard de métricas para acompanhamento de operação e performance 
 - **Baixo consumo de recursos**: roda confortavelmente com 256 MB de RAM, mesmo em hardware antigo ou dispositivos compactos
 - **Grátis e de Código Aberto**: software livre, mantido abertamente no GitHub, permitindo auditoria e uso irrestrito
-- **Runtime stateless**: não depende de bancos de dados e outros sistemas periféricos, possibilitando rápido cold start
-- **Baixo número de dependências**: apenas 5: dnsjava, logback, javalin, minimal-json e snakeyaml
+- **Runtime stateless por padrão**: não depende de bancos de dados e outros sistemas periféricos; opcionalmente persiste métricas/histórico de queries em um arquivo SQLite local via `server.statsDbPath`
+- **Baixo número de dependências**: dnsjava, logback, javalin, minimal-json, snakeyaml e sqlite-jdbc
 
 ---
 

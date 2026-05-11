@@ -10,6 +10,7 @@ public class ServerConf {
     int tcpThreadPool = 4;
     int httpThreadPool = 10;
     int webPort = 8044;
+    String statsDbPath;
 
     public int getHttpThreadPool() {
         return httpThreadPool;
@@ -33,6 +34,14 @@ public class ServerConf {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public String getStatsDbPath() {
+        return statsDbPath;
+    }
+
+    public void setStatsDbPath(String statsDbPath) {
+        this.statsDbPath = statsDbPath;
     }
 
     public int getUdpThreadPool() {

@@ -30,9 +30,11 @@ public class DnsServer {
     private final ProtocolServer udpServer;
     private final ProtocolServer tcpServer;
     private final WebServer webServer;
+    private final StatsCollector statsCollector;
 
     public DnsServer(ServerConf conf, QueryProcessorFactory factory, ExecutorServiceFactory executorServiceFactory, StatsCollector statsCollector) {
         this.port = conf.getPort();
+        this.statsCollector = statsCollector;
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
@@ -76,6 +78,13 @@ public class DnsServer {
         }
         if (webServer != null && webServer.isRunning()) {
             webServer.stop();
+        }
+        if (statsCollector instanceof AutoCloseable closeable) {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                log.warn("failed closing stats collector", e);
+            }
         }
         running = false;
         log.info("DNS server stopped");
