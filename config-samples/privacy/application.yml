@@ -4,6 +4,9 @@ server:
   tcpThreadPool: 3
   webPort: 8044
   httpThreadPool: 10
+  # Optional: persist metrics/query history to SQLite.
+  # Parent directory must exist and be writable (DNSao will not create it).
+  # statsDbPath: "/etc/dnsao/stats.db"
 
 cache:
   enabled: true

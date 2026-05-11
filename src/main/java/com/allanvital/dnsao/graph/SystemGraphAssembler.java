@@ -13,6 +13,7 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.web.stats.StatsCollector;
+import com.allanvital.dnsao.web.stats.db.DbStatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 
 import java.util.concurrent.ExecutorService;
@@ -37,7 +38,7 @@ public class SystemGraphAssembler {
         CacheManager cacheManager = cacheManager(cacheConf, fixedTimeRewarmScheduler, miscConf.getExpiredConf());
 
         NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
-        StatsCollector statsCollector = memoryStatsCollector(notificationManager);
+        StatsCollector statsCollector = statsCollector(serverConf, notificationManager);
 
         QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, conf, cacheManager, notificationManager);
 
@@ -117,6 +118,16 @@ public class SystemGraphAssembler {
         MemoryStatsCollector memoryStatsCollector = new MemoryStatsCollector();
         notificationManager.querySubscribe(memoryStatsCollector);
         return memoryStatsCollector;
+    }
+
+    StatsCollector statsCollector(ServerConf serverConf, NotificationManager notificationManager) {
+        String dbPath = serverConf.getStatsDbPath();
+        if (dbPath == null || dbPath.isBlank()) {
+            return memoryStatsCollector(notificationManager);
+        }
+        DbStatsCollector dbStatsCollector = new DbStatsCollector(dbPath);
+        notificationManager.querySubscribe(dbStatsCollector);
+        return dbStatsCollector;
     }
 
 }

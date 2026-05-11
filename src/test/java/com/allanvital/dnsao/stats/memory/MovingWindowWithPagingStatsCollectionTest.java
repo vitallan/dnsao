@@ -1,9 +1,8 @@
-package com.allanvital.dnsao.stats;
+package com.allanvital.dnsao.stats.memory;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
