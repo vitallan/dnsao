@@ -145,6 +145,9 @@
       let sortKey = 'time';
       let sortDir = 'desc';
 
+      // Used to cancel in-flight loads when Refresh is clicked.
+      let activeLoad = { id: 0, abort: null };
+
       function setStatus(text) { STATUS.textContent = text; }
       function fmtSource(v) { return (v === null || v === undefined || v === '') ? '—' : v; }
 
@@ -267,12 +270,40 @@
       }
 
       async function fetchData() {
+        // Cancel any in-flight load.
+        activeLoad.id++;
+        if (activeLoad.abort) {
+          try { activeLoad.abort.abort(); } catch (_) { /* ignored */ }
+        }
+        activeLoad.abort = new AbortController();
+        const loadId = activeLoad.id;
+
         try {
           setStatus('Loading…');
 
-          const rows = [];
+          // Reset immediately so the user sees progress as pages arrive.
+          allRows = [];
+          currentPage = 1;
+          renderTable();
+
+          let lastRenderAt = 0;
+          let pagesLoaded = 0;
+          const maybeRender = async (force) => {
+            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            if (!force && (now - lastRenderAt) < 150) {
+              return;
+            }
+            lastRenderAt = now;
+            renderTable();
+            // Yield so the browser can paint between page fetches.
+            await new Promise(requestAnimationFrame);
+          };
+
           for (let page = 0; ; page++) {
-            const res = await fetch(`/queries?page=${page}`, { cache: 'no-store' });
+            if (loadId !== activeLoad.id) {
+              return;
+            }
+            const res = await fetch(`/queries?page=${page}`, { cache: 'no-store', signal: activeLoad.abort.signal });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
 
@@ -288,13 +319,20 @@
             }));
 
             if (chunk.length === 0) break;
-            rows.push(...chunk);
+
+            allRows.push(...chunk);
+            pagesLoaded++;
+            setStatus(`Loading… ${allRows.length} loaded (${pagesLoaded} page${pagesLoaded === 1 ? '' : 's'})`);
+            await maybeRender(false);
           }
 
-          allRows = rows;
-          currentPage = 1;
-          renderTable();
+          setStatus(`Loaded ${allRows.length} quer${allRows.length === 1 ? 'y' : 'ies'} • Sorted by ${sortKey} (${sortDir})`);
+          await maybeRender(true);
         } catch (err) {
+          if (err && err.name === 'AbortError') {
+            // A newer fetchData() call took over.
+            return;
+          }
           console.error(err);
           T_BODY.innerHTML = '';
           const tr = document.createElement('tr');
