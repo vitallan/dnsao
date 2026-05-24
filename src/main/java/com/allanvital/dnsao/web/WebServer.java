@@ -163,23 +163,12 @@ public class WebServer {
     }
 
     private void processQueryAndSetResult(Context ctx, byte[] request) throws UnknownHostException {
-        String ip = getIp(ctx);
+        String ip = ClientIpExtractor.extract(ctx);
         QueryProcessor processor = queryProcessorFactory.buildQueryProcessor();
         DnsQuery dnsQuery = processor.processExternalQuery(getByName(ip), request);
         byte[] responseBytes = dnsQuery.getMessageBytes();
 
         ctx.status(200).result(responseBytes);
-    }
-
-    private String getIp(Context context) {
-        String ip = context.header("X-Forwarded-For");
-        if (ip == null || ip.isBlank()) {
-            ip = context.header("X-Real-IP");
-        }
-        if (ip == null || ip.isBlank()) {
-            ip = context.req().getRemoteAddr();
-        }
-        return ip;
     }
 
     public int getPort() {
