@@ -6,8 +6,8 @@ import com.allanvital.dnsao.dns.processor.engine.pojo.DnsQueryResult;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
+import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import com.allanvital.dnsao.graph.ExecutorServiceFactory;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,24 +30,22 @@ public class UpstreamUnit implements EngineUnit {
     private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final boolean serveExpired;
-    private final ExecutorServiceFactory executorServiceFactory;
+    private final ExecutorService upstreamExecutor;
     private final QueryOrchestrator queryOrchestrator;
     private final ResolverProvider resolverProvider;
 
-    public UpstreamUnit(ExecutorServiceFactory executorServiceFactory, UpstreamUnitConf upstreamUnitConf) {
+    public UpstreamUnit(UpstreamThreadPoolExecutor upstreamThreadPoolExecutor, UpstreamUnitConf upstreamUnitConf) {
         this.serveExpired = upstreamUnitConf.isServeExpired();
         this.queryOrchestrator = upstreamUnitConf.getQueryOrchestrator();
-        this.executorServiceFactory = executorServiceFactory;
+        this.upstreamExecutor = upstreamThreadPoolExecutor.executor();
         this.resolverProvider = upstreamUnitConf.getResolverProvider();
     }
 
     @Override
     public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
         List<UpstreamResolver> upstreamsToBeUsed = resolverProvider.getResolversToUse();
-        String threadName = Thread.currentThread().getName();
-        ExecutorService executor = executorServiceFactory.buildExecutor(threadName + "-res", upstreamsToBeUsed.size());
         try {
-            DnsQueryResult queryResult = queryOrchestrator.query(executor, dnsQueryRequest, upstreamsToBeUsed);
+            DnsQueryResult queryResult = queryOrchestrator.query(upstreamExecutor, dnsQueryRequest, upstreamsToBeUsed);
             if (queryResult == null) {
                 return null;
             } else if (serveExpired && (isOfType(REFUSED, queryResult) || isOfType(SERVFAIL, queryResult))) {
@@ -60,8 +58,6 @@ public class UpstreamUnit implements EngineUnit {
             if (log.isDebugEnabled()) {
                 e.printStackTrace();
             }
-        } finally {
-            executor.shutdown();
         }
         return null;
     }

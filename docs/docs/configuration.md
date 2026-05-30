@@ -38,6 +38,8 @@ misc:
 resolver:
   tlsPoolSize: 5
   multiplier: 3
+  upstreamThreadPoolSize: 64
+  upstreamQueueSize: 640
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -192,6 +194,8 @@ Regardless of the upstream answer, **DNSao** does not set the *AD* flag in the a
 resolver:
   tlsPoolSize: 5
   multiplier: 3
+  upstreamThreadPoolSize: 64
+  upstreamQueueSize: 640
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -230,6 +234,16 @@ The **resolver** property defines the upstreams to be queried. You must specify 
 |---------|------------|
 | **tlsPoolSize** | the maximum pool size for DOT connections per upstream. Using a pool improves performance since the TLS handshake is costly, but increasing it excessively won’t necessarily improve speed — a single connection can serve multiple requests and stale connections are discarded by the upstream |
 | **multiplier** | how many upstreams each query will be sent to. **DNSao** uses the fastest response and discards the others. There’s a trade-off between speed and privacy: the more upstreams queried per request, the more servers will see your DNS queries. If privacy is the main goal, set the multiplier to 1 and use DOT or DOH upstreams. |
+| **upstreamThreadPoolSize** | size of the shared thread pool used to execute upstream calls. Default is **64** |
+| **upstreamQueueSize** | size of the bounded queue for upstream tasks. Default is **640** (64 * 10) |
+
+#### Upstream Execution Internals
+
+Upstream calls are executed via a shared `ThreadPoolExecutor` (`UpstreamThreadPoolExecutor`) configured with a fixed number of threads (`resolver.upstreamThreadPoolSize`) and a bounded queue (`resolver.upstreamQueueSize`).
+
+When the pool and queue are saturated, **DNSao** uses `CallerRunsPolicy` as backpressure: the caller thread executes the upstream call inline, slowing down request handling instead of spawning new threads or growing memory unbounded.
+
+The `resolver.multiplier` controls how many upstream tasks a single query may schedule; under saturation, tasks may queue or run inline due to backpressure.
 
 These are the inner properties for the "upstreams" property.
 

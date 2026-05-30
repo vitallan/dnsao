@@ -10,6 +10,7 @@ import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.dns.DnsServer;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
+import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.web.stats.StatsCollector;
@@ -40,7 +41,13 @@ public class SystemGraphAssembler {
         NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
         StatsCollector statsCollector = statsCollector(serverConf, notificationManager);
 
-        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, conf, cacheManager, notificationManager);
+        UpstreamThreadPoolExecutor upstreamThreadPoolExecutor = new UpstreamThreadPoolExecutor(
+                executorServiceFactory,
+                resolverConf.getUpstreamThreadPoolSize(),
+                resolverConf.getUpstreamQueueSize()
+        );
+
+        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, upstreamThreadPoolExecutor, conf, cacheManager, notificationManager);
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
@@ -49,7 +56,7 @@ public class SystemGraphAssembler {
         scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
         kickstarter.kickStartKeep();
 
-        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector);
+        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor);
     }
 
     KeepKickstarter keepKickStarter(KeepProvider keepProvider, QueryProcessorFactory queryProcessorFactory) {
@@ -60,16 +67,24 @@ public class SystemGraphAssembler {
         return new KeepProvider(cacheConf);
     }
 
-    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory, Conf conf, CacheManager cacheManager, NotificationManager notificationManager) throws ConfException {
-        return queryInfraAssembler.assemble(conf, cacheManager, executorServiceFactory, notificationManager);
+    public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory,
+                                                                 UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                                                                 Conf conf,
+                                                                 CacheManager cacheManager,
+                                                                 NotificationManager notificationManager) throws ConfException {
+        return queryInfraAssembler.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager);
     }
 
     public <T> void registerOverride(T module) {
         this.overrideRegistry.registerOverride(module);
     }
 
-    private DnsServer dnsServer(ServerConf conf, QueryProcessorFactory queryProcessorFactory, ExecutorServiceFactory executorServiceFactory, StatsCollector statsCollector) {
-        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector);
+    private DnsServer dnsServer(ServerConf conf,
+                                QueryProcessorFactory queryProcessorFactory,
+                                ExecutorServiceFactory executorServiceFactory,
+                                StatsCollector statsCollector,
+                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor) {
+        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor);
     }
 
     private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,

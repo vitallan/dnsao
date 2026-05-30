@@ -38,6 +38,8 @@ misc:
 resolver:
   tlsPoolSize: 5
   multiplier: 3
+  upstreamThreadPoolSize: 64
+  upstreamQueueSize: 640
   dnssec: "simple"
   upstreams:
     - ip: "1.1.1.1"
@@ -192,6 +194,8 @@ Independente da resposta do upstream, **DNSao** não habilita a flag *AD* na res
 resolver:
   tlsPoolSize: 5
   multiplier: 3
+  upstreamThreadPoolSize: 64
+  upstreamQueueSize: 640
   upstreams:
     - ip: "1.1.1.1"
       port: 853
@@ -229,6 +233,16 @@ A propriedade **resolver** define os *upstreams* que serão consultados. Você d
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **tlsPoolSize** | tamanho máximo do *pool* de conexões DOT por *upstream*. Usar *pool* melhora a performance, já que o *handshake* TLS é custoso, mas aumentá-lo demais não trará necessariamente mais velocidade — uma única conexão pode servir múltiplas requisições e conexões stale são descartadas pelo *upstream*                     |
 | **multiplier**  | para quantos *upstreams* cada query será enviada. O **DNSao** usa a resposta mais rápida e descarta as demais. Há um *trade-off* entre velocidade e privacidade: quanto mais *upstreams* por requisição, mais servidores verão suas queries. Se privacidade é o principal objetivo, defina *multiplier* como 1 e use *upstreams* DOT ou DOH. |
+| **upstreamThreadPoolSize** | tamanho do pool compartilhado de threads usado para executar chamadas aos upstreams. O default é **64** |
+| **upstreamQueueSize** | tamanho da fila limitada para tarefas upstream. O default é **640** (64 * 10) |
+
+#### Internals da Execução Upstream
+
+As chamadas aos upstreams são executadas via um `ThreadPoolExecutor` compartilhado (`UpstreamThreadPoolExecutor`) configurado com um número fixo de threads (`resolver.upstreamThreadPoolSize`) e uma fila limitada (`resolver.upstreamQueueSize`).
+
+Quando o pool e a fila estão saturados, o **DNSao** usa `CallerRunsPolicy` como mecanismo de *backpressure*: a thread chamadora executa a chamada upstream inline, desacelerando o processamento de novas queries ao invés de criar mais threads ou permitir crescimento ilimitado de memória.
+
+O `resolver.multiplier` controla quantas tarefas upstream uma única query pode agendar; sob saturação, as tarefas podem ficar na fila ou serem executadas inline por causa do *backpressure*.
 
 Estas são as propriedades internas dentro de **upstreams**:
 
