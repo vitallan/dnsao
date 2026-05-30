@@ -17,6 +17,7 @@ import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerProvider;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamResolverProvider;
+import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolFactory;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
@@ -38,7 +39,11 @@ public class QueryInfraAssembler {
         this.overrideRegistry = overrideRegistry;
     }
 
-    public QueryProcessorDependencies assemble(Conf conf, CacheManager cacheManager, ExecutorServiceFactory executorServiceFactory, NotificationManager notificationManager) throws ConfException {
+    public QueryProcessorDependencies assemble(Conf conf,
+                                               CacheManager cacheManager,
+                                               ExecutorServiceFactory executorServiceFactory,
+                                               UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                                               NotificationManager notificationManager) throws ConfException {
         ResolverConf resolverConf = conf.getResolver();
         MiscConf miscConf = conf.getMisc();
         ListsConf listsConf = conf.getLists();
@@ -55,7 +60,7 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
+        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider);
 
@@ -129,12 +134,13 @@ public class QueryInfraAssembler {
     }
 
     EngineUnitProvider engineUnitProvider(ExecutorServiceFactory executorServiceFactory,
-                                                  BlockDecider blockDecider,
-                                                  Map<String, String> localMappings,
-                                                  CacheManager cacheManager,
-                                                  UpstreamUnitConf upstreamUnitConf) {
+                                          UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                                          BlockDecider blockDecider,
+                                          Map<String, String> localMappings,
+                                          CacheManager cacheManager,
+                                          UpstreamUnitConf upstreamUnitConf) {
 
-        return new EngineUnitProvider(executorServiceFactory, blockDecider, localMappings, cacheManager, upstreamUnitConf);
+        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf);
     }
 
     private PostHandlerFacade postHandlerFacade(PostHandlerProvider provider, ExecutorServiceFactory executorServiceFactory) {

@@ -9,6 +9,7 @@ import com.allanvital.dnsao.graph.ExecutorServiceFactory;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import com.allanvital.dnsao.web.WebServer;
+import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,10 +32,16 @@ public class DnsServer {
     private final ProtocolServer tcpServer;
     private final WebServer webServer;
     private final StatsCollector statsCollector;
+    private final UpstreamThreadPoolExecutor upstreamThreadPoolExecutor;
 
-    public DnsServer(ServerConf conf, QueryProcessorFactory factory, ExecutorServiceFactory executorServiceFactory, StatsCollector statsCollector) {
+    public DnsServer(ServerConf conf,
+                     QueryProcessorFactory factory,
+                     ExecutorServiceFactory executorServiceFactory,
+                     StatsCollector statsCollector,
+                     UpstreamThreadPoolExecutor upstreamThreadPoolExecutor) {
         this.port = conf.getPort();
         this.statsCollector = statsCollector;
+        this.upstreamThreadPoolExecutor = upstreamThreadPoolExecutor;
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
@@ -84,6 +91,13 @@ public class DnsServer {
                 closeable.close();
             } catch (Exception e) {
                 log.warn("failed closing stats collector", e);
+            }
+        }
+        if (upstreamThreadPoolExecutor != null) {
+            try {
+                upstreamThreadPoolExecutor.close();
+            } catch (Exception e) {
+                log.warn("failed closing upstream executor", e);
             }
         }
         running = false;

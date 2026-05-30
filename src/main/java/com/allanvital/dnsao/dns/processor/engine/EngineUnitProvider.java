@@ -4,6 +4,7 @@ import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.*;
+import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
 
 import java.util.LinkedList;
@@ -18,6 +19,7 @@ public class EngineUnitProvider {
     private final List<EngineUnit> engineUnits = new LinkedList<>();
 
     public EngineUnitProvider(ExecutorServiceFactory executorServiceFactory,
+                              UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
                               BlockDecider blockDecider,
                               Map<String, String> localMappings,
                               CacheManager cacheManager,
@@ -26,7 +28,7 @@ public class EngineUnitProvider {
         engineUnits.add(new BlockUnit(blockDecider));
         engineUnits.add(new LocalMappingUnit(localMappings));
         engineUnits.add(new CacheUnit(cacheManager));
-        engineUnits.add(new UpstreamUnit(executorServiceFactory, upstreamUnitConf));
+        engineUnits.add(new UpstreamUnit(upstreamThreadPoolExecutor, upstreamUnitConf));
         engineUnits.add(new StaleUnit(cacheManager));
         engineUnits.add(new ServFailUnit());
     }

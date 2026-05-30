@@ -14,6 +14,10 @@ public class ResolverConf {
     private int tlsPoolSize = 3;
     private List<LocalMapping> localMappings = new LinkedList<>();
 
+    // Shared upstream execution pool (used only in forward mode)
+    private Integer upstreamThreadPoolSize;
+    private Integer upstreamQueueSize;
+
     public List<Upstream> getUpstreams() {
         return upstreams;
     }
@@ -47,6 +51,22 @@ public class ResolverConf {
 
     public void setLocalMappings(List<LocalMapping> localMappings) {
         this.localMappings = localMappings;
+    }
+
+    public Integer getUpstreamThreadPoolSize() {
+        return upstreamThreadPoolSize;
+    }
+
+    public void setUpstreamThreadPoolSize(Integer upstreamThreadPoolSize) {
+        this.upstreamThreadPoolSize = upstreamThreadPoolSize;
+    }
+
+    public Integer getUpstreamQueueSize() {
+        return upstreamQueueSize;
+    }
+
+    public void setUpstreamQueueSize(Integer upstreamQueueSize) {
+        this.upstreamQueueSize = upstreamQueueSize;
     }
 
     private static List<Upstream> buildDefault() {
