@@ -1,0 +1,26 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+misc:
+  timeout: 1
+  retries: 1
+
+cache:
+  enabled: true
+  maxCacheEntries: 1
+  rewarm: true
+  secsBeforeTtlToRewarm: 20
+  maxRewarmCount: 2
+  keep:
+    - "keep1.com"
+    - "keep2.com"
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"

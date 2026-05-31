@@ -36,7 +36,8 @@ public class SystemGraphAssembler {
         ExecutorServiceFactory executorServiceFactory = executorServiceFactory();
 
         FixedTimeRewarmScheduler fixedTimeRewarmScheduler = rewarmScheduler(cacheConf.getSecsBeforeTtlToRewarm());
-        CacheManager cacheManager = cacheManager(cacheConf, fixedTimeRewarmScheduler, miscConf.getExpiredConf());
+        KeepProvider keepProvider = keepProvider(cacheConf);
+        CacheManager cacheManager = cacheManager(cacheConf, fixedTimeRewarmScheduler, miscConf.getExpiredConf(), keepProvider);
 
         NotificationManager notificationManager = notificationManager(miscConf.isQueryLog());
         StatsCollector statsCollector = statsCollector(serverConf, notificationManager);
@@ -51,7 +52,6 @@ public class SystemGraphAssembler {
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
-        KeepProvider keepProvider = keepProvider(cacheConf);
         KeepKickstarter kickstarter = keepKickStarter(keepProvider, factory);
         scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
         kickstarter.kickStartKeep();
@@ -106,9 +106,12 @@ public class SystemGraphAssembler {
         return new QueryInfraAssembler(overrideRegistry);
     }
 
-    CacheManager cacheManager(CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, ExpiredConf expiredConf) {
+    CacheManager cacheManager(CacheConf cacheConf,
+                              FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
+                              ExpiredConf expiredConf,
+                              KeepProvider keepProvider) {
         return overrideRegistry.getRegisteredModule(CacheManager.class)
-                .orElse(new CacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf));
+                .orElse(new CacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf, keepProvider));
     }
 
     private FixedTimeRewarmScheduler rewarmScheduler(long timeBeforeTtlToTriggerRewarm) {

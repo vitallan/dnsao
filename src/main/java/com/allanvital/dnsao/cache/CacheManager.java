@@ -1,6 +1,8 @@
 package com.allanvital.dnsao.cache;
 
 import com.allanvital.dnsao.cache.map.LruDnsCache;
+import com.allanvital.dnsao.cache.map.KeepAwareLruDnsCache;
+import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
@@ -30,7 +32,10 @@ public class CacheManager {
     private final FixedTimeRewarmScheduler fixedTimeRewarmScheduler;
     private final ExpiredConf expiredConf;
 
-    public CacheManager(CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, ExpiredConf expiredConf) {
+    public CacheManager(CacheConf cacheConf,
+                        FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
+                        ExpiredConf expiredConf,
+                        KeepProvider keepProvider) {
         if (cacheConf == null || !cacheConf.isEnabled()) {
             enabled = false;
             cache = null;
@@ -41,7 +46,13 @@ public class CacheManager {
         this.expiredConf = expiredConf;
         enabled = true;
         this.fixedTimeRewarmScheduler = fixedTimeRewarmScheduler;
-        this.cache = Collections.synchronizedMap(new LruDnsCache(cacheConf.getMaxCacheEntries()));
+
+        int maxEntries = cacheConf.getMaxCacheEntries();
+        if (keepProvider != null && cacheConf.getKeep() != null && !cacheConf.getKeep().isEmpty()) {
+            this.cache = Collections.synchronizedMap(new KeepAwareLruDnsCache(maxEntries, keepProvider));
+        } else {
+            this.cache = Collections.synchronizedMap(new LruDnsCache(maxEntries));
+        }
     }
 
     public DnsCacheEntry safeGet(String key) {
