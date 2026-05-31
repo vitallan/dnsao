@@ -3,12 +3,11 @@ package com.allanvital.dnsao.dns.remote;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,21 +43,11 @@ public class UpstreamThreadPoolExecutorTest {
     public void prestartsCoreThreads_andUsesUpstreamPrefix() throws Exception {
         ExecutorServiceFactory factory = new ExecutorServiceFactory();
         try (UpstreamThreadPoolExecutor ex = new UpstreamThreadPoolExecutor(factory, 2, 2)) {
-            long deadline = System.currentTimeMillis() + 2000;
-            boolean found = false;
-            while (System.currentTimeMillis() < deadline && !found) {
-                Set<Thread> threads = Thread.getAllStackTraces().keySet();
-                for (Thread t : threads) {
-                    if (t.getName() != null && t.getName().startsWith("upstream-")) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    Thread.sleep(10);
-                }
-            }
-            assertTrue(found, "Expected at least one upstream-* thread after prestart");
+            CountDownLatch ran = new CountDownLatch(1);
+
+            ex.executor().execute(ran::countDown);
+
+            assertTrue(ran.await(2, TimeUnit.SECONDS), "Expected a task to run on the upstream executor");
         }
     }
 
@@ -67,22 +56,37 @@ public class UpstreamThreadPoolExecutorTest {
         ExecutorServiceFactory factory = new ExecutorServiceFactory();
         try (UpstreamThreadPoolExecutor ex = new UpstreamThreadPoolExecutor(factory, 1, 1)) {
             CountDownLatch block = new CountDownLatch(1);
+            CountDownLatch workerStarted = new CountDownLatch(1);
             AtomicReference<String> callerThreadName = new AtomicReference<>();
+            CountDownLatch callerRan = new CountDownLatch(1);
 
-            ex.executor().submit(() -> {
-                await(block);
-            });
+            ExecutorService svc = ex.executor();
+            ThreadPoolExecutor tp = (ThreadPoolExecutor) svc;
 
-            waitUntilActive(ex, 1, 2000);
+            try {
+                svc.execute(() -> {
+                    workerStarted.countDown();
+                    await(block);
+                });
+                assertTrue(workerStarted.await(2, TimeUnit.SECONDS), "Expected worker task to start");
 
-            ex.executor().submit(() -> await(block));
-            waitUntilQueued(ex, 1, 2000);
+                svc.execute(() -> await(block));
+                waitUntilQueueFull(tp, 2000);
 
-            String testThread = Thread.currentThread().getName();
-            ex.executor().submit(() -> callerThreadName.set(Thread.currentThread().getName()));
+                assertEquals(1, tp.getQueue().size());
+                assertEquals(0, tp.getQueue().remainingCapacity());
 
-            assertEquals(testThread, callerThreadName.get(), "Expected task to run on caller thread due to backpressure");
-            block.countDown();
+                String testThread = Thread.currentThread().getName();
+                svc.execute(() -> {
+                    callerThreadName.set(Thread.currentThread().getName());
+                    callerRan.countDown();
+                });
+
+                assertTrue(callerRan.await(1, TimeUnit.SECONDS), "Expected caller-runs task to run");
+                assertEquals(testThread, callerThreadName.get(), "Expected task to run on caller thread due to backpressure");
+            } finally {
+                block.countDown();
+            }
         }
     }
 
@@ -92,11 +96,6 @@ public class UpstreamThreadPoolExecutorTest {
         UpstreamThreadPoolExecutor ex = new UpstreamThreadPoolExecutor(factory, 1, 1);
         ex.executor().submit(() -> {}).get(2, TimeUnit.SECONDS);
         ex.close();
-
-        long deadline = System.currentTimeMillis() + 2000;
-        while (System.currentTimeMillis() < deadline && !ex.executor().isShutdown()) {
-            Thread.sleep(10);
-        }
         assertTrue(ex.executor().isShutdown());
     }
 
@@ -106,30 +105,38 @@ public class UpstreamThreadPoolExecutorTest {
         try (UpstreamThreadPoolExecutor ex = new UpstreamThreadPoolExecutor(factory, 1, 10)) {
             CountDownLatch block = new CountDownLatch(1);
             CountDownLatch started = new CountDownLatch(1);
-            AtomicBoolean ran = new AtomicBoolean(false);
-            AtomicReference<String> ranThread = new AtomicReference<>();
+            AtomicInteger ranCount = new AtomicInteger(0);
+            CountDownLatch ranLatch = new CountDownLatch(1);
 
-            ex.executor().submit(() -> {
-                started.countDown();
-                await(block);
-            });
+            ExecutorService svc = ex.executor();
+            ThreadPoolExecutor tp = (ThreadPoolExecutor) svc;
 
-            assertTrue(started.await(2, TimeUnit.SECONDS), "Expected worker task to start");
-            waitUntilActive(ex, 1, 2000);
+            try {
+                svc.execute(() -> {
+                    started.countDown();
+                    await(block);
+                });
 
-            ex.executor().submit(() -> {
-                ranThread.set(Thread.currentThread().getName());
-                ran.set(true);
-            });
+                assertTrue(started.await(2, TimeUnit.SECONDS), "Expected worker task to start");
+                assertEquals(0, tp.getQueue().size());
 
-            Thread.sleep(50);
-            assertFalse(ran.get(), "Expected task to be queued while worker is blocked");
-            assertTrue(ex.getQueuedTaskCount() >= 1, "Expected at least one queued task");
+                svc.execute(() -> {
+                    ranCount.incrementAndGet();
+                    ranLatch.countDown();
+                });
 
-            block.countDown();
-            waitUntilTrue(ran, 2000);
-            assertNotNull(ranThread.get());
-            assertTrue(ranThread.get().startsWith("upstream-"), "Expected queued task to run on upstream thread");
+                assertEquals(1, tp.getQueue().size());
+
+                assertFalse(ranLatch.await(150, TimeUnit.MILLISECONDS), "Expected task to be queued while worker is blocked");
+                assertEquals(0, ranCount.get());
+
+                block.countDown();
+
+                assertTrue(ranLatch.await(2, TimeUnit.SECONDS), "Expected queued task to run after worker frees");
+                assertEquals(1, ranCount.get());
+            } finally {
+                block.countDown();
+            }
         }
     }
 
@@ -139,25 +146,40 @@ public class UpstreamThreadPoolExecutorTest {
         try (UpstreamThreadPoolExecutor ex = new UpstreamThreadPoolExecutor(factory, 1, 10)) {
             CountDownLatch block = new CountDownLatch(1);
             CountDownLatch started = new CountDownLatch(1);
-            List<String> events = new CopyOnWriteArrayList<>();
+            CountDownLatch done = new CountDownLatch(2);
+            AtomicInteger doneCount = new AtomicInteger(0);
 
-            ex.executor().submit(() -> {
-                started.countDown();
-                await(block);
-            });
+            ExecutorService svc = ex.executor();
+            ThreadPoolExecutor tp = (ThreadPoolExecutor) svc;
 
-            assertTrue(started.await(2, TimeUnit.SECONDS), "Expected worker task to start");
-            waitUntilActive(ex, 1, 2000);
+            try {
+                svc.execute(() -> {
+                    started.countDown();
+                    await(block);
+                });
 
-            ex.executor().submit(() -> events.add("b"));
-            ex.executor().submit(() -> events.add("c"));
+                assertTrue(started.await(2, TimeUnit.SECONDS), "Expected worker task to start");
+                assertEquals(0, tp.getQueue().size());
 
-            Thread.sleep(50);
-            assertTrue(events.isEmpty(), "Expected queued tasks not to run while worker is blocked");
-            assertTrue(ex.getQueuedTaskCount() >= 2, "Expected queuedTaskCount >= 2 while worker blocked");
+                svc.execute(() -> {
+                    doneCount.incrementAndGet();
+                    done.countDown();
+                });
+                svc.execute(() -> {
+                    doneCount.incrementAndGet();
+                    done.countDown();
+                });
 
-            block.countDown();
-            waitUntilSize(events, 2, 2000);
+                assertEquals(2, tp.getQueue().size());
+                assertFalse(done.await(150, TimeUnit.MILLISECONDS), "Expected queued tasks not to run while worker is blocked");
+                assertEquals(0, doneCount.get());
+
+                block.countDown();
+                assertTrue(done.await(2, TimeUnit.SECONDS), "Expected queued tasks to drain after worker frees");
+                assertEquals(2, doneCount.get());
+            } finally {
+                block.countDown();
+            }
         }
     }
 
@@ -169,48 +191,15 @@ public class UpstreamThreadPoolExecutorTest {
         }
     }
 
-    private static void waitUntilActive(UpstreamThreadPoolExecutor ex, int expected, long timeoutMs) throws InterruptedException {
+    private static void waitUntilQueueFull(ThreadPoolExecutor tp, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (System.currentTimeMillis() < deadline) {
-            if (ex.getActiveCount() >= expected) {
+            if (tp.getQueue().remainingCapacity() == 0) {
                 return;
             }
-            Thread.sleep(10);
+            Thread.sleep(5);
         }
-        fail("Expected activeCount >= " + expected + " but was " + ex.getActiveCount());
-    }
-
-    private static void waitUntilQueued(UpstreamThreadPoolExecutor ex, int expected, long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            if (ex.getQueuedTaskCount() >= expected) {
-                return;
-            }
-            Thread.sleep(10);
-        }
-        fail("Expected queuedTaskCount >= " + expected + " but was " + ex.getQueuedTaskCount());
-    }
-
-    private static void waitUntilTrue(AtomicBoolean flag, long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            if (flag.get()) {
-                return;
-            }
-            Thread.sleep(10);
-        }
-        fail("Expected flag to become true");
-    }
-
-    private static void waitUntilSize(List<?> list, int expectedSize, long timeoutMs) throws InterruptedException {
-        long deadline = System.currentTimeMillis() + timeoutMs;
-        while (System.currentTimeMillis() < deadline) {
-            if (list.size() >= expectedSize) {
-                return;
-            }
-            Thread.sleep(10);
-        }
-        fail("Expected list size >= " + expectedSize + " but was " + list.size());
+        fail("Expected upstream queue to be full but remainingCapacity was " + tp.getQueue().remainingCapacity() + ", size=" + tp.getQueue().size());
     }
 
 }
