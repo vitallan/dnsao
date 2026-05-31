@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
@@ -22,8 +23,11 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     }
 
     @Override
-    CacheManager cacheManager(CacheConf cacheConf, FixedTimeRewarmScheduler fixedTimeRewarmScheduler, ExpiredConf expiredConf) {
-        this.cacheManager = super.cacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf);
+    CacheManager cacheManager(CacheConf cacheConf,
+                              FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
+                              ExpiredConf expiredConf,
+                              KeepProvider keepProvider) {
+        this.cacheManager = super.cacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf, keepProvider);
         return this.cacheManager;
     }
 
