@@ -30,6 +30,7 @@ cache:
 
 misc:
   timeout: 3
+  queryLog: true
   refreshLists: false
   serveExpired: false
   serveExpiredMax: 86400
@@ -160,6 +161,7 @@ The **cache** property defines the application’s cache behavior. The cache is 
 ```yaml
 misc:
   timeout: 3
+  queryLog: true
   refreshLists: false
   serveExpired: false
   serveExpiredMax: 86400
@@ -171,6 +173,7 @@ The **misc** property defines general purposes functions in **DNSao**.
 | Property | Description |
 |---------|------------|
 | **timeout** | global timeout in seconds when querying upstream servers |
+| **queryLog** | true/false, default is true. Controls whether individual query events are logged and stored. When false: query details are suppressed from the DNS log, sensitive fields (domain, client, type, answer) are stripped from events notified to subscribers, dashboard counters still work normally, but the query history table stays empty |
 | **refreshLists** | true/false, default is false. When enabled, **DNSao** will periodically redownload the block and allow list to refresh the entries. If a lot of lists are used, this might overload the available memory. Allocate more memory if this is desired |
 | **serveExpired** | true/false, default is false. Adhering to dns rfc8767, when enabled, **DNSao** will serve data that is already expired when no available upstream resulted in a definitive answer (null, SERVFAIL and REFUSED) to maximixe dns availability |
 | **serveExpiredMax** | default is 86400 (one day). When **serveExpired** is enable this is the maximum time in seconds that a local query will result in a cache hit before the entry is considered expired and removed |

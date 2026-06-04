@@ -19,10 +19,11 @@ public class PostHandlerProvider {
     public PostHandlerProvider(CacheManager cacheManager,
                                NotificationManager notificationManager,
                                ResolverProvider resolverProvider,
-                               Set<String> urlsToNotify) {
+                               Set<String> urlsToNotify,
+                               boolean queryLogEnabled) {
 
         handlers.add(new CachePostHandler(cacheManager));
-        handlers.add(new LogPostHandler());
+        handlers.add(new LogPostHandler(queryLogEnabled));
         handlers.add(new WinnerUpstreamHandler(resolverProvider));
         handlers.add(new NotificationPostHandler(notificationManager));
         handlers.add(new HttpListenerPostHandler(urlsToNotify));

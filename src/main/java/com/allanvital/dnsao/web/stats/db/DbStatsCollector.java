@@ -424,16 +424,20 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
              PreparedStatement bucket = conn.prepareStatement(upsertBucket);
              PreparedStatement upstream = conn.prepareStatement(upsertUpstream)) {
 
+            boolean hasQueryEvent = false;
             for (QueryEvent e : events) {
-                ins.setLong(1, e.getTime());
-                ins.setString(2, e.getQueryResolvedBy() == null ? null : e.getQueryResolvedBy().name());
-                ins.setString(3, e.getClient());
-                ins.setString(4, e.getType());
-                ins.setString(5, e.getDomain());
-                ins.setString(6, e.getAnswer());
-                ins.setString(7, e.getSource());
-                ins.setLong(8, e.getElapsedTime());
-                ins.addBatch();
+                if (!e.isAnonymized()) {
+                    hasQueryEvent = true;
+                    ins.setLong(1, e.getTime());
+                    ins.setString(2, e.getQueryResolvedBy() == null ? null : e.getQueryResolvedBy().name());
+                    ins.setString(3, e.getClient());
+                    ins.setString(4, e.getType());
+                    ins.setString(5, e.getDomain());
+                    ins.setString(6, e.getAnswer());
+                    ins.setString(7, e.getSource());
+                    ins.setLong(8, e.getElapsedTime());
+                    ins.addBatch();
+                }
 
                 long bucketStart = truncateToWindow(e.getTime(), bucketIntervalMs);
 
@@ -469,7 +473,9 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                 }
             }
 
-            ins.executeBatch();
+            if (hasQueryEvent) {
+                ins.executeBatch();
+            }
             bucket.executeBatch();
             upstream.executeBatch();
         }

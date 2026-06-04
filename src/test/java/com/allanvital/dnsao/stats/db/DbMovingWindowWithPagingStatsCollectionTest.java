@@ -16,6 +16,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class DbMovingWindowWithPagingStatsCollectionTest {
 
+    private static QueryEvent eventWithDomain(long time, long elapsedTime) {
+        QueryEvent event = new QueryEvent(time, elapsedTime);
+        event.setDomain("test.com.");
+        return event;
+    }
+
     @TempDir
     Path tempDir;
 
@@ -39,10 +45,10 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
 
     @Test
     public void getOrderedQueryEventsWithPages() throws Exception {
-        QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
-        QueryEvent q2 = new QueryEvent(t("2025-10-02T09:32:00Z"), 100);
-        QueryEvent q3 = new QueryEvent(t("2025-10-02T09:41:00Z"), 100);
-        QueryEvent q4 = new QueryEvent(t("2025-10-02T09:51:00Z"), 100);
+        QueryEvent q1 = eventWithDomain(t("2025-10-02T09:31:00Z"), 100);
+        QueryEvent q2 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
+        QueryEvent q3 = eventWithDomain(t("2025-10-02T09:41:00Z"), 100);
+        QueryEvent q4 = eventWithDomain(t("2025-10-02T09:51:00Z"), 100);
 
         dbStatsCollector.receiveNewQuery(q1);
         dbStatsCollector.receiveNewQuery(q2);
@@ -77,8 +83,8 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
 
     @Test
     public void getOrderedQueryEventsPageBeyondAvailableReturnsEmpty() throws Exception {
-        QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
-        QueryEvent q2 = new QueryEvent(t("2025-10-02T09:32:00Z"), 100);
+        QueryEvent q1 = eventWithDomain(t("2025-10-02T09:31:00Z"), 100);
+        QueryEvent q2 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
 
         dbStatsCollector.receiveNewQuery(q1);
         dbStatsCollector.receiveNewQuery(q2);
@@ -100,12 +106,12 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
 
     @Test
     public void getOrderedQueryEventsExactlyMultipleOfPageSize() throws Exception {
-        QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
-        QueryEvent q2 = new QueryEvent(t("2025-10-02T09:32:00Z"), 100);
-        QueryEvent q3 = new QueryEvent(t("2025-10-02T09:33:00Z"), 100);
-        QueryEvent q4 = new QueryEvent(t("2025-10-02T09:34:00Z"), 100);
-        QueryEvent q5 = new QueryEvent(t("2025-10-02T09:35:00Z"), 100);
-        QueryEvent q6 = new QueryEvent(t("2025-10-02T09:36:00Z"), 100);
+        QueryEvent q1 = eventWithDomain(t("2025-10-02T09:31:00Z"), 100);
+        QueryEvent q2 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
+        QueryEvent q3 = eventWithDomain(t("2025-10-02T09:33:00Z"), 100);
+        QueryEvent q4 = eventWithDomain(t("2025-10-02T09:34:00Z"), 100);
+        QueryEvent q5 = eventWithDomain(t("2025-10-02T09:35:00Z"), 100);
+        QueryEvent q6 = eventWithDomain(t("2025-10-02T09:36:00Z"), 100);
 
         dbStatsCollector.receiveNewQuery(q1);
         dbStatsCollector.receiveNewQuery(q2);

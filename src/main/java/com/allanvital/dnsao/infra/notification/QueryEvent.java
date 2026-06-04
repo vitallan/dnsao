@@ -128,6 +128,17 @@ public class QueryEvent implements Comparable<QueryEvent> {
         this.elapsedTime = elapsedTime;
     }
 
+    public void anonymize() {
+        this.domain = null;
+        this.client = null;
+        this.type = null;
+        this.answer = null;
+    }
+
+    public boolean isAnonymized() {
+        return domain == null && client == null && type == null && answer == null;
+    }
+
     @Override
     public String toString() {
         return "QueryEvent {" +

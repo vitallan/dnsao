@@ -62,7 +62,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
 
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider);
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -147,8 +147,8 @@ public class QueryInfraAssembler {
         return new PostHandlerFacade(provider, executorServiceFactory);
     }
 
-    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify, ResolverProvider resolverProvider) {
-        return new PostHandlerProvider(cacheManager, notificationManager, resolverProvider, urlsToNotify);
+    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify, ResolverProvider resolverProvider, boolean queryLogEnabled) {
+        return new PostHandlerProvider(cacheManager, notificationManager, resolverProvider, urlsToNotify, queryLogEnabled);
     }
 
 }

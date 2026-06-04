@@ -34,7 +34,7 @@ public class MemoryBucket implements Bucket {
     public void increment(QueryEvent queryEvent) {
         totalCounter.increment();
         elapsedTimeSum.add(queryEvent.getElapsedTime());
-        if (totalCounter.sum() < MAX_QUERY_EVENTS) {
+        if (!queryEvent.isAnonymized() && totalCounter.sum() < MAX_QUERY_EVENTS) {
             queryEvents.add(queryEvent);
         }
         if (queryEvent.getQueryResolvedBy() != null) {
