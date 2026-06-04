@@ -143,9 +143,13 @@ public class MovingWindowStatsCollectionTest {
     @Test
     public void getOrderedQueryEvents() {
         QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
+        q1.setDomain("test.com.");
         QueryEvent q2 = new QueryEvent(t("2025-10-02T09:32:00Z"), 100);
+        q2.setDomain("test.com.");
         QueryEvent q3 = new QueryEvent(t("2025-10-02T09:41:00Z"), 100);
+        q3.setDomain("test.com.");
         QueryEvent q4 = new QueryEvent(t("2025-10-02T09:51:00Z"), 100);
+        q4.setDomain("test.com.");
 
         memoryStatsCollector.receiveNewQuery(q1);
         memoryStatsCollector.receiveNewQuery(q2);

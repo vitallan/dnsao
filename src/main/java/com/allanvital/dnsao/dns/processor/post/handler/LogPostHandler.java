@@ -21,8 +21,17 @@ public class LogPostHandler implements PostHandler {
 
     protected static final Logger log = LoggerFactory.getLogger(DNS);
 
+    private final boolean queryLogEnabled;
+
+    public LogPostHandler(boolean queryLogEnabled) {
+        this.queryLogEnabled = queryLogEnabled;
+    }
+
     @Override
     public void handle(DnsQueryRequest request, DnsQueryResponse response) {
+        if (!queryLogEnabled) {
+            return;
+        }
         InetAddress clientAddress = request.getClientAddress();
         Record question = request.getRequest().getQuestion();
         Name name = question.getName();
@@ -35,7 +44,6 @@ public class LogPostHandler implements PostHandler {
         }
         String ip = DnsUtils.extractIpFromResponseMessage(response.getResponse());
         log.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\"", typeName, client, name, solvedBy, ip);
-
     }
 
 }

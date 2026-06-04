@@ -27,7 +27,7 @@ public class NotificationManager {
 
     public void notifyQuery(QueryEvent queryEvent) {
         if (!queryLogEnabled) {
-            return;
+            queryEvent.anonymize();
         }
         for (QueryEventListener listener : queryListeners.get()) {
             try {

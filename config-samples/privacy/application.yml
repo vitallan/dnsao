@@ -16,6 +16,7 @@ cache:
 
 misc:
   timeout: 3
+  queryLog: false
   refreshLists: true
   serveExpired: false
   dnssec: simple

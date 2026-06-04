@@ -72,9 +72,13 @@ public class DbMovingWindowStatsCollectionTest {
     public void getOrderedQueryEventsTrimsEventsOutsideWindowWhenNowAdvances() throws Exception {
         // Window is 60 minutes. nowRef starts at 10:10.
         QueryEvent qOld = new QueryEvent(t("2025-10-02T09:00:00Z"), 100);
+        qOld.setDomain("test.com.");
         QueryEvent q1 = new QueryEvent(t("2025-10-02T09:31:00Z"), 100);
+        q1.setDomain("test.com.");
         QueryEvent q2 = new QueryEvent(t("2025-10-02T09:51:00Z"), 100);
+        q2.setDomain("test.com.");
         QueryEvent q3 = new QueryEvent(t("2025-10-02T10:05:00Z"), 100);
+        q3.setDomain("test.com.");
 
         dbStatsCollector.receiveNewQuery(qOld);
         dbStatsCollector.receiveNewQuery(q1);

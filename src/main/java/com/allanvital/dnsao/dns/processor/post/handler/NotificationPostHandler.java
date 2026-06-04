@@ -20,7 +20,6 @@ public class NotificationPostHandler implements PostHandler {
         if (!request.isLocalQuery()) {
             notifier.notifyQuery(buildQueryEvent(request, response));
         }
-
     }
 
 }
