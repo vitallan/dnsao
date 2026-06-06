@@ -1,9 +1,8 @@
 # Configuration
 
-**DNSao** requires two configuration files:
+**DNSao** requires a single configuration file:
 
 * [YML configuration](#configuration-yml)
-* [Logback XML](#logback-xml)
 
 You can find configuration examples [in the GitHub project]({{sample_conf_url}}), but below are examples and references.
 
@@ -358,83 +357,50 @@ Optional config that can be used to set external http listeners to receive the d
 
 **Source** field shows which upstream answered the query, in case the query was resolved by an upstream, otherwise it is null.
 
-## Logback XML
+## Logging
 
-Logback is a well-known standard in the Java community, and the file read by **DNSao** must follow the logback format. When in doubt, just follow [the documentation](https://logback.qos.ch/documentation.html).
+Logging is configured via the `log` section in `application.yml`. **DNSao** uses `java.util.logging` (JUL) with three named loggers: **DNS**, **CACHE**, and **INFRA**.
 
-Below is an example of logs set at the INFO level.
+### Configuration
 
-```xml
-<configuration>
-
-    <property name="LOG_DIR" value="/var/log/dnsao"/>
-    <property name="LOG_FILE" value="${LOG_DIR}/dnsao.log"/>
-    <property name="LOG_PATTERN" value="[%d{HH:mm:ss.SSS}] %-5level [%replace(%thread){'com.allanvital.dnsao.Main.main','main'}] [%logger] %msg%n" />
-
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-    </appender>
-
-    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_FILE}</file>
-        <append>true</append>
-        <prudent>false</prudent>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/dnsao.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>5GB</totalSizeCap>
-            <cleanHistoryOnStart>true</cleanHistoryOnStart>
-            <maxFileSize>100MB</maxFileSize>
-        </rollingPolicy>
-        <encoder>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-    </appender>
-
-    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
-        <queueSize>2048</queueSize>
-        <discardingThreshold>90</discardingThreshold>
-        <neverBlock>true</neverBlock>
-        <appender-ref ref="CONSOLE"/>
-    </appender>
-
-    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-        <queueSize>8192</queueSize>
-        <discardingThreshold>0</discardingThreshold>
-        <neverBlock>false</neverBlock>
-        <appender-ref ref="FILE"/>
-    </appender>
-
-    <root level="INFO">
-        <appender-ref ref="ASYNC_CONSOLE"/>
-        <appender-ref ref="ASYNC_FILE"/>
-    </root>
-
-    <logger name="org.xbill.DNS" level="OFF"/>
-    <logger name="io.javalin" level="OFF"/>
-    <logger name="org.eclipse.jetty" level="OFF"/>
-</configuration>
-
+```yaml
+log:
+  rootLevel: WARN
+  dns: DEBUG
+  cache: DEBUG
+  infra: DEBUG
+  # Optional file logging (printed to console if absent):
+  file:
+    path: "/var/log/dnsao/dnsao-%g.log"
+    maxSize: 10485760
+    maxFiles: 5
 ```
 
-**DNSao** has three main loggers: **DNS, CACHE, and INFRA**. If you prefer a more privacy-oriented setup, just change the root level of the XML above to "WARN" — queries and other expected events will not be logged.
-For troubleshooting, analysis, or personal preference, you can set each log individually:
+### Loggers
 
-```xml
-<logger name="DNS" level="INFO" additivity="false">
-    <appender-ref ref="ASYNC_CONSOLE" />
-    <appender-ref ref="ASYNC_FILE"/>
-</logger>
-<logger name="CACHE" level="OFF" additivity="false">
-    <appender-ref ref="ASYNC_CONSOLE" />
-    <appender-ref ref="ASYNC_FILE"/>
-</logger>
-<logger name="INFRA" level="DEBUG" additivity="false">
-    <appender-ref ref="ASYNC_CONSOLE" />
-    <appender-ref ref="ASYNC_FILE"/>
-</logger>
+- **DNS** — DNS query resolution, server lifecycle
+- **CACHE** — cache operations (hits, misses, rewarm)
+- **INFRA** — infrastructure events (list loading, upstream connections)
+
+### Levels
+
+| Config value | JUL level | Description |
+|---|---|---|
+| `TRACE` | FINER | Fine-grained diagnostic details |
+| `DEBUG` | FINE | General debug information |
+| `INFO` | INFO | Normal operational messages |
+| `WARN` | WARNING | Unexpected but recoverable situations |
+| `ERROR` | SEVERE | Severe failures |
+| `OFF` | OFF | Suppresses all messages |
+
+### File logging
+
+When `file.path` is set, DNSao writes logs asynchronously to a rolling file. The pattern supports `%g` as a generation index (e.g., `dnsao-0.log`, `dnsao-1.log`).
+
+### Console output format
+
+```
+[HH:mm:ss.SSS] LEVEL [thread] [LOGGER] message
 ```
 
 <div style="margin-bottom: 60px;"></div>

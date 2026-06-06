@@ -40,7 +40,10 @@ public class LogPostHandler implements PostHandler {
             solvedBy = response.getResponseSource();
         }
         String ip = DnsUtils.extractIpFromResponseMessage(response.getResponse());
-        Log.DNS.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\"", typeName, client, name, solvedBy, ip);
+        double elapsedMs = (response.getFinishTime() - request.getStart()) / 1_000_000.0;
+        String elapsedStr = String.format("%.4f", elapsedMs);
+        Log.DNS.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\" elapsed_ms:\"{}\"",
+            typeName, client, name, solvedBy, ip, elapsedStr);
     }
 
 }

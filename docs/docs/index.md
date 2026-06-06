@@ -25,7 +25,7 @@ title: Home
 - **Low Resource Usage**: runs comfortably with 256 MB of RAM, even on older hardware or compact devices
 - **Free and Open Source**: free software, openly maintained [on GitHub](https://github.com/vitallan/dnsao), allowing unrestricted auditing and use
 - **Stateless By Default**: does not rely on databases or peripheral systems; optionally persists metrics/query history to a local SQLite file via `server.statsDbPath`
-- **Low Number of Dependencies**: dnsjava, logback, javalin, minimal-json, snakeyaml, and sqlite-jdbc
+- **Low Number of Dependencies**: dnsjava, javalin, minimal-json, snakeyaml, and sqlite-jdbc
 
 ---
 

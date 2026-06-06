@@ -74,8 +74,7 @@ To run it manually:
 
 ```bash
 java -jar target/dnsao-<version>.jar \
-  -Dconfig=/etc/dnsao/application.yml \
-  -Dlogback.configurationFile=/etc/dnsao/logback.xml
+  -Dconfig=/etc/dnsao/application.yml
 ```
 
 or, using maven itself:
@@ -134,7 +133,7 @@ DNSao makes use of open-source libraries, including:
 * [Javalin](https://javalin.io) — lightweight web server
 * [SnakeYAML](https://bitbucket.org/asomov/snakeyaml) — YAML configuration
 * [Minimal-json](https://github.com/ralfstx/minimal-json) - JSON manipulation
-* [Logback](https://logback.qos.ch) — logging framework
+* [java.util.logging](https://docs.oracle.com/en/java/javase/17/core/java-logging-overview.html) — logging framework
 * [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) — embedded SQLite JDBC driver
 
 ---

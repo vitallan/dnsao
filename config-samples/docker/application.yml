@@ -52,6 +52,12 @@ resolver:
 
   localMappings:
 
+log:
+  rootLevel: WARN
+  dns: INFO
+  cache: DEBUG
+  infra: DEBUG
+
 lists:
   blockLists:
     block: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
