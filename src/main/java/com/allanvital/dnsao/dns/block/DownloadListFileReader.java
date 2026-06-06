@@ -1,14 +1,12 @@
 package com.allanvital.dnsao.dns.block;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.utils.DownloadUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Set;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static com.allanvital.dnsao.utils.FileUtils.readFileEntries;
 
 /**
@@ -16,7 +14,6 @@ import static com.allanvital.dnsao.utils.FileUtils.readFileEntries;
  */
 public class DownloadListFileReader implements DomainListFileReader {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     @Override
     public Set<Long> readEntries(String url) {
@@ -27,7 +24,7 @@ public class DownloadListFileReader implements DomainListFileReader {
             DownloadUtils.downloadToPath(url, finalPath);
             return readFileEntries(finalPath);
         } catch (IOException | InterruptedException e) {
-            log.warn("it was not possible to download url {}. Error was {}", url, e.getMessage());
+            Log.INFRA.warn("it was not possible to download url {}. Error was {}", url, e.getMessage());
         }
         return Set.of();
     }

@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.dns;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.conf.inner.ServerConf;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
@@ -10,19 +11,15 @@ import com.allanvital.dnsao.web.json.JsonBuilder;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.WebServer;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DnsServer {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final int port;
     private volatile boolean running = false;
@@ -74,7 +71,7 @@ public class DnsServer {
         tcpServer.start();
         webServer.start();
         running = true;
-        log.info("DNS server now running on ports {} for udp and {} for tcp and accepting connections", getUdpPort(), getTcpPort());
+        Log.DNS.info("DNS server now running on ports {} for udp and {} for tcp and accepting connections", getUdpPort(), getTcpPort());
     }
 
     public void stop() {
@@ -91,18 +88,18 @@ public class DnsServer {
             try {
                 closeable.close();
             } catch (Exception e) {
-                log.warn("failed closing stats collector", e);
+                Log.DNS.warn("failed closing stats collector", e);
             }
         }
         if (upstreamThreadPoolExecutor != null) {
             try {
                 upstreamThreadPoolExecutor.close();
             } catch (Exception e) {
-                log.warn("failed closing upstream executor", e);
+                Log.DNS.warn("failed closing upstream executor", e);
             }
         }
         running = false;
-        log.info("DNS server stopped");
+        Log.DNS.info("DNS server stopped");
     }
 
 }

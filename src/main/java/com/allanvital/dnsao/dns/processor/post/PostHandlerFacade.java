@@ -1,16 +1,14 @@
 package com.allanvital.dnsao.dns.processor.post;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.dns.processor.post.handler.PostHandler;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
@@ -18,7 +16,6 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
  */
 public class PostHandlerFacade {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
     private final PostHandlerProvider provider;
     private final ExecutorService threadPool;
 
@@ -29,8 +26,8 @@ public class PostHandlerFacade {
 
     public void handlePost(DnsQueryRequest request, DnsQueryResponse response) {
         if (response == null) {
-            log.error("the following request resulted in a null response: ");
-            log.error(request.getRequest().toString());
+            Log.DNS.error("the following request resulted in a null response: ");
+            Log.DNS.error(request.getRequest().toString());
             //should never happen
             return;
         }

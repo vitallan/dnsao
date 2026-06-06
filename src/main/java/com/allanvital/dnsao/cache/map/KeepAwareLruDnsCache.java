@@ -1,12 +1,11 @@
 package com.allanvital.dnsao.cache.map;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.Constants;
 import com.allanvital.dnsao.cache.CacheStats;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.infra.clock.Clock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Record;
 
 import java.util.Iterator;
@@ -14,11 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 
 public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> implements CacheStats {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
 
     private final int maxSize;
     private final KeepProvider keepProvider;
@@ -50,7 +47,7 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
 
             if (!warnedAllKeepOverCapacity) {
                 warnedAllKeepOverCapacity = true;
-                log.warn("cache over capacity (size={}, max={}) but all entries are in keep; allowing size to exceed maxCacheEntries", size(), maxSize);
+                Log.CACHE.warn("cache over capacity (size={}, max={}) but all entries are in keep; allowing size to exceed maxCacheEntries", size(), maxSize);
             }
             break;
         }

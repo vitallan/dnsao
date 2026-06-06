@@ -1,21 +1,18 @@
 package com.allanvital.dnsao.dns.server;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.infra.clock.Clock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public abstract class ProtocolServer {
 
-    protected static final Logger log = LoggerFactory.getLogger(DNS);
 
     protected int port;
     protected final ExecutorService threadPool;
@@ -48,7 +45,7 @@ public abstract class ProtocolServer {
             }
             Thread.yield();
         }
-        log.debug("Started {} on port {}", threadName(), port);
+        Log.DNS.debug("Started {} on port {}", threadName(), port);
     }
 
     public boolean isRunning() {
@@ -60,11 +57,11 @@ public abstract class ProtocolServer {
         try {
             threadPool.awaitTermination(3, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
-            log.error("interrupted while terminating server thredPool {}", e.getMessage());
+            Log.DNS.error("interrupted while terminating server thredPool {}", e.getMessage());
         }
         serverThread.interrupt();
         running = false;
-        log.debug("Stopped {}", threadName());
+        Log.DNS.debug("Stopped {}", threadName());
     }
 
     protected boolean hasValidDnsHeader(byte[] data) {

@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.dns.server;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
@@ -39,7 +40,7 @@ public class UdpServer extends ProtocolServer {
                     try {
                         socket.receive(packet);
                     } catch (SocketException e) {
-                        log.debug("stopping udpServer because of socketException");
+                        Log.DNS.debug("stopping udpServer because of socketException");
                         running = false;
                         break;
                     }
@@ -52,7 +53,7 @@ public class UdpServer extends ProtocolServer {
                 }
             } catch (IOException e) {
                 Throwable rootCause = ExceptionUtils.findRootCause(e);
-                log.error("Error on UDP server start: {}", rootCause.getMessage());
+                Log.DNS.error("Error on UDP server start: {}", rootCause.getMessage());
             } finally {
                 if (this.socket != null && !this.socket.isClosed()) {
                     this.socket.close();
@@ -64,15 +65,15 @@ public class UdpServer extends ProtocolServer {
     private void handleClientUdp(DatagramSocket socket, InetAddress clientAddress, int clientPort, byte[] data, QueryProcessor processor) {
         try {
             if (data.length < 12) {
-                log.warn("UDP: DNS message too short ({} bytes) from {}:{}", data.length, clientAddress, clientPort);
+                Log.DNS.warn("UDP: DNS message too short ({} bytes) from {}:{}", data.length, clientAddress, clientPort);
                 return;
             }
             if (data.length > 512) {
-                log.warn("UDP: Oversized DNS message ({} bytes) from {}:{}", data.length, clientAddress, clientPort);
+                Log.DNS.warn("UDP: Oversized DNS message ({} bytes) from {}:{}", data.length, clientAddress, clientPort);
             }
 
             if (!hasValidDnsHeader(data)) {
-                log.warn("UDP: DNS message failed the header check ({} bytes) from {}", data.length, clientAddress);
+                Log.DNS.warn("UDP: DNS message failed the header check ({} bytes) from {}", data.length, clientAddress);
                 return;
             }
 
@@ -80,7 +81,7 @@ public class UdpServer extends ProtocolServer {
             byte[] responseBytes = dnsQuery.getMessageBytes();
 
             if (responseBytes == null) {
-                log.warn("UDP: Processor returned null for {}:{}", clientAddress, clientPort);
+                Log.DNS.warn("UDP: Processor returned null for {}:{}", clientAddress, clientPort);
                 return;
             }
 
@@ -91,7 +92,7 @@ public class UdpServer extends ProtocolServer {
             socket.send(responsePacket);
 
         } catch (IOException e) {
-            log.error("Error trying to handle UDP client", e);
+            Log.DNS.error("Error trying to handle UDP client", e);
         }
     }
 

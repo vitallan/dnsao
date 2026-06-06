@@ -1,19 +1,16 @@
 package com.allanvital.dnsao.dns.remote;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 public class UpstreamThreadPoolExecutor implements AutoCloseable {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     public static final int DEFAULT_POOL_SIZE = 64;
     public static final int DEFAULT_QUEUE_SIZE = DEFAULT_POOL_SIZE * 10;
@@ -27,11 +24,11 @@ public class UpstreamThreadPoolExecutor implements AutoCloseable {
         int qs = (queueSize == null) ? DEFAULT_QUEUE_SIZE : queueSize;
 
         if (ps <= 0) {
-            log.warn("resolver.upstreamThreadPoolSize is invalid ({}). Defaulting to {}", ps, DEFAULT_POOL_SIZE);
+            Log.INFRA.warn("resolver.upstreamThreadPoolSize is invalid ({}). Defaulting to {}", ps, DEFAULT_POOL_SIZE);
             ps = DEFAULT_POOL_SIZE;
         }
         if (qs <= 0) {
-            log.warn("resolver.upstreamQueueSize is invalid ({}). Defaulting to {}", qs, DEFAULT_QUEUE_SIZE);
+            Log.INFRA.warn("resolver.upstreamQueueSize is invalid ({}). Defaulting to {}", qs, DEFAULT_QUEUE_SIZE);
             qs = DEFAULT_QUEUE_SIZE;
         }
 

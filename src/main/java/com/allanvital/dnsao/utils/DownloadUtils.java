@@ -1,8 +1,7 @@
 package com.allanvital.dnsao.utils;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.Clock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -15,14 +14,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DownloadUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     public static Path getAppDir() throws IOException {
         String base = System.getProperty("java.io.tmpdir");
@@ -33,7 +30,7 @@ public class DownloadUtils {
 
     public static Path downloadToPath(String url, Path target) throws IOException, InterruptedException {
         URI uri = URI.create(url);
-        log.debug("downloading url {}", url);
+        Log.INFRA.debug("downloading url {}", url);
 
         if (Files.exists(target)) {
             long eightHours = 8 * 60 * 60 * 1000L;
@@ -41,7 +38,7 @@ public class DownloadUtils {
             long lastModified = target.toFile().lastModified();
             boolean isOlderThanEightHours = (now - lastModified) > eightHours;
             if (!isOlderThanEightHours) {
-                log.debug("cached file for {} already exists on {}", url, target);
+                Log.INFRA.debug("cached file for {} already exists on {}", url, target);
                 return target;
             }
         }
@@ -72,7 +69,7 @@ public class DownloadUtils {
             throw new IOException("HTTP failure trying to download file " + url + " . Status: " + status);
         }
 
-        log.debug("url {} downloaded at {}", url, target);
+        Log.INFRA.debug("url {} downloaded at {}", url, target);
 
         return target;
     }

@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.web.stats.memory;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
@@ -6,8 +7,6 @@ import com.allanvital.dnsao.infra.notification.QueryEventListener;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.stats.Bucket;
 import com.allanvital.dnsao.web.stats.StatsCollector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,14 +21,12 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static com.allanvital.dnsao.Constants.STATS_WINDOW_MS;
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class MemoryStatsCollector implements QueryEventListener, StatsCollector {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     //10 minutes window
     public static final long DEFAULT_BUCKET_INTERVAL_MS = 10 * 60_000L;
@@ -64,7 +61,7 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
 
     @Override
     public void receiveNewQuery(QueryEvent queryEvent) {
-        log.info("{}", queryEvent);
+        Log.DNS.info("{}", queryEvent);
 
         long bucketStart = truncateToWindow(queryEvent.getTime(), bucketIntervalMs);
         MemoryBucket memoryBucket = buckets.computeIfAbsent(bucketStart, k -> new MemoryBucket());

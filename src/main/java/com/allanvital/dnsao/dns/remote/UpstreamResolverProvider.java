@@ -1,23 +1,20 @@
 package com.allanvital.dnsao.dns.remote;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class UpstreamResolverProvider implements ResolverProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final AtomicInteger index = new AtomicInteger(0);
     private final AtomicReference<UpstreamResolver> lastWinner = new AtomicReference<>();

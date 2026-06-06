@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.dns.processor.engine.unit;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
@@ -9,15 +10,12 @@ import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Header;
 import org.xbill.DNS.Message;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 import static org.xbill.DNS.Rcode.REFUSED;
 import static org.xbill.DNS.Rcode.SERVFAIL;
@@ -27,7 +25,6 @@ import static org.xbill.DNS.Rcode.SERVFAIL;
  */
 public class UpstreamUnit implements EngineUnit {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final boolean serveExpired;
     private final ExecutorService upstreamExecutor;
@@ -54,8 +51,8 @@ public class UpstreamUnit implements EngineUnit {
             queryResult.cleanADHeader();
             return new DnsQueryResponse(dnsQueryRequest, queryResult);
         } catch (InterruptedException e) {
-            log.warn("failed to resolve upstream: {}", e.getMessage());
-            if (log.isDebugEnabled()) {
+            Log.DNS.warn("failed to resolve upstream: {}", e.getMessage());
+            if (Log.DNS.isDebugEnabled()) {
                 e.printStackTrace();
             }
         }

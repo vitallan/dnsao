@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.cache.keep;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.pojo.KeepEntry;
 import com.allanvital.dnsao.conf.inner.CacheConf;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
@@ -11,14 +10,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class KeepProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
 
     private final List<KeepEntry> keep = new LinkedList<>();
 
@@ -38,7 +35,7 @@ public class KeepProvider {
                 try {
                     keep.add(new KeepEntry(Record.newRecord(getName(url), type, DClass.IN)));
                 } catch (TextParseException e) {
-                    log.warn("it was not possible to parse {} as a uri to be kickstarted, ignoring", url);
+                    Log.CACHE.warn("it was not possible to parse {} as a uri to be kickstarted, ignoring", url);
                 }
             }
         }

@@ -1,16 +1,13 @@
 package com.allanvital.dnsao.conf.inner;
+import com.allanvital.dnsao.infra.log.Log;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class MiscConf {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private int timeout = 3;
     private boolean refreshLists = false;
@@ -30,7 +27,7 @@ public class MiscConf {
         try {
             secMode = DNSSecMode.valueOf(dnssec.toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
-            log.warn("it was not possible to parse {}. Defaulting to SIMPLE", dnssec);
+            Log.INFRA.warn("it was not possible to parse {}. Defaulting to SIMPLE", dnssec);
         }
         this.dnsSecMode = secMode;
     }

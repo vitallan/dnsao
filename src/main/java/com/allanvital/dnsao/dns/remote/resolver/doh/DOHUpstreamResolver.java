@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.dns.remote.resolver.doh;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import javax.net.ssl.SSLContext;
@@ -16,14 +15,12 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DOHUpstreamResolver implements UpstreamResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final URI uri;
     private final HttpClient client;
@@ -43,7 +40,7 @@ public class DOHUpstreamResolver implements UpstreamResolver {
         if (host == null) {
             throw new IOException("for DOH, it is necessary to set host property");
         }
-        log.debug("building DOHResolver for host: {}", host);
+        Log.INFRA.debug("building DOHResolver for host: {}", host);
         this.uri = URI.create("https://" + host + ":" + port + path);
         this.port = port;
         this.semaphore = new Semaphore(64);
@@ -53,7 +50,7 @@ public class DOHUpstreamResolver implements UpstreamResolver {
                 .connectTimeout(Duration.ofSeconds(2))
                 .sslContext(SSLContext.getDefault())
                 .build();
-        log.debug("DOHResolver for host {} built", host);
+        Log.INFRA.debug("DOHResolver for host {} built", host);
     }
 
     @Override
@@ -85,10 +82,10 @@ public class DOHUpstreamResolver implements UpstreamResolver {
             }
             return new Message(body);
         } catch (IOException e) {
-            log.debug("failed to execute http request on {}: {}", uri, e.getMessage());
+            Log.INFRA.debug("failed to execute http request on {}: {}", uri, e.getMessage());
             return null;
         } catch (InterruptedException e) {
-            log.trace("request discarded because other returned faster {}", query.getQuestion().getName());
+            Log.INFRA.trace("request discarded because other returned faster {}", query.getQuestion().getName());
             return null;
         } finally {
             semaphore.release();

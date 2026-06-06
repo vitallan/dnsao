@@ -1,13 +1,11 @@
 package com.allanvital.dnsao.cache.pojo;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.Clock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import java.util.Objects;
 
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillisTime;
 
 /**
@@ -15,7 +13,6 @@ import static com.allanvital.dnsao.utils.TimeUtils.formatMillisTime;
  */
 public class DnsCacheEntry {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
 
     private final Message response;
     private final long expiryTime;
@@ -32,7 +29,7 @@ public class DnsCacheEntry {
         long ttlMs = Math.multiplyExact(configuredTtlInSeconds, 1000L);
         long currentTimeInMillis = getCurrentTimeInMillis();
         this.expiryTime = Math.addExact(currentTimeInMillis, ttlMs);
-        log.trace("new cacheEntry ttlInSecs={} : ttlInMs={} : currentTime={} : expiryTime={} ",
+        Log.CACHE.trace("new cacheEntry ttlInSecs={} : ttlInMs={} : currentTime={} : expiryTime={} ",
                 ttlInSeconds,
                 ttlMs,
                 formatMillisTime(currentTimeInMillis),

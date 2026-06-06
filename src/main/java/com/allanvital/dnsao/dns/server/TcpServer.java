@@ -1,11 +1,10 @@
 package com.allanvital.dnsao.dns.server;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.utils.ExceptionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -14,14 +13,12 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutorService;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class TcpServer extends ProtocolServer {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private volatile ServerSocket serverSocket;
 
@@ -51,7 +48,7 @@ public class TcpServer extends ProtocolServer {
                 }
             } catch (IOException e) {
                 Throwable rootCause = ExceptionUtils.findRootCause(e);
-                log.error("Error on TCP server start: {}", rootCause.getMessage());
+                Log.DNS.error("Error on TCP server start: {}", rootCause.getMessage());
             } finally {
                 safeCloseSocket();
             }
@@ -79,13 +76,13 @@ public class TcpServer extends ProtocolServer {
 
                 int b2 = din.read();
                 if (b2 == -1) {
-                    log.warn("TCP: Incomplete length header from {}", client.getInetAddress());
+                    Log.DNS.warn("TCP: Incomplete length header from {}", client.getInetAddress());
                     break;
                 }
 
                 int length = (b1 << 8) | b2;
                 if (length < 12 || length > 65535) {
-                    log.warn("TCP: Invalid DNS message length {} from {}", length, client.getInetAddress());
+                    Log.DNS.warn("TCP: Invalid DNS message length {} from {}", length, client.getInetAddress());
                     break;
                 }
 
@@ -93,12 +90,12 @@ public class TcpServer extends ProtocolServer {
                 try {
                     din.readFully(data);
                 } catch (EOFException eof) {
-                    log.warn("TCP: Truncated DNS message from {}. {} bytes", client.getInetAddress(), length);
+                    Log.DNS.warn("TCP: Truncated DNS message from {}. {} bytes", client.getInetAddress(), length);
                     break;
                 }
 
                 if (!hasValidDnsHeader(data)) {
-                    log.warn("TCP: No valid DNS header from {}. {} bytes", client.getInetAddress(), length);
+                    Log.DNS.warn("TCP: No valid DNS header from {}. {} bytes", client.getInetAddress(), length);
                     break;
                 }
 
@@ -106,7 +103,7 @@ public class TcpServer extends ProtocolServer {
                 byte[] responseBytes = dnsQuery.getMessageBytes();
 
                 if (responseBytes == null) {
-                    log.warn("TCP: Processor returned null for {}", client.getInetAddress());
+                    Log.DNS.warn("TCP: Processor returned null for {}", client.getInetAddress());
                     break;
                 }
 
@@ -116,7 +113,7 @@ public class TcpServer extends ProtocolServer {
             }
 
         } catch (IOException e) {
-            log.error("TCP: Error handling client {}", client.getInetAddress(), e);
+            Log.DNS.error("TCP: Error handling client {}", client.getInetAddress(), e);
         } finally {
             try { client.close(); } catch (IOException ignore) {}
         }
@@ -127,7 +124,7 @@ public class TcpServer extends ProtocolServer {
             try {
                 this.serverSocket.close();
             } catch (IOException e) {
-                log.error("failed to close tcp socket {}", e.getMessage());
+                Log.DNS.error("failed to close tcp socket {}", e.getMessage());
             }
         }
     }
