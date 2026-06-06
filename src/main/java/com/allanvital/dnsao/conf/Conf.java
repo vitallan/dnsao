@@ -21,6 +21,7 @@ public class Conf {
     private MiscConf misc = new MiscConf();
     private ListsConf lists = new ListsConf();
     private Map<String, GroupInnerConf> groups = new HashMap<>();
+    private LogConf log = new LogConf();
     private HttpListenerConf listeners = new HttpListenerConf();
 
     public ServerConf getServer() {
@@ -99,6 +100,14 @@ public class Conf {
         mainInnerConf.setAllows(validAllows);
         mainInnerConf.setBlocks(validBlocks);
         groups.put(MAIN, mainInnerConf);
+    }
+
+    public LogConf getLog() {
+        return log;
+    }
+
+    public void setLog(LogConf log) {
+        this.log = log;
     }
 
     public HttpListenerConf getListeners() {

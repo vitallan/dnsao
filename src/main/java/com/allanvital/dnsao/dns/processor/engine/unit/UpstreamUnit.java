@@ -51,10 +51,7 @@ public class UpstreamUnit implements EngineUnit {
             queryResult.cleanADHeader();
             return new DnsQueryResponse(dnsQueryRequest, queryResult);
         } catch (InterruptedException e) {
-            Log.DNS.warn("failed to resolve upstream: {}", e.getMessage());
-            if (Log.DNS.isDebugEnabled()) {
-                e.printStackTrace();
-            }
+            Log.DNS.warn("failed to resolve upstream: {}", e.getMessage(), e);
         }
         return null;
     }

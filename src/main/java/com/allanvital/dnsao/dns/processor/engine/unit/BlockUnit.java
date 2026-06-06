@@ -45,10 +45,7 @@ public class BlockUnit implements EngineUnit {
             Message response = buildBlocked(request);
             return new DnsQueryResponse(dnsQueryRequest, response);
         } catch (UnknownHostException | TextParseException e) {
-            Log.DNS.error("it was not possible to build a blocked response: {}", e.getMessage());
-            if (Log.DNS.isDebugEnabled()) {
-                e.printStackTrace();
-            }
+            Log.DNS.error("it was not possible to build a blocked response: {}", e.getMessage(), e);
         }
         return null;
     }

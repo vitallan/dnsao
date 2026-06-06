@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.holder;
 
+import com.allanvital.dnsao.conf.inner.LogConf;
 import com.allanvital.dnsao.graph.TestTelemetryListener;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.ConfLoader;
@@ -11,6 +12,7 @@ import com.allanvital.dnsao.graph.bean.MessageHelper;
 import com.allanvital.dnsao.graph.fake.FakeServer;
 import com.allanvital.dnsao.graph.fake.FakeUdpServer;
 import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.log.LogConfigurator;
 import org.junit.jupiter.api.Assertions;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.SimpleResolver;
@@ -75,6 +77,8 @@ public class TestHolder {
             startFakeServer();
         }
         registerOverride(this.testExecutorServiceFactory);
+        LogConfigurator.reset();
+        LogConfigurator.configure(this.conf.getLog());
         dnsServer = assembler.assemble(this.conf);
         queryInfraAssembler = assembler.getQueryInfraAssembler();
         dnsServer.start();

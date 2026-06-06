@@ -1,7 +1,4 @@
 package com.allanvital.dnsao.conf.inner;
-import com.allanvital.dnsao.infra.log.Log;
-
-
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -27,7 +24,7 @@ public class MiscConf {
         try {
             secMode = DNSSecMode.valueOf(dnssec.toUpperCase());
         } catch (IllegalArgumentException | NullPointerException e) {
-            Log.INFRA.warn("it was not possible to parse {}. Defaulting to SIMPLE", dnssec);
+            // invalid value, defaults to SIMPLE
         }
         this.dnsSecMode = secMode;
     }

@@ -130,10 +130,7 @@ public class RewarmWorker implements Runnable {
                 Log.CACHE.debug("stopping rewarm worker");
                 break;
             } catch (Throwable t) {
-                Log.CACHE.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage());
-                if (Log.CACHE.isDebugEnabled()) {
-                    t.printStackTrace();
-                }
+                Log.CACHE.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage(), t);
             }
         }
     }
