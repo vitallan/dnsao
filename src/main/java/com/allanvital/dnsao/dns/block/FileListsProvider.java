@@ -2,14 +2,18 @@ package com.allanvital.dnsao.dns.block;
 
 import com.allanvital.dnsao.conf.inner.ListsConf;
 import com.allanvital.dnsao.infra.clock.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Name;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static com.allanvital.dnsao.infra.notification.telemetry.EventType.REFRESHED_LISTS;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 import static com.allanvital.dnsao.utils.HashUtils.fnv1a64;
@@ -19,6 +23,7 @@ import static com.allanvital.dnsao.utils.HashUtils.fnv1a64;
  */
 public class FileListsProvider {
 
+    private static final Logger log = LoggerFactory.getLogger(INFRA);
     private static final int REFRESH_INTERVAL_IN_HOURS = 12;
     private long lastBeat = Clock.currentTimeInMillis();
 
@@ -37,21 +42,24 @@ public class FileListsProvider {
     }
 
     private void populate() {
+        log.info("loading allow/block lists...");
         populateMap(listsConf.getAllowLists());
         populateMap(listsConf.getBlockLists());
+        log.info("allow/block lists loaded ({} allows, {} blocks)",
+            listsConf.getAllowLists().size(), listsConf.getBlockLists().size());
     }
 
     private void populateMap(Map<String, String> toUse) {
-        Map<String, Set<Long>> domainsMap = domainsUnderListName.get();
-        Set<Map.Entry<String, String>> entries = toUse.entrySet();
-        for (Map.Entry<String, String> entry : entries) {
+        Map<String, Set<Long>> updated = new HashMap<>(domainsUnderListName.get());
+        for (Map.Entry<String, String> entry : toUse.entrySet()) {
             String name = entry.getKey();
             String url = entry.getValue();
             Set<Long> parsedUrls = domainListFileReader.readEntries(url);
+            log.debug("list '{}' loaded ({} entries)", name, parsedUrls.size());
             telemetryNotify(REFRESHED_LISTS);
-            domainsMap.put(name, parsedUrls);
+            updated.put(name, parsedUrls);
         }
-        domainsUnderListName.set(domainsMap);
+        domainsUnderListName.set(Collections.unmodifiableMap(updated));
     }
 
     public boolean isInBlocked(Name name, Set<String> blockNames) {
