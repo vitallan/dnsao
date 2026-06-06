@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.web.json;
 
+import com.allanvital.dnsao.cache.CacheStats;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.stats.Bucket;
 import com.allanvital.dnsao.web.stats.StatsCollector;
@@ -16,9 +17,11 @@ import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 public class JsonBuilder {
 
     private final StatsCollector statsCollector;
+    private final CacheStats cacheStats;
 
-    public JsonBuilder(StatsCollector statsCollector) {
+    public JsonBuilder(StatsCollector statsCollector, CacheStats cacheStats) {
         this.statsCollector = statsCollector;
+        this.cacheStats = cacheStats;
     }
 
     public JsonObject buildHomeJsonStats() {
@@ -26,7 +29,19 @@ public class JsonBuilder {
         addSummarization(root);
         addPerUpstreamCount(root);
         addQueriesPerBucket(root);
+        addCacheStats(root);
         return root;
+    }
+
+    private void addCacheStats(JsonObject root) {
+        if (cacheStats == null) {
+            return;
+        }
+        JsonObject cache = Json.object();
+        cache.add("size", cacheStats.getCurrentSize());
+        cache.add("maxSize", cacheStats.getMaxSize());
+        cache.add("evictionCount", cacheStats.getEvictionCount());
+        root.add("cache", cache);
     }
 
     public JsonObject buildQueriesArray(int page) {
