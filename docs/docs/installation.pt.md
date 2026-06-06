@@ -126,14 +126,14 @@ services:
 
 E executar `docker compose up -d`.
 
-Se `/your/local/volume` estiver vazio, **DNSao** irá fazer o download dos arquivos application.yml e logback.xml padrão para docker no volume montado e os usará.
+Se `/your/local/volume` estiver vazio, **DNSao** irá fazer o download do arquivo application.yml padrão para docker no volume montado e o usará.
 
 ## Instalação manual
 
-Você também pode baixar o [último jar]({{latest_jar_url}}) disponibilizado e realizar as [configurações manualmente](configuration.pt.md). Lembrando que o **DNSao** precisa de uma configuração de aplicação e um arquivo de configuração para os logs. Um exemplo de execução padrão seria o abaixo:
+Você também pode baixar o [último jar]({{latest_jar_url}}) disponibilizado e realizar as [configurações manualmente](configuration.pt.md). Toda a configuração é feita no único arquivo application.yml. Um exemplo de execução padrão seria o abaixo:
 
 ```bash
-java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -jar dnsao.jar
+java -Dconfig=/etc/dnsao/application.yml -jar dnsao.jar
 ```
 
 Lembrando que, em linux, portas abaixo de 1024 precisam de permissão de root para rodar sem ser por serviço. Considere isso quando for executar manualmente o servidor.
@@ -147,7 +147,7 @@ Outro detalhe importante: por ser uma aplicação java, é recomendado limitar o
 O comando final fica então:
 
 ```bash
-java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k  -jar /etc/dnsao/dnsao.jar
+java -Dconfig=/etc/dnsao/application.yml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k -jar /etc/dnsao/dnsao.jar
 ```
 
 ## Depois de instalar

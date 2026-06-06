@@ -44,6 +44,16 @@ resolver:
       port: 53
       protocol: "udp" 
 
+log:
+  rootLevel: INFO
+  dns: DEBUG
+  cache: DEBUG
+  infra: DEBUG
+  file:
+    path: "/var/log/dnsao/dnsao-%g.log"
+    maxSize: 10485760
+    maxFiles: 5
+
 lists:
   blockLists:
     block: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"

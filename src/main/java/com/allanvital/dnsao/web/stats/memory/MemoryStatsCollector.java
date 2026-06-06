@@ -61,7 +61,7 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
 
     @Override
     public void receiveNewQuery(QueryEvent queryEvent) {
-        Log.DNS.info("{}", queryEvent);
+        Log.DNS.debug("{}", queryEvent);
 
         long bucketStart = truncateToWindow(queryEvent.getTime(), bucketIntervalMs);
         MemoryBucket memoryBucket = buckets.computeIfAbsent(bucketStart, k -> new MemoryBucket());

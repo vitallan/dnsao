@@ -18,6 +18,12 @@ misc:
   blockingEnabled: true
   serveExpired: false
 
+log:
+  rootLevel: WARN
+  dns: INFO
+  cache: WARN
+  infra: WARN
+
 resolver:
   multiplier: 3 #how many upstreams we will reach on each active remote query
   upstreams:

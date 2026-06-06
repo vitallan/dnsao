@@ -124,14 +124,14 @@ services:
 
 ```
 
-If `/your/local/volume` is empty, **DNSao** will download the default docker application.yml and logback.xml files to the volume and use then. 
+If `/your/local/volume` is empty, **DNSao** will download the default docker application.yml file to the volume and use it. 
 
 ## Manual installation
 
-You can also download the [latest jar]({{latest_jar_url}}) and perform a [manual configuration](configuration.md). Remember that **DNSao** requires both an application configuration file and a log configuration file. A standard execution example would be as follows:
+You can also download the [latest jar]({{latest_jar_url}}) and perform a [manual configuration](configuration.md). All configuration is done in the single application.yml file. A standard execution example would be as follows:
 
 ```bash
-java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -jar dnsao.jar
+java -Dconfig=/etc/dnsao/application.yml -jar dnsao.jar
 ```
 
 Keep in mind that, on Linux, ports below 1024 require root privileges to run without being managed by a service. Consider this when running the server manually.
@@ -145,7 +145,7 @@ Another important detail: since it’s a Java application, it’s recommended to
 The final command is then:
 
 ```bash
-java -Dconfig=/etc/dnsao/application.yml -Dlogback.configurationFile=/etc/dnsao/logback.xml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k  -jar /etc/dnsao/dnsao.jar
+java -Dconfig=/etc/dnsao/application.yml -Xms128m -Xmx128m -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m -Xss512k -jar /etc/dnsao/dnsao.jar
 ```
 
 ## Post install

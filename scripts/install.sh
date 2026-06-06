@@ -11,7 +11,6 @@ LOG_DIR="/var/log/${APP_NAME}"
 SERVICE_FILE="/etc/systemd/system/${APP_NAME}.service"
 
 JAR_URL="https://github.com/vitallan/dnsao/releases/latest/download/dnsao.jar"
-LOGBACK_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/balanced/logback.xml"
 APP_YML_URL="https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/balanced/application.yml"
 
 JAVA_BIN="$(command -v java || true)"
@@ -61,7 +60,7 @@ create_dirs() {
 download_file() {
   local url="$1" dest="$2" mode="$3" owner="$4" group="$5"
   local tmp="$(mktemp)"
-  info "downloading ${url} -> ${dest}"
+  info "downloading ${url}"
   "${CURL_BIN}" -fL --proto '=https' --tlsv1.2 -o "${tmp}" "${url}" || abort "download failed ${url}"
   install -m "${mode}" -o "${owner}" -g "${group}" -D "${tmp}" "${dest}"
   rm -f "${tmp}"
@@ -86,7 +85,6 @@ ExecStart=/usr/bin/env java \
   -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m \
   -Xss320k \
   -Dconfig=/etc/dnsao/application.yml \
-  -Dlogback.configurationFile=/etc/dnsao/logback.xml \
   -jar /etc/dnsao/dnsao.jar
 
 Restart=on-failure
@@ -128,8 +126,7 @@ Installation finished ok
 Files:
   • Jar:           ${APP_DIR}/dnsao.jar
   • Config:        ${APP_DIR}/application.yml
-  • Logback:       ${APP_DIR}/logback.xml
-  • Logs:          ${LOG_DIR}
+  • Logs:          ${LOG_DIR} (configure via application.yml log.file.path)
   • Unit systemd:  ${SERVICE_FILE}
 
 Useful commands:
@@ -148,7 +145,6 @@ create_user_group
 create_dirs
 
 download_file "${JAR_URL}"      "${APP_DIR}/dnsao.jar"        "0644" "${APP_USER}" "${APP_GROUP}"
-download_file "${LOGBACK_URL}"  "${APP_DIR}/logback.xml"     "0644" "root"       "root"
 download_file "${APP_YML_URL}"  "${APP_DIR}/application.yml" "0644" "root"       "root"
 
 chown "${APP_USER}:${APP_GROUP}" "${APP_DIR}/dnsao.jar"

@@ -6,10 +6,8 @@ DNSAO_CONFIG="${DNSAO_CONFIG:-/etc/dnsao}"
 APP_JAR="${DNSAO_HOME}/dnsao.jar"
 
 APP_YML="${DNSAO_CONFIG}/application.yml"
-LOGBACK_XML="${DNSAO_CONFIG}/logback.xml"
 
 APP_YML_URL="${APP_YML_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/docker/application.yml}"
-LOGBACK_URL="${LOGBACK_URL:-https://raw.githubusercontent.com/vitallan/dnsao/refs/heads/main/config-samples/docker/logback.xml}"
 
 if [ "$(id -u)" -eq 0 ]; then
   RUN_USER="${RUN_USER:-dnsao}"
@@ -42,16 +40,7 @@ if [ ! -f "${APP_YML}" ]; then
   fi
 fi
 
-if [ ! -f "${LOGBACK_XML}" ]; then
-  echo "[dnsao] logback.xml not provided. Downloading default ${LOGBACK_URL}..."
-  if ! curl -fsSL "${LOGBACK_URL}" -o "${LOGBACK_XML}"; then
-    echo "[dnsao] ERROR: error downloading logback.xml; Check connection or provide the logback.xml." >&2
-	exit 2
-  fi
-fi
-
 JAVA_ARGS="-Dconfig=${APP_YML}"
-JAVA_ARGS="${JAVA_ARGS} -Dlogback.configurationFile=${LOGBACK_XML}"
 
 if [ "$#" -ge 1 ]; then
   CMD_BIN="$1"
