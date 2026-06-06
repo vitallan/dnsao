@@ -15,6 +15,7 @@ misc:
   timeout: 3
   dnssec: "simple"
   refreshLists: false
+  blockingEnabled: true
   serveExpired: false
 
 resolver:

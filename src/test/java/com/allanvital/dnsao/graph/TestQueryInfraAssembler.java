@@ -58,9 +58,10 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
                                           BlockDecider blockDecider,
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
-                                          UpstreamUnitConf upstreamUnitConf) {
+                                          UpstreamUnitConf upstreamUnitConf,
+                                          boolean blockingEnabled) {
 
-        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf);
+        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
         return this.engineUnitProvider;
     }
 

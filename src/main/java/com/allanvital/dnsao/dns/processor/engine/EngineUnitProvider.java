@@ -23,9 +23,10 @@ public class EngineUnitProvider {
                               BlockDecider blockDecider,
                               Map<String, String> localMappings,
                               CacheManager cacheManager,
-                              UpstreamUnitConf upstreamUnitConf) {
+                              UpstreamUnitConf upstreamUnitConf,
+                              boolean blockingEnabled) {
 
-        engineUnits.add(new BlockUnit(blockDecider));
+        engineUnits.add(new BlockUnit(blockDecider, blockingEnabled));
         engineUnits.add(new LocalMappingUnit(localMappings));
         engineUnits.add(new CacheUnit(cacheManager));
         engineUnits.add(new UpstreamUnit(upstreamThreadPoolExecutor, upstreamUnitConf));

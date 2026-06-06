@@ -18,6 +18,7 @@ misc:
   timeout: 3
   queryLog: false
   refreshLists: true
+  blockingEnabled: true
   serveExpired: false
   dnssec: simple
 

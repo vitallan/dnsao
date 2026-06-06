@@ -163,6 +163,7 @@ misc:
   timeout: 3
   queryLog: true
   refreshLists: false
+  blockingEnabled: true
   serveExpired: false
   serveExpiredMax: 86400
   dnssec: "simple"
@@ -175,6 +176,7 @@ A propriedade **misc** define mecanismos de funcionamento geral do servidor.
 | **timeout** | timeout global em segundos para as queries upstream |
 | **queryLog** | true/false, padrão é true. Controla se eventos individuais de consulta são registrados e armazenados. Quando false: detalhes da consulta são suprimidos do log DNS, campos sensíveis (domínio, cliente, tipo, resposta) são removidos dos eventos notificados aos assinantes, os contadores do dashboard continuam funcionando, mas a tabela de histórico de consultas fica vazia |
 | **refreshLists** | true/false, default é false. Quando habilitado o servidor irá refazer o download das listas de *allow* e *block* periodicamente para atualizar seus valores. Se muitas listas forem usadas, isso pode causar um aumento no consumo de memória. Aloque mais memória caso deseje habilitar a função |
+| **blockingEnabled** | true/false, padrão é true. Quando definido como false, a unidade de bloqueio é completamente desabilitada e todas as consultas passam sem verificação de listas. Útil para desabilitar temporariamente o filtro sem remover as configurações de lista |
 | **serveExpired** | true/false, default é false. Aderindo a dns rfc8767, quando habilitado, **DNSao** servirá entradas que já expiraram quando nenhuma consulta upstream resultar em uma resposta definitiva (timeout, SERVFAIL ou REFUSED) para maximizar disponibilidade DNS  |
 | **serveExpiredMax** | default é 86400 (um dia). Quando **serveExpired** está habilitado, esse é o tempo máximo de segundos que uma entrada do cache local resultará em sucesso antes da entrada ser considerada expirada e removida |
 | **dnssec** | Define o funcionamento geral sobre DNSSEC do servidor. Mais detalhes na tabela abaixo. O valor default é **simple** |
