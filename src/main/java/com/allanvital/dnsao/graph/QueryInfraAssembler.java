@@ -60,7 +60,7 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf);
+        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled());
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
@@ -138,9 +138,10 @@ public class QueryInfraAssembler {
                                           BlockDecider blockDecider,
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
-                                          UpstreamUnitConf upstreamUnitConf) {
+                                          UpstreamUnitConf upstreamUnitConf,
+                                          boolean blockingEnabled) {
 
-        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf);
+        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
     }
 
     private PostHandlerFacade postHandlerFacade(PostHandlerProvider provider, ExecutorServiceFactory executorServiceFactory) {

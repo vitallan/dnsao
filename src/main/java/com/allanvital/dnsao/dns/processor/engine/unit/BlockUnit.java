@@ -26,13 +26,18 @@ public class BlockUnit implements EngineUnit {
     private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final BlockDecider blockDecider;
+    private final boolean blockingEnabled;
 
-    public BlockUnit(BlockDecider blockDecider) {
+    public BlockUnit(BlockDecider blockDecider, boolean blockingEnabled) {
         this.blockDecider = blockDecider;
+        this.blockingEnabled = blockingEnabled;
     }
 
     @Override
     public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
+        if (!blockingEnabled) {
+            return null;
+        }
         Message request = dnsQueryRequest.getRequest();
         InetAddress client = dnsQueryRequest.getClientAddress();
         Name question = getQuestionName(request);

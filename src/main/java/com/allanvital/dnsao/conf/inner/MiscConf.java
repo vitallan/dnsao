@@ -19,6 +19,7 @@ public class MiscConf {
     private int retries = 5;
     private boolean queryLog = true;
     private boolean enableTelemetry = false;
+    private boolean blockingEnabled = true;
 
     public String getDnssec() {
         return this.dnsSecMode.name();
@@ -96,5 +97,13 @@ public class MiscConf {
 
     public void setEnableTelemetry(boolean enableTelemetry) {
         this.enableTelemetry = enableTelemetry;
+    }
+
+    public boolean isBlockingEnabled() {
+        return blockingEnabled;
+    }
+
+    public void setBlockingEnabled(boolean blockingEnabled) {
+        this.blockingEnabled = blockingEnabled;
     }
 }
