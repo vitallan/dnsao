@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.graph;
+import com.allanvital.dnsao.infra.log.Log;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -9,14 +8,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class TestExecutorServiceFactory extends ExecutorServiceFactory {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
     private final List<ExecutorService> executorServices = new LinkedList<>();
 
     @Override
@@ -36,10 +33,10 @@ public class TestExecutorServiceFactory extends ExecutorServiceFactory {
     public void stopAndRemoveAllExecutors() throws InterruptedException {
         for (ExecutorService executorService : executorServices) {
             while (!executorService.isTerminated() || !executorService.isShutdown()) {
-                log.trace("stopping " + executorService);
+                Log.INFRA.trace("stopping {}", executorService);
                 executorService.shutdownNow();
                 executorService.awaitTermination(3, TimeUnit.SECONDS);
-                log.trace("stopped " + executorService);
+                Log.INFRA.trace("stopped {}", executorService);
             }
         }
         executorServices.clear();

@@ -1,21 +1,18 @@
 package com.allanvital.dnsao.infra.notification;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.utils.ExceptionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class NotificationManager {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final AtomicReference<List<QueryEventListener>> queryListeners = new AtomicReference<>(new LinkedList<>());
 
@@ -37,7 +34,7 @@ public class NotificationManager {
                     throw t;
                 }
                 Throwable rootCause = ExceptionUtils.findRootCause(t);
-                log.error("failed to notify listener " + listener + " : " + rootCause.getMessage());
+                Log.INFRA.error("failed to notify listener {} : {}", listener, rootCause.getMessage());
             }
         }
     }

@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.dns.remote.resolver.udp;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.utils.ExceptionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -13,14 +12,12 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class UdpUpstreamResolver extends SimpleResolver implements UpstreamResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final String ip;
     private final int port;
@@ -55,11 +52,11 @@ public class UdpUpstreamResolver extends SimpleResolver implements UpstreamResol
             Name name = question.getName();
             Throwable cause = e.getCause();
             if (cause instanceof InterruptedException) {
-                log.debug("discarding udp call to {} because other thread returned first", name);
+                Log.INFRA.debug("discarding udp call to {} because other thread returned first", name);
                 return null;
             }
             Throwable rootCause = ExceptionUtils.findRootCause(e);
-            log.error("query to {} failed: {}", name, rootCause.getMessage());
+            Log.INFRA.error("query to {} failed: {}", name, rootCause.getMessage());
             return null;
         }
     }

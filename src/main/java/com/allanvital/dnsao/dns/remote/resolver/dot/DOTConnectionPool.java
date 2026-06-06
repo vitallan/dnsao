@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.dns.remote.resolver.dot;
+import com.allanvital.dnsao.infra.log.Log;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
@@ -17,14 +16,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DOTConnectionPool {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private static final int SOCKET_TIMEOUT = 5000;
     private int ACQUIRE_TIMEOUT = 2000;
@@ -48,7 +45,7 @@ public class DOTConnectionPool {
     }
 
     private SSLSocket createConnection() throws IOException {
-        log.debug("creating new connection to {}", tlsAuthName);
+        Log.INFRA.debug("creating new connection to {}", tlsAuthName);
         SSLSocket socket = (SSLSocket) socketFactory.createSocket(ip, port);
         socket.setSoTimeout(SOCKET_TIMEOUT);
         socket.setTcpNoDelay(true);
@@ -145,7 +142,7 @@ public class DOTConnectionPool {
             try {
                 s.close();
             } catch (IOException ignore) {
-                log.trace("ignored exception: {}", ignore.getMessage());
+                Log.INFRA.trace("ignored exception: {}", ignore.getMessage());
             }
         }
     }

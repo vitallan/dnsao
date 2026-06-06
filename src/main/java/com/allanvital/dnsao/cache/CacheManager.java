@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.cache;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.map.KeepAwareLruDnsCache;
@@ -7,14 +8,11 @@ import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import java.util.Collections;
 import java.util.Map;
 
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 import static com.allanvital.dnsao.infra.notification.telemetry.EventType.CACHE_ADDED;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
@@ -23,7 +21,6 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
  */
 public class CacheManager {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
 
     private final boolean enabled;
     private final Map<String, DnsCacheEntry> cache;
@@ -72,11 +69,11 @@ public class CacheManager {
         DnsCacheEntry entry = safeGet(key);
         if (entry != null) {
             if (!entry.isExpired(expiredConf.getServeExpiredMax())) {
-                log.info("stale cache hit for {}", key);
+                Log.CACHE.info("stale cache hit for {}", key);
                 telemetryNotify(EventType.STALE_CACHE_HIT);
                 return entry;
             }
-            log.info("cache entry {} was found, but expired. Removing", key);
+            Log.CACHE.info("cache entry {} was found, but expired. Removing", key);
             cache.remove(key);
         }
         return null;
@@ -88,7 +85,7 @@ public class CacheManager {
         }
         DnsCacheEntry entry = safeGet(key);
         if (entry != null && !entry.isStale()) {
-            log.info("cache hit for {}", key);
+            Log.CACHE.info("cache hit for {}", key);
             entry.setRewarmCount(0);
             cache.put(key, entry);
             telemetryNotify(EventType.CACHE_HIT);
@@ -96,12 +93,12 @@ public class CacheManager {
         }
 
         if (entry != null && entry.isStale()) {
-            log.info("cache entry {} was found, but stale ", key);
+            Log.CACHE.info("cache entry {} was found, but stale ", key);
             if (!expiredConf.isServeExpired()) {
                 cache.remove(key);
             }
             if (expiredConf.isServeExpired() && entry.isExpired(expiredConf.getServeExpiredMax())) {
-                log.debug("cache entry {} was found, but stale and expired ", key);
+                Log.CACHE.debug("cache entry {} was found, but stale and expired ", key);
                 cache.remove(key);
             }
             return null;
@@ -114,7 +111,7 @@ public class CacheManager {
         if (!enabled) {
             return;
         }
-        log.debug("rewarming entry {}", key);
+        Log.CACHE.debug("rewarming entry {}", key);
         addEntry(key, entry);
     }
 
@@ -122,7 +119,7 @@ public class CacheManager {
         if (!enabled) {
             return;
         }
-        log.info("adding {} to cache", key);
+        Log.CACHE.info("adding {} to cache", key);
         addEntry(key, new DnsCacheEntry(response, ttlSecs));
     }
 

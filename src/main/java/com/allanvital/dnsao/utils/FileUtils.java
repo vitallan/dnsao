@@ -1,7 +1,6 @@
 package com.allanvital.dnsao.utils;
+import com.allanvital.dnsao.infra.log.Log;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,14 +10,12 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class FileUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     public static final String COMMENT = "#";
 
@@ -40,9 +37,9 @@ public class FileUtils {
             }
         } catch (IOException e) {
             Throwable rootCause = ExceptionUtils.findRootCause(e);
-            log.error("failed to read " + file + " error was: " + rootCause);
+            Log.INFRA.error("failed to read {} error was: {}", file, rootCause);
         }
-        log.debug("read a total of {} entries from file {}", count, file);
+        Log.INFRA.debug("read a total of {} entries from file {}", count, file);
         return entries;
     }
 

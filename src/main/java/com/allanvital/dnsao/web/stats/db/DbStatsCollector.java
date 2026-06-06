@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.web.stats.db;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
@@ -7,8 +8,6 @@ import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.stats.Bucket;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,11 +21,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 import static com.allanvital.dnsao.Constants.STATS_WINDOW_MS;
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 public class DbStatsCollector implements StatsCollector, QueryEventListener, AutoCloseable {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     public static final long DEFAULT_BUCKET_INTERVAL_MS = MemoryStatsCollector.DEFAULT_BUCKET_INTERVAL_MS;
     public static final long DEFAULT_WINDOW_MS = STATS_WINDOW_MS;
@@ -374,7 +371,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
         try {
             flushOnce();
         } catch (Exception e) {
-            log.warn("stats db flush failed", e);
+            Log.DNS.warn("stats db flush failed", e);
         }
     }
 

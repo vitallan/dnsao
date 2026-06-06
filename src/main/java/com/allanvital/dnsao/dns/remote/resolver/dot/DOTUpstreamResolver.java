@@ -1,9 +1,8 @@
 package com.allanvital.dnsao.dns.remote.resolver.dot;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -19,14 +18,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class DOTUpstreamResolver implements UpstreamResolver {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final String ip;
     private final String tlsAuthName;
@@ -34,7 +31,7 @@ public class DOTUpstreamResolver implements UpstreamResolver {
     private final DOTConnectionPool pool;
 
     public DOTUpstreamResolver(DOTConnectionPool pool, Upstream upstream) throws CertificateParsingException, IOException {
-        log.debug("building DOTResolver for host: {}", upstream.getIp());
+        Log.INFRA.debug("building DOTResolver for host: {}", upstream.getIp());
         this.pool = pool;
         this.ip = upstream.getIp();
         this.tlsAuthName = upstream.getTlsAuthName();
@@ -44,7 +41,7 @@ public class DOTUpstreamResolver implements UpstreamResolver {
             this.port = upstream.getPort();
         }
         verifyTlsAuthName();
-        log.debug("DOTResolver for host {} built", upstream.getIp());
+        Log.INFRA.debug("DOTResolver for host {} built", upstream.getIp());
     }
 
     private void verifyTlsAuthName() throws IOException, CertificateParsingException {
@@ -111,7 +108,7 @@ public class DOTUpstreamResolver implements UpstreamResolver {
                     response = sendOnSocket(socket, query);
                 } catch (IOException e) {
                     retries++;
-                    log.debug("failed to send query on TLS socket: {} for {}. Retrying", e.getMessage(), this.tlsAuthName);
+                    Log.INFRA.debug("failed to send query on TLS socket: {} for {}. Retrying", e.getMessage(), this.tlsAuthName);
                     pool.release(socket, true);
                     socket = forceAcquire();
                 }
@@ -127,7 +124,7 @@ public class DOTUpstreamResolver implements UpstreamResolver {
         try {
             socket = pool.acquire();
         } catch (IOException | TimeoutException e) {
-            log.debug("it was not possible to acquire a sslSocket, error was {}", e.getMessage());
+            Log.INFRA.debug("it was not possible to acquire a sslSocket, error was {}", e.getMessage());
             throw new IOException(e);
         } catch (InterruptedException e) {
             throw new IOException(e);

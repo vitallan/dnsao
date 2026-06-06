@@ -1,12 +1,10 @@
 package com.allanvital.dnsao.graph;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.TimeProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
 
 /**
@@ -14,7 +12,6 @@ import static com.allanvital.dnsao.utils.TimeUtils.formatMillis;
  */
 public class TestTimeProvider implements TimeProvider {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private long now;
     private final Object lock = new Object();
@@ -33,7 +30,7 @@ public class TestTimeProvider implements TimeProvider {
     public void setNow(long now) {
         synchronized (lock) {
             this.now = now;
-            log.debug("now is: " + formatMillis(now, "HH:mm:ss.SSS"));
+            Log.INFRA.debug("now is: {}", formatMillis(now, "HH:mm:ss.SSS"));
         }
     }
 
@@ -44,7 +41,7 @@ public class TestTimeProvider implements TimeProvider {
     public void walkNow(long miliseconds) {
         synchronized (lock) {
             long newValue = now + miliseconds;
-            log.debug("now is: " + formatMillis(newValue, "HH:mm:ss.SSS"));
+            Log.INFRA.debug("now is: " + formatMillis(newValue, "HH:mm:ss.SSS"));
             now = newValue;
         }
     }

@@ -1,17 +1,15 @@
 package com.allanvital.dnsao.dns.processor.pre;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.processor.pre.handler.PreHandler;
 import com.allanvital.dnsao.exc.PreHandlerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.List;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.utils.ExceptionUtils.findRootCause;
 
 /**
@@ -19,7 +17,6 @@ import static com.allanvital.dnsao.utils.ExceptionUtils.findRootCause;
  */
 public class PreHandlerFacade {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
     private final List<PreHandler> handlers;
 
     public PreHandlerFacade(PreHandlerProvider preHandlerProvider) {

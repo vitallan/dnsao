@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.dns.processor;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
@@ -7,14 +8,11 @@ import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
 import com.allanvital.dnsao.exc.PreHandlerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.utils.ExceptionUtils.findRootCause;
 
 /**
@@ -22,7 +20,6 @@ import static com.allanvital.dnsao.utils.ExceptionUtils.findRootCause;
  */
 public class QueryProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final PreHandlerFacade preHandler;
     private final QueryEngine engine;
@@ -39,7 +36,7 @@ public class QueryProcessor {
         try {
             request = preHandler.prepare(clientAddress, clientQuery, isInternalQuery);
         } catch (PreHandlerException e) {
-            log.error(e.getMessage());
+            Log.DNS.error(e.getMessage());
             return null;
         }
         DnsQueryResponse response = engine.process(request);
@@ -65,7 +62,7 @@ public class QueryProcessor {
             clientQuery = new Message(rawMessage);
         } catch (IOException e) {
             Throwable rootCause = findRootCause(e);
-            log.error("Failed to build query for processing: {} - {}", rootCause, rootCause.getMessage());
+            Log.DNS.error("Failed to build query for processing: {} - {}", rootCause, rootCause.getMessage());
         }
         return clientQuery;
     }

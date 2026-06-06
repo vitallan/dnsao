@@ -1,12 +1,11 @@
 package com.allanvital.dnsao.dns.processor.post.handler;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.dns.processor.post.handler.json.HttpListenerBodyBuilder;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.eclipsesource.json.JsonObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -16,7 +15,6 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Set;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static com.allanvital.dnsao.infra.notification.telemetry.EventType.QUERY_EVENT_HTTP_NOTIFIED;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
@@ -25,7 +23,6 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
  */
 public class HttpListenerPostHandler implements PostHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private final HttpListenerBodyBuilder bodyBuilder = new HttpListenerBodyBuilder();
     private final HttpClient client;
@@ -61,7 +58,7 @@ public class HttpListenerPostHandler implements PostHandler {
         try {
             client.send(post, HttpResponse.BodyHandlers.discarding());
         } catch (IOException | InterruptedException e) {
-            log.warn("it was not possible to notify {}. Error: {}", url, e.getMessage());
+            Log.INFRA.warn("it was not possible to notify {}. Error: {}", url, e.getMessage());
         }
     }
 

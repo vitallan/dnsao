@@ -1,17 +1,15 @@
 package com.allanvital.dnsao.dns.processor.post.handler;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.dns.remote.DnsUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
 import java.net.InetAddress;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 
 /**
@@ -19,7 +17,6 @@ import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
  */
 public class LogPostHandler implements PostHandler {
 
-    protected static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final boolean queryLogEnabled;
 
@@ -43,7 +40,7 @@ public class LogPostHandler implements PostHandler {
             solvedBy = response.getResponseSource();
         }
         String ip = DnsUtils.extractIpFromResponseMessage(response.getResponse());
-        log.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\"", typeName, client, name, solvedBy, ip);
+        Log.DNS.info("query:\"{}\" from:\"{}\" to:\"{}\" solved_by:\"{}\" response:\"{}\"", typeName, client, name, solvedBy, ip);
     }
 
 }

@@ -1,12 +1,11 @@
 package com.allanvital.dnsao.dns.processor.engine.unit;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
@@ -15,7 +14,6 @@ import java.net.UnknownHostException;
 
 import static com.allanvital.dnsao.dns.remote.DnsUtils.baseResponse;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.formErr;
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.BLOCKED;
 
 /**
@@ -23,7 +21,6 @@ import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.BLOCKED;
  */
 public class BlockUnit implements EngineUnit {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final BlockDecider blockDecider;
     private final boolean blockingEnabled;
@@ -48,8 +45,8 @@ public class BlockUnit implements EngineUnit {
             Message response = buildBlocked(request);
             return new DnsQueryResponse(dnsQueryRequest, response);
         } catch (UnknownHostException | TextParseException e) {
-            log.error("it was not possible to build a blocked response: {}", e.getMessage());
-            if (log.isDebugEnabled()) {
+            Log.DNS.error("it was not possible to build a blocked response: {}", e.getMessage());
+            if (Log.DNS.isDebugEnabled()) {
                 e.printStackTrace();
             }
         }

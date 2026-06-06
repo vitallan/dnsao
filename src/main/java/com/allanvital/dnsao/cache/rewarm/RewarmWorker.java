@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.cache.rewarm;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
@@ -8,8 +9,6 @@ import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
@@ -19,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
-import static com.allanvital.dnsao.infra.AppLoggers.CACHE;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
@@ -27,7 +25,6 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
  */
 public class RewarmWorker implements Runnable {
 
-    private static final Logger log = LoggerFactory.getLogger(CACHE);
 
     private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
@@ -48,7 +45,7 @@ public class RewarmWorker implements Runnable {
         this.queryProcessorFactory = queryProcessorFactory;
         this.keepProvider = keepProvider;
         this.maxRewarmCount = maxRewarmCount;
-        log.debug("starting RewarWorker");
+        Log.CACHE.debug("starting RewarWorker");
     }
 
     public void shutdown() {
@@ -63,7 +60,7 @@ public class RewarmWorker implements Runnable {
         long now = Clock.currentTimeInMillis();
         if (now - lastBeat >= 30_000) {
             int qsize = scheduler.queue().size();
-            log.debug("heartbeat: queueSize={}", qsize);
+            Log.CACHE.debug("heartbeat: queueSize={}", qsize);
             lastBeat = now;
         }
     }
@@ -81,60 +78,60 @@ public class RewarmWorker implements Runnable {
                 key = task.getKey();
                 DnsCacheEntry entry = cache.safeGet(key);
                 if (entry == null) {
-                    log.debug("rewarm was scheduled but key already left cache key={}", key);
+                    Log.CACHE.debug("rewarm was scheduled but key already left cache key={}", key);
                     continue;
                 }
 
                 Message cachedResponse = entry.getResponse();
                 Record question = cachedResponse.getQuestion();
                 if (question == null) {
-                    log.debug("rewarm skip: missing QUESTION section for key={}", key);
+                    Log.CACHE.debug("rewarm skip: missing QUESTION section for key={}", key);
                     continue;
                 }
                 if (!isWarmable(cachedResponse)) {
-                    log.debug("rewarm skip: not warmable (rcode/answers) key={}", key);
+                    Log.CACHE.debug("rewarm skip: not warmable (rcode/answers) key={}", key);
                     continue;
                 }
                 int currentRewarmCount = entry.getRewarmCount();
                 boolean isInCacheKeep = keepProvider.contain(question);
                 if (currentRewarmCount >= maxRewarmCount && !isInCacheKeep) { //better to remove scheduled afterward to ensure cache is correctly clean
-                    log.debug("max rewarm count for key={}", key);
+                    Log.CACHE.debug("max rewarm count for key={}", key);
                     telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
                     continue;
                 }
-                log.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
+                Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
                 Message query = Message.newQuery(question);
                 QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
                 DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
                 Message newResponse = queryResponse.getResponse();
                 if (newResponse == null) {
                     telemetryNotify(EventType.CACHE_REWARM_FAILED);
-                    log.debug("it was not possible to rewarm entry {}", key);
+                    Log.CACHE.debug("it was not possible to rewarm entry {}", key);
                     continue;
                 }
                 Long ttlFromDirectResponse = getTtlFromDirectResponse(newResponse);
 
                 if (ttlFromDirectResponse == null) {
                     telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
-                    log.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
+                    Log.CACHE.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
                             key, Rcode.string(newResponse.getRcode()));
                     continue;
                 }
                 DnsCacheEntry updateCacheEntry = new DnsCacheEntry(newResponse, ttlFromDirectResponse, currentRewarmCount + 1);
                 cache.rewarm(key, updateCacheEntry);
                 telemetryNotify(EventType.CACHE_REWARM);
-                log.debug("rewarm stored (warm cache) key={} ttl={}s qname={} type={}",
+                Log.CACHE.debug("rewarm stored (warm cache) key={} ttl={}s qname={} type={}",
                         key, ttlFromDirectResponse,
                         question.getName().toString(),
                         Type.string(question.getType()));
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 running.set(false);
-                log.debug("stopping rewarm worker");
+                Log.CACHE.debug("stopping rewarm worker");
                 break;
             } catch (Throwable t) {
-                log.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage());
-                if (log.isDebugEnabled()) {
+                Log.CACHE.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage());
+                if (Log.CACHE.isDebugEnabled()) {
                     t.printStackTrace();
                 }
             }

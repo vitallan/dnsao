@@ -1,14 +1,12 @@
 package com.allanvital.dnsao.dns.processor.post.handler;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
 
-import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 import static com.allanvital.dnsao.dns.processor.engine.unit.AbstractCacheUnit.key;
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
@@ -18,7 +16,6 @@ import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
  */
 public class CachePostHandler implements PostHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(DNS);
 
     private final CacheManager cacheManager;
 
@@ -29,7 +26,7 @@ public class CachePostHandler implements PostHandler {
     @Override
     public void handle(DnsQueryRequest request, DnsQueryResponse response) {
         if (UPSTREAM.equals(response.getQueryResolvedBy()) && !request.isLocalQuery()) {
-            log.debug("adding {} to cache", key(request.getRequest()));
+            Log.DNS.debug("adding {} to cache", key(request.getRequest()));
             putInCache(request.getRequest(), response.getResponse());
         }
     }

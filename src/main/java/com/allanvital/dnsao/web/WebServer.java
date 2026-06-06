@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.web;
+import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
@@ -8,13 +9,10 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.UnknownHostException;
 import java.util.Objects;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 import static java.net.InetAddress.getByName;
 import static java.util.Base64.getUrlDecoder;
 
@@ -23,7 +21,6 @@ import static java.util.Base64.getUrlDecoder;
  */
 public class WebServer {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     private Javalin app;
     private int port;
@@ -44,10 +41,10 @@ public class WebServer {
 
     public void start() {
         if (port == -1) {
-            log.debug("web server disabled, using webPort = -1");
+            Log.INFRA.debug("web server disabled, using webPort = -1");
             return;
         }
-        log.debug("starting web server on port {}", port);
+        Log.INFRA.debug("starting web server on port {}", port);
         threadPool = new QueuedThreadPool();
         threadPool.setName("web");
         threadPool.setMaxThreads(httpThreadPool);
@@ -90,7 +87,7 @@ public class WebServer {
         this.app.start(port);
         this.port = this.app.port();
 
-        log.debug("web server running on port {}", port);
+        Log.INFRA.debug("web server running on port {}", port);
         running = true;
     }
 
@@ -174,7 +171,7 @@ public class WebServer {
     }
 
     public void stop() {
-        log.debug("stopping web server");
+        Log.INFRA.debug("stopping web server");
         if (app != null) {
             app.stop();
         }
@@ -182,11 +179,11 @@ public class WebServer {
             try {
                 threadPool.stop();
             } catch (Exception e) {
-                log.error(e.getMessage());
+                Log.INFRA.error(e.getMessage());
             }
         }
         running = false;
-        log.debug("web server stopped");
+        Log.INFRA.debug("web server stopped");
     }
 
 }

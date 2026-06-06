@@ -1,19 +1,16 @@
 package com.allanvital.dnsao.utils;
+import com.allanvital.dnsao.infra.log.Log;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static com.allanvital.dnsao.infra.AppLoggers.INFRA;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class ExceptionUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(INFRA);
 
     public static Throwable findRootCause(Throwable throwable) {
-        if (log.isDebugEnabled()) {
+        if (Log.INFRA.isDebugEnabled()) {
             throwable.printStackTrace();
         }
         if (throwable == null) {
