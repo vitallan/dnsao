@@ -1,19 +1,21 @@
 package com.allanvital.dnsao;
-import com.allanvital.dnsao.infra.log.Log;
-
 
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.ConfLoader;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.SystemGraph;
+import com.allanvital.dnsao.infra.log.Log;
+import com.allanvital.dnsao.infra.log.LogConfigurator;
 
 
 public class Main {
 
 
     public static void main( String[] args ) {
+        LogConfigurator.reset();
         Conf conf = ConfLoader.load();
         conf.sanitizeGroups();
+        LogConfigurator.configure(conf.getLog());
         SystemGraph systemGraph = null;
         try {
             systemGraph = new SystemGraph(conf);
