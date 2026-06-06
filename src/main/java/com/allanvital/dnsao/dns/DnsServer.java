@@ -6,8 +6,8 @@ import com.allanvital.dnsao.dns.server.ProtocolServer;
 import com.allanvital.dnsao.dns.server.TcpServer;
 import com.allanvital.dnsao.dns.server.UdpServer;
 import com.allanvital.dnsao.graph.ExecutorServiceFactory;
+import com.allanvital.dnsao.web.json.JsonBuilder;
 import com.allanvital.dnsao.web.stats.StatsCollector;
-import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import com.allanvital.dnsao.web.WebServer;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import org.slf4j.Logger;
@@ -38,7 +38,8 @@ public class DnsServer {
                      QueryProcessorFactory factory,
                      ExecutorServiceFactory executorServiceFactory,
                      StatsCollector statsCollector,
-                     UpstreamThreadPoolExecutor upstreamThreadPoolExecutor) {
+                     UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                     JsonBuilder jsonBuilder) {
         this.port = conf.getPort();
         this.statsCollector = statsCollector;
         this.upstreamThreadPoolExecutor = upstreamThreadPoolExecutor;
@@ -46,7 +47,7 @@ public class DnsServer {
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
         tcpServer = new TcpServer(tcpThreadPool, factory, port);
-        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), statsCollector);
+        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), jsonBuilder);
     }
 
     public int getUdpPort() {

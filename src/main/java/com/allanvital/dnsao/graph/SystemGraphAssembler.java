@@ -13,6 +13,7 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
+import com.allanvital.dnsao.web.json.JsonBuilder;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.stats.db.DbStatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
@@ -56,7 +57,9 @@ public class SystemGraphAssembler {
         scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
         kickstarter.kickStartKeep();
 
-        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor);
+        JsonBuilder jsonBuilder = new JsonBuilder(statsCollector, cacheManager.getCacheStats());
+
+        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
     }
 
     KeepKickstarter keepKickStarter(KeepProvider keepProvider, QueryProcessorFactory queryProcessorFactory) {
@@ -83,8 +86,9 @@ public class SystemGraphAssembler {
                                 QueryProcessorFactory queryProcessorFactory,
                                 ExecutorServiceFactory executorServiceFactory,
                                 StatsCollector statsCollector,
-                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor) {
-        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor);
+                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                                JsonBuilder jsonBuilder) {
+        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
     }
 
     private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,

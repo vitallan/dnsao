@@ -4,8 +4,6 @@ import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.web.json.JsonBuilder;
-import com.allanvital.dnsao.web.stats.StatsCollector;
-import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
@@ -37,11 +35,11 @@ public class WebServer {
     private static final String CONTENT_TYPE = "application/dns-message";
     private boolean running = false;
 
-    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, StatsCollector statsCollector) {
+    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, JsonBuilder builder) {
         this.port = port;
         this.queryProcessorFactory = queryProcessorFactory;
         this.httpThreadPool = httpThreadPool;
-        this.builder = new JsonBuilder(statsCollector);
+        this.builder = builder;
     }
 
     public void start() {

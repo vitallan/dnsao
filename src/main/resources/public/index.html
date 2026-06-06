@@ -190,6 +190,22 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card mt-4">
+                    <header class="card-header">
+                        <p class="card-header-title">Cache Stats</p>
+                    </header>
+                    <div class="card-content">
+                        <table class="table is-fullwidth" id="cacheStatsTable">
+                            <tbody>
+                                <tr><td><strong>Max Size</strong></td><td id="cacheMaxSize" class="has-text-right">—</td></tr>
+                                <tr><td><strong>Utilization</strong></td><td id="cacheUtilization" class="has-text-right">—</td></tr>
+                                <tr><td><strong>LRU Eviction Count</strong></td><td id="cacheEvictionCount" class="has-text-right">—</td></tr>
+                            </tbody>
+                        </table>
+                        <p id="cacheDisabledMsg" class="has-text-grey is-hidden">Cache is disabled</p>
+                    </div>
+                </div>
             </div>
 
             <div class="column is-4-desktop">
@@ -239,6 +255,7 @@
         renderSummary(stats.summary);
         buildChart(stats);
         buildUpstreamPie(stats);
+        renderCacheStats(stats.cache);
 
         computeCacheRate(stats.summary);
         fillUpstreamLegend(stats.upstream);
@@ -311,6 +328,33 @@
       });
       const tag = document.getElementById('upstreamCountTag');
       if (tag) tag.textContent = `${entries.length} upstreams`;
+    }
+
+    function renderCacheStats(cache) {
+      const table = document.getElementById('cacheStatsTable');
+      const msg = document.getElementById('cacheDisabledMsg');
+      if (!cache) {
+        if (table) table.classList.add('is-hidden');
+        if (msg) msg.classList.remove('is-hidden');
+        return;
+      }
+      if (table) table.classList.remove('is-hidden');
+      if (msg) msg.classList.add('is-hidden');
+
+      const nf = new Intl.NumberFormat('pt-BR');
+      const setText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val != null ? nf.format(val) : '—';
+      };
+
+      setText('cacheMaxSize', cache.maxSize);
+      setText('cacheEvictionCount', cache.evictionCount);
+
+      const utilization = (cache.maxSize > 0)
+        ? (cache.size / cache.maxSize * 100).toFixed(1) + '%'
+        : '—';
+      const utilEl = document.getElementById('cacheUtilization');
+      if (utilEl) utilEl.textContent = utilization;
     }
     document.addEventListener('DOMContentLoaded', () => {
       const burger = document.querySelector('.navbar-burger');

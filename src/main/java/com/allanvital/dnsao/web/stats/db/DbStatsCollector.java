@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
+import static com.allanvital.dnsao.Constants.STATS_WINDOW_MS;
 import static com.allanvital.dnsao.infra.AppLoggers.DNS;
 
 public class DbStatsCollector implements StatsCollector, QueryEventListener, AutoCloseable {
@@ -28,7 +29,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
     private static final Logger log = LoggerFactory.getLogger(DNS);
 
     public static final long DEFAULT_BUCKET_INTERVAL_MS = MemoryStatsCollector.DEFAULT_BUCKET_INTERVAL_MS;
-    public static final long DEFAULT_WINDOW_MS = MemoryStatsCollector.DEFAULT_WINDOW_MS;
+    public static final long DEFAULT_WINDOW_MS = STATS_WINDOW_MS;
     public static final int DEFAULT_PAGE_SIZE = MemoryStatsCollector.DEFAULT_PAGE_SIZE;
     public static final long DEFAULT_FLUSH_INTERVAL_MS = 500L;
 
