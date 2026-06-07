@@ -133,7 +133,6 @@ DNSao makes use of open-source libraries, including:
 * [Javalin](https://javalin.io) — lightweight web server
 * [SnakeYAML](https://bitbucket.org/asomov/snakeyaml) — YAML configuration
 * [Minimal-json](https://github.com/ralfstx/minimal-json) - JSON manipulation
-* [java.util.logging](https://docs.oracle.com/en/java/javase/17/core/java-logging-overview.html) — logging framework
 * [sqlite-jdbc](https://github.com/xerial/sqlite-jdbc) — embedded SQLite JDBC driver
 
 ---

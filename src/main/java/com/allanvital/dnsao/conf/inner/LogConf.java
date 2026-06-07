@@ -6,9 +6,9 @@ package com.allanvital.dnsao.conf.inner;
 public class LogConf {
 
     private String rootLevel = "WARN";
-    private String dns = "DEBUG";
-    private String cache = "DEBUG";
-    private String infra = "DEBUG";
+    private String dns = "INFO";
+    private String cache = "WARN";
+    private String infra = "WARN";
     private LogFileConf file;
 
     public String getRootLevel() {

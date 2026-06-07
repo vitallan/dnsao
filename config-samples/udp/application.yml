@@ -46,9 +46,9 @@ resolver:
 
 log:
   rootLevel: INFO
-  dns: DEBUG
-  cache: DEBUG
-  infra: DEBUG
+  dns: INFO
+  cache: WARN
+  infra: WARN
   file:
     path: "/var/log/dnsao/dnsao-%g.log"
     maxSize: 10485760
