@@ -32,9 +32,6 @@ public class LogConfigurator {
     }
 
     public static void configure(LogConf conf) {
-        SystemOutHandler consoleHandler = new SystemOutHandler(new LogFormatter());
-        consoleHandler.setLevel(Level.ALL);
-
         Handler fileHandler = null;
         LogFileConf fileConf = conf.getFile();
         if (fileConf != null && fileConf.getPath() != null && !fileConf.getPath().isEmpty()) {
@@ -53,17 +50,19 @@ public class LogConfigurator {
 
         for (String name : LOGGER_NAMES) {
             Logger logger = Logger.getLogger(name);
-            logger.setLevel(parseLevel(getLevel(conf, name)));
-            logger.addHandler(consoleHandler);
+            Level level = parseLevel(getLevel(conf, name));
+            logger.setLevel(Level.ALL);
+            logger.addHandler(new SystemOutHandler(new LogFormatter()));
             if (fileHandler != null) {
                 logger.addHandler(fileHandler);
             }
             logger.setUseParentHandlers(false);
+            Log.valueOf(name).setLevel(level);
         }
 
         Logger root = Logger.getLogger("");
         root.setLevel(parseLevel(conf.getRootLevel()));
-        root.addHandler(consoleHandler);
+        root.addHandler(new SystemOutHandler(new LogFormatter()));
         if (fileHandler != null) {
             root.addHandler(fileHandler);
         }

@@ -16,6 +16,8 @@ public enum Log {
     CACHE("CACHE"),
     INFRA("INFRA");
 
+    private Level configuredLevel = Level.INFO;
+
     @FunctionalInterface
     public interface Handler {
         void onEvent(Level level, String category, String message);
@@ -34,6 +36,10 @@ public enum Log {
     Log(String name) {
         this.enumName = name;
         this.julLogger = Logger.getLogger(name);
+    }
+
+    public void setLevel(Level level) {
+        this.configuredLevel = level != null ? level : Level.INFO;
     }
 
     public void trace(String msg, Object... args) {
@@ -57,7 +63,7 @@ public enum Log {
     }
 
     public void error(String msg, Object arg, Throwable t) {
-        if (!julLogger.isLoggable(Level.SEVERE)) {
+        if (Level.SEVERE.intValue() < configuredLevel.intValue()) {
             return;
         }
         String translated = translate(msg);
@@ -69,14 +75,14 @@ public enum Log {
         if (arg != null) {
             record.setParameters(params);
         }
-        if (julLogger.isLoggable(Level.FINE)) {
+        if (configuredLevel.intValue() <= Level.FINE.intValue()) {
             record.setThrown(t);
         }
         julLogger.log(record);
     }
 
     private void log(Level level, String msg, Object... args) {
-        if (!julLogger.isLoggable(level)) {
+        if (level.intValue() < configuredLevel.intValue()) {
             return;
         }
         Throwable thrown = null;
@@ -93,7 +99,7 @@ public enum Log {
         if (remaining != null && remaining.length > 0) {
             record.setParameters(remaining);
         }
-        if (thrown != null && julLogger.isLoggable(Level.FINE)) {
+        if (thrown != null && configuredLevel.intValue() <= Level.FINE.intValue()) {
             record.setThrown(thrown);
         }
         julLogger.log(record);
