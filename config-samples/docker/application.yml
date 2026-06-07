@@ -55,8 +55,8 @@ resolver:
 log:
   rootLevel: WARN
   dns: INFO
-  cache: DEBUG
-  infra: DEBUG
+  cache: WARN
+  infra: WARN
 
 lists:
   blockLists:
