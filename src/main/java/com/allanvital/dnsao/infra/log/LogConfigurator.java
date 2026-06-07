@@ -52,7 +52,7 @@ public class LogConfigurator {
             Logger logger = Logger.getLogger(name);
             Level level = parseLevel(getLevel(conf, name));
             logger.setLevel(Level.ALL);
-            logger.addHandler(new SystemOutHandler(new LogFormatter()));
+            logger.addHandler(new AsyncConsoleHandler(new LogFormatter()));
             if (fileHandler != null) {
                 logger.addHandler(fileHandler);
             }
@@ -62,7 +62,7 @@ public class LogConfigurator {
 
         Logger root = Logger.getLogger("");
         root.setLevel(parseLevel(conf.getRootLevel()));
-        root.addHandler(new SystemOutHandler(new LogFormatter()));
+        root.addHandler(new AsyncConsoleHandler(new LogFormatter()));
         if (fileHandler != null) {
             root.addHandler(fileHandler);
         }
