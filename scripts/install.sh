@@ -81,7 +81,7 @@ Group=dnsao
 WorkingDirectory=/etc/dnsao
 
 ExecStart=/usr/bin/env java \
-  -Xms128m -Xmx128m \
+  -Xms128m -Xmx256m \
   -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=128m \
   -Xss320k \
   -Dconfig=/etc/dnsao/application.yml \
@@ -97,7 +97,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=/var/log/dnsao
+ReadWritePaths=/var/log/dnsao /etc/dnsao
 
 LimitNOFILE=65536
 
