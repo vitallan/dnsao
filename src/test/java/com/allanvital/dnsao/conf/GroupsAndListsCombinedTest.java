@@ -33,8 +33,23 @@ public class GroupsAndListsCombinedTest extends ConfValidation {
         conf.sanitizeGroups();
         assertEquals(1, groups.size());
         GroupInnerConf main = groups.get(MAIN);
-        assertEquals(2, main.getAllows().size());
-        assertEquals(2, main.getBlocks().size());
+        assertEquals(1, main.getMembers().size());
+        assertTrue(main.getMembers().contains("192.168.68.3"));
+        assertEquals(0, main.getAllows().size());
+        assertEquals(0, main.getBlocks().size());
+    }
+
+    @Test
+    public void validateExplicitEmptyMain() {
+        Conf conf = getConf("explicit-empty-main.yml");
+        Map<String, GroupInnerConf> groups = conf.getGroups();
+        conf.sanitizeGroups();
+        assertEquals(1, groups.size());
+        GroupInnerConf main = groups.get(MAIN);
+        assertEquals(1, main.getMembers().size());
+        assertTrue(main.getMembers().contains("192.168.68.3"));
+        assertEquals(0, main.getAllows().size());
+        assertEquals(0, main.getBlocks().size());
     }
 
     @Test

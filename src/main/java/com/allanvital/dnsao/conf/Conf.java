@@ -86,20 +86,16 @@ public class Conf {
     public void sanitizeGroups() {
         Set<String> validAllows = lists.getValidAllowNames();
         Set<String> validBlocks = lists.getValidBlockNames();
-        Set<Map.Entry<String, GroupInnerConf>> entries = groups.entrySet();
-        for (Map.Entry<String, GroupInnerConf> entry : entries) {
-            if (MAIN.equalsIgnoreCase(entry.getKey())) {
-                groups.remove(entry.getKey());
-                continue;
-            }
-            GroupInnerConf group = entry.getValue();
+        for (GroupInnerConf group : groups.values()) {
             group.getAllows().removeIf(allow -> !validAllows.contains(allow));
             group.getBlocks().removeIf(block -> !validBlocks.contains(block));
         }
-        GroupInnerConf mainInnerConf = new GroupInnerConf();
-        mainInnerConf.setAllows(validAllows);
-        mainInnerConf.setBlocks(validBlocks);
-        groups.put(MAIN, mainInnerConf);
+        if (!groups.containsKey(MAIN)) {
+            GroupInnerConf main = new GroupInnerConf();
+            main.setAllows(validAllows);
+            main.setBlocks(validBlocks);
+            groups.put(MAIN, main);
+        }
     }
 
     public LogConf getLog() {

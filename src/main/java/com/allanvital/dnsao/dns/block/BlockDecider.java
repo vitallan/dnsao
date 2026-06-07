@@ -45,16 +45,10 @@ public class BlockDecider {
     }
 
     private Set<String> getAllowedNames(String group) {
-        if (MAIN.equals(group)) {
-            return listsConf.getValidAllowNames();
-        }
         return groups.get(group).getAllows();
     }
 
     private Set<String> getBlockedNames(String group) {
-        if (MAIN.equals(group)) {
-            return listsConf.getValidBlockNames();
-        }
         return groups.get(group).getBlocks();
     }
 
