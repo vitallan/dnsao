@@ -328,9 +328,9 @@ In the above example, the group named **group1** will have two members (ips endi
 
 The group named **group2** will have a single member, and will not block or allow any specific list.
 
-All clients not defined in a group will enter the default **MAIN** group, which is an internal group that will block all blockLists defined in the **blockLists** property, and allow all lists in **allowLists**.
+All clients not defined in a group will enter the default **MAIN** group.
 
-The **MAIN** group cannot be manually setup, and trying to do so will be ignored.
+The **MAIN** group can optionally be defined manually in YAML. When explicitly defined, its `members`, `allows`, and `blocks` are preserved as-is. When `main` is **absent** from the config, **DNSao** creates it automatically as a catchall using all blockLists and allowLists defined in the `lists` section.
 
 ### listeners
 

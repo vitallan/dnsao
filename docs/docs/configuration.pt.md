@@ -327,9 +327,9 @@ No exemplo acima, o grupo nomeado **group1** terá dois membros (os ips terminan
 
 O grupo **group2** terá um único membro e não bloqueará ou permitirá nenhuma lista específica.
 
-Todo os clientes não definidos individualmente em um grupo entrarão no grupo **MAIN**, que é um grupo interno que bloqueia todas as listas definidas como **blockLists** e permite todos os domínios das listas **allowLists**.
+Todo os clientes não definidos individualmente em um grupo entrarão no grupo **MAIN**.
 
-O grupo **MAIN** não pode ser manualmente configurado, e tentativas de sua configuração serão ignoradas.
+O grupo **MAIN** pode opcionalmente ser definido manualmente no YAML. Quando explicitamente definido, seus `members`, `allows` e `blocks` são preservados como estão. Quando `main` está **ausente** da configuração, o **DNSao** o cria automaticamente como um grupo genérico usando todas as blockLists e allowLists definidas na seção `lists`.
 
 ### listeners
 
