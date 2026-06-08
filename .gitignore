@@ -155,3 +155,5 @@ buildNumber.properties
 site/
 .venv/
 .DS_Store
+
+data/

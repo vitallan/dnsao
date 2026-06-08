@@ -13,7 +13,7 @@ After the instalation is complete, you can point your devices (or, ideally your 
 
 The only dependency of **DNSao** is the presence of a JDK version 17 or higher.
 
-If you enable `server.statsDbPath`, make sure the parent directory exists and is writable (DNSao will not create directories).
+**DNSao** stores metrics and query history in a SQLite file by default (`{tmpdir}/dnsao.db`). If you set a custom `server.statsDbPath`, make sure the parent directory exists and is writable (DNSao will not create directories).
 
 If your server is Debian-based:
 
@@ -102,7 +102,7 @@ sudo ss -tulpn | grep :53
 
 This should return nothing. Then you can use docker compose:
 
-If you enable `server.statsDbPath` (example: `/etc/dnsao/stats.db`), ensure your `/etc/dnsao` volume mount is writable by the container.
+**DNSao** stores metrics and query history in a SQLite file by default. If you set a custom `server.statsDbPath` (example: `/etc/dnsao/stats.db`), ensure your volume mount is writable by the container.
 
 ```yaml
 

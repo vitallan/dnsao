@@ -122,15 +122,14 @@ The **server** property defines the application’s top-level properties.
 | **tcpThreadPool** | how many threads will be available for TCP protocol, as the **server**. The default value is 3 |
 | **httpThreadPool** | how many threads will be available for HTTP protocol, as the **server**. The default value is 10 |
 | **webPort** | the port where the metrics dashboard will be available. Default is 8044 |
-| **statsDbPath** | optional path to a SQLite database file used to persist metrics and query events. When unset/blank, **DNSao** keeps stats in-memory (default). The parent directory must already exist and be writable (DNSao will not create directories) |
+| **statsDbPath** | path to a SQLite database file for metrics and query history. When unset/blank, **DNSao** defaults to `{tmpdir}/dnsao.db` (the OS temp directory). The parent directory must already exist and be writable (DNSao will not create directories) |
+| **useMemoryStorage** | true/false, default is false. When true, forces in-memory stats storage instead of SQLite. Useful for ephemeral environments or when you want to avoid disk writes |
 
 For HTTP queries, the endpoint will be **http://serverIp:webPort/dns-query**, following dns standards. Note that the answer will be in HTTP, not HTTPS. This is a concious decision to avoid manual handling of tls certificates to favor the users possibility to use their own certificates. If https is desired, it is recommended to use a reverse proxy that enables the remote communication to happen through https (like traeffic or nginx) and then reverse proxy internally to **DNSao**.
 
 In the web interface **http://serverIp:webPort/** you can take a look at the server metrics and search the individual queries. The graph contains a rolling window of 24 hours divided in 10 minutes segments. 
 
-In the default **in-memory** mode, these segments are also used to hold the query events to be searchable in the */query* endpoint, however a maximum of 5000 queries will be saved in a given segment. The totals are still accounted for on the general counters, but excess queries won't show on the query table.
-
-If **server.statsDbPath** is configured, **DNSao** will persist both the buckets and the individual query events to a local SQLite file, so the metrics and query history survive restarts. Writes are batched every 500ms; if the DB can't keep up, DNSao will drop the oldest buffered query events to avoid unbounded memory growth.
+**DNSao** persists queries and metrics to a local SQLite file by default. The buckets hold query events searchable in the */query* endpoint — with disk persistence there is no event cap, unlike the legacy in-memory mode which was limited to 5,000 events per segment. Writes are batched every 500ms; if the DB can't keep up, DNSao will drop the oldest buffered query events to avoid unbounded memory growth.
 
 ### cache
 

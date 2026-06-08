@@ -11,6 +11,7 @@ public class ServerConf {
     int httpThreadPool = 10;
     int webPort = 8044;
     String statsDbPath;
+    boolean useMemoryStorage = false;
 
     public int getHttpThreadPool() {
         return httpThreadPool;
@@ -42,6 +43,14 @@ public class ServerConf {
 
     public void setStatsDbPath(String statsDbPath) {
         this.statsDbPath = statsDbPath;
+    }
+
+    public boolean isUseMemoryStorage() {
+        return useMemoryStorage;
+    }
+
+    public void setUseMemoryStorage(boolean useMemoryStorage) {
+        this.useMemoryStorage = useMemoryStorage;
     }
 
     public int getUdpThreadPool() {

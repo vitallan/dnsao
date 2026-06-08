@@ -44,7 +44,7 @@ Ele lida com consultas DNS via UDP, TCP e HTTP, oferece suporte a upstreams crip
 - Múltiplos resolvedores DNS upstream (UDP/DoT/DoH)
 - Sistema de cache com reconhecimento de TTL e revalidação assíncrona
 - DNSSEC aware com políticas configuráveis
-- Histórico de queries e métricas (em memória por padrão; persistência opcional via SQLite com `server.statsDbPath`)
+- Histórico de queries e métricas  
 - Painel de métricas em tempo real desenvolvido com Bulma + Chart.js
 - Suporte a listas de bloqueio e mapeamentos/substituições locais
 - Configuração unificada via `application.yml`
