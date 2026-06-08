@@ -156,4 +156,6 @@ site/
 .venv/
 .DS_Store
 
-data/
+data/*.db
+data/*.db-wal
+data/*.db-shm
