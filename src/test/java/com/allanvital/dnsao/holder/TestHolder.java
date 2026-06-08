@@ -79,7 +79,6 @@ public class TestHolder {
         registerOverride(this.testExecutorServiceFactory);
         LogConfigurator.reset();
         LogConfigurator.configure(this.conf.getLog());
-        this.conf.sanitizeGroups();
         dnsServer = assembler.assemble(this.conf);
         queryInfraAssembler = assembler.getQueryInfraAssembler();
         dnsServer.start();
