@@ -24,7 +24,7 @@ title: Home
 - **Metrics Dashboard**: provides a metrics dashboard to monitor operation and performance
 - **Low Resource Usage**: runs comfortably with 256 MB of RAM, even on older hardware or compact devices
 - **Free and Open Source**: free software, openly maintained [on GitHub](https://github.com/vitallan/dnsao), allowing unrestricted auditing and use
-- **Stateless By Default**: does not rely on databases or peripheral systems; optionally persists metrics/query history to a local SQLite file via `server.statsDbPath`
+- **Lightweight Persistence**: metrics and query history are persisted to a local SQLite file by default; optionally use in-memory via `server.useMemoryStorage` or set a custom path via `server.statsDbPath`
 - **Low Number of Dependencies**: dnsjava, javalin, minimal-json, snakeyaml, and sqlite-jdbc
 
 ---

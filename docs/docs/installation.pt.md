@@ -13,7 +13,7 @@ Depois de terminar a instalação, você pode configurar seus dispositivos (ou, 
 
 A única dependência de **DNSao** é a presença de uma jdk versão 17 ou maior. 
 
-Se você habilitar `server.statsDbPath`, confirme que o diretório pai existe e tem permissão de escrita (o DNSao não cria diretórios).
+O **DNSao** armazena métricas e histórico de queries em um arquivo SQLite por padrão (`{tmpdir}/dnsao.db`). Se você definir um `server.statsDbPath` personalizado, confirme que o diretório pai existe e tem permissão de escrita (o DNSao não cria diretórios).
 
 Se o seu servidor for debian based:
 
@@ -102,7 +102,7 @@ sudo ss -tulpn | grep :53
 
 Esse comando não deve retornar nada. Então você pode usar docker compose:
 
-Se você habilitar `server.statsDbPath` (exemplo: `/etc/dnsao/stats.db`), confirme que o volume montado em `/etc/dnsao` é gravável pelo container.
+O **DNSao** armazena métricas e histórico de queries em um arquivo SQLite por padrão. Se você definir um `server.statsDbPath` personalizado (exemplo: `/etc/dnsao/stats.db`), confirme que o volume montado é gravável pelo container.
 
 ```yaml
 

@@ -12,6 +12,8 @@ import com.allanvital.dnsao.graph.bean.MessageHelper;
 import com.allanvital.dnsao.graph.fake.FakeServer;
 import com.allanvital.dnsao.graph.fake.FakeUdpServer;
 import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.dir.TempDir;
+import com.allanvital.dnsao.infra.dir.TestTempDirProvider;
 import com.allanvital.dnsao.infra.log.LogConfigurator;
 import org.junit.jupiter.api.Assertions;
 import org.xbill.DNS.Message;
@@ -21,12 +23,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedList;
 import java.util.List;
 
+
+import static com.allanvital.dnsao.Constants.DB_DEFAULT_NAME;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.enableTelemetry;
 
 /**
@@ -71,6 +76,7 @@ public class TestHolder {
         setupSslStore();
         testTimeProvider.setNow(Instant.parse("2025-11-08T10:00:00Z").toEpochMilli());
         Clock.setNewTimeProvider(testTimeProvider);
+        TempDir.setProvider(new TestTempDirProvider());
         enableTelemetry(true);
         eventListener = new TestTelemetryListener(testTimeProvider);
         if (!fakeServerAlreadySetup) {
@@ -111,6 +117,14 @@ public class TestHolder {
         }
         testExecutorServiceFactory.stopAndRemoveAllExecutors();
         eventListener.reset();
+        cleanDbFiles();
+    }
+
+    private void cleanDbFiles() {
+        try (var files = Files.list(Paths.get(TempDir.getTempDir()))) {
+            files.filter(f -> f.getFileName().toString().startsWith(DB_DEFAULT_NAME))
+                    .forEach(f -> { try { Files.deleteIfExists(f); } catch (Exception ignored) {} });
+        } catch (Exception ignored) {}
     }
 
     protected void setupSslStore() {

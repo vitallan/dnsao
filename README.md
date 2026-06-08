@@ -44,7 +44,7 @@ It handles UDP, TCP and HTTP queries, and supports modern encrypted upstreams (D
 - Multiple upstream DNS resolvers (UDP/DoT/DoH)
 - TTL-aware caching system with asynchronous rewarm
 - DNSSEC aware with configurable policies
-- Query history and metrics (in-memory by default; optional SQLite persistence via `server.statsDbPath`)
+- Query history and metrics 
 - Real-time metrics dashboard built with Bulma + Chart.js
 - Pluggable blocklists and local mappings/overrides
 - Configuration via a single `application.yml`

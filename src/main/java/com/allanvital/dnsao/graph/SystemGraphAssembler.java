@@ -12,13 +12,17 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.infra.dir.TempDir;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.web.json.JsonBuilder;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.stats.db.DbStatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
+
+import static com.allanvital.dnsao.Constants.DB_DEFAULT_NAME;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -143,9 +147,12 @@ public class SystemGraphAssembler {
     }
 
     StatsCollector statsCollector(ServerConf serverConf, NotificationManager notificationManager) {
+        if (serverConf.isUseMemoryStorage()) {
+            return memoryStatsCollector(notificationManager);
+        }
         String dbPath = serverConf.getStatsDbPath();
         if (dbPath == null || dbPath.isBlank()) {
-            return memoryStatsCollector(notificationManager);
+            dbPath = Paths.get(TempDir.getTempDir(), DB_DEFAULT_NAME).toString();
         }
         DbStatsCollector dbStatsCollector = new DbStatsCollector(dbPath);
         notificationManager.querySubscribe(dbStatsCollector);
