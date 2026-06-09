@@ -10,10 +10,13 @@ import com.allanvital.dnsao.conf.inner.ExpiredConf;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.xbill.DNS.Message;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static com.allanvital.dnsao.infra.notification.telemetry.EventType.CACHE_ADDED;
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.CACHE_REMOVED;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
@@ -56,10 +59,7 @@ public class CacheManager {
     }
 
     public DnsCacheEntry safeGet(String key) {
-        if (cache.containsKey(key)) {
-            return cache.get(key);
-        }
-        return null;
+        return cache.get(key);
     }
 
     public DnsCacheEntry getStale(String key) {
@@ -73,8 +73,10 @@ public class CacheManager {
                 telemetryNotify(EventType.STALE_CACHE_HIT);
                 return entry;
             }
-            Log.CACHE.info("cache entry {} was found, but expired. Removing", key);
-            cache.remove(key);
+            if (shouldRemove(entry)) {
+                Log.CACHE.info("cache entry {} was found, but expired. Removing", key);
+                remove(key);
+            }
         }
         return null;
     }
@@ -94,12 +96,8 @@ public class CacheManager {
 
         if (entry != null && entry.isStale()) {
             Log.CACHE.info("cache entry {} was found, but stale ", key);
-            if (!expiredConf.isServeExpired()) {
-                cache.remove(key);
-            }
-            if (expiredConf.isServeExpired() && entry.isExpired(expiredConf.getServeExpiredMax())) {
-                Log.CACHE.debug("cache entry {} was found, but stale and expired ", key);
-                cache.remove(key);
+            if (shouldRemove(entry)) {
+                remove(key);
             }
             return null;
         }
@@ -121,6 +119,37 @@ public class CacheManager {
         }
         Log.CACHE.info("adding {} to cache", key);
         addEntry(key, new DnsCacheEntry(response, ttlSecs));
+    }
+
+    public void purgeExpired() {
+        if (!enabled) {
+            return;
+        }
+        List<String> keys;
+        synchronized (cache) {
+            keys = new ArrayList<>(cache.keySet());
+        }
+        for (String key : keys) {
+            DnsCacheEntry entry = cache.get(key);
+            if (entry != null && shouldRemove(entry)) {
+                remove(key);
+            }
+        }
+    }
+
+    private void remove(String key) {
+        cache.remove(key);
+        telemetryNotify(CACHE_REMOVED);
+    }
+
+    private boolean shouldRemove(DnsCacheEntry entry) {
+        if (!entry.isStale()) {
+            return false;
+        }
+        if (expiredConf.isServeExpired() && !entry.isExpired(expiredConf.getServeExpiredMax())) {
+            return false;
+        }
+        return true;
     }
 
     private void addEntry(String key, DnsCacheEntry entry) {

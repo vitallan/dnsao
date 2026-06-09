@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.cache.CacheScavenger;
 import com.allanvital.dnsao.cache.keep.KeepKickstarter;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
@@ -21,6 +22,8 @@ import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.allanvital.dnsao.Constants.DB_DEFAULT_NAME;
 
@@ -59,6 +62,7 @@ public class SystemGraphAssembler {
 
         KeepKickstarter kickstarter = keepKickStarter(keepProvider, factory);
         scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
+        scheduleScavenger(executorServiceFactory, cacheConf, cacheManager);
         kickstarter.kickStartKeep();
 
         JsonBuilder jsonBuilder = new JsonBuilder(statsCollector, cacheManager.getCacheStats());
@@ -108,6 +112,15 @@ public class SystemGraphAssembler {
             return rewarmWorker;
         }
         return null;
+    }
+
+    private void scheduleScavenger(ExecutorServiceFactory executorServiceFactory,
+                                    CacheConf cacheConf,
+                                    CacheManager cacheManager) {
+        if (cacheConf.isEnabled()) {
+            ScheduledExecutorService scavengerExecutor = executorServiceFactory.buildScheduledExecutor("scavenger");
+            scavengerExecutor.scheduleAtFixedRate(new CacheScavenger(cacheManager), 0, 500, TimeUnit.MILLISECONDS);
+        }
     }
 
     QueryInfraAssembler queryInfraAssembler() {

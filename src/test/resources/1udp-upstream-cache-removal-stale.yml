@@ -1,0 +1,27 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+log:
+  rootLevel: INFO
+  dns: DEBUG
+  cache: DEBUG
+  infra: DEBUG
+
+misc:
+  serveExpired: true
+  serveExpiredMax: 1
+
+cache:
+  enabled: true
+  maxCacheEntries: 2
+  rewarm: false
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
