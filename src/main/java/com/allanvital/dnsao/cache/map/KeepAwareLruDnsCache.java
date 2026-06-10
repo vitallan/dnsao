@@ -3,29 +3,54 @@ import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.Constants;
 import com.allanvital.dnsao.cache.CacheStats;
+import com.allanvital.dnsao.cache.SizeSnapshot;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.infra.clock.Clock;
 import org.xbill.DNS.Record;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 
 public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> implements CacheStats {
 
-
     private final int maxSize;
     private final KeepProvider keepProvider;
+    private final long bucketIntervalMs;
+    private final int maxHistoryEntries;
     private final ConcurrentLinkedDeque<Long> evictionTimes = new ConcurrentLinkedDeque<>();
+    private final ConcurrentLinkedDeque<SizeSnapshot> sizeHistory = new ConcurrentLinkedDeque<>();
+    private final ScheduledExecutorService sizeSampler;
+    private final LongSupplier nowSupplier;
     private boolean warnedAllKeepOverCapacity;
 
     public KeepAwareLruDnsCache(int maxSize, KeepProvider keepProvider) {
+        this(maxSize, keepProvider, Constants.STATS_BUCKET_INTERVAL_MS, Constants.STATS_WINDOW_MS, Clock::currentTimeInMillis);
+    }
+
+    public KeepAwareLruDnsCache(int maxSize, KeepProvider keepProvider, long bucketIntervalMs, long windowMs, LongSupplier nowSupplier) {
         super(Math.max(16, maxSize), 0.75f, true);
         this.maxSize = maxSize;
         this.keepProvider = keepProvider;
+        this.bucketIntervalMs = bucketIntervalMs;
+        this.maxHistoryEntries = (int) (windowMs / bucketIntervalMs);
+        this.nowSupplier = nowSupplier;
+        this.sizeSampler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "cache-size-sampler");
+            t.setDaemon(true);
+            return t;
+        });
+        recordSizeSnapshot();
+        sizeSampler.scheduleAtFixedRate(this::recordSizeSnapshot, bucketIntervalMs, bucketIntervalMs, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -88,6 +113,40 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
             evictionTimes.pollFirst();
         }
         return evictionTimes.size();
+    }
+
+    @Override
+    public List<SizeSnapshot> getSizeHistory() {
+        recordSizeSnapshot();
+        long now = nowSupplier.getAsLong();
+        long currentBucket = (now / bucketIntervalMs) * bucketIntervalMs;
+        long cutoff = currentBucket - (maxHistoryEntries - 1) * bucketIntervalMs;
+        List<SizeSnapshot> result = new ArrayList<>(maxHistoryEntries);
+        for (int i = 0; i < maxHistoryEntries; i++) {
+            long ts = cutoff + i * bucketIntervalMs;
+            int size = findLatestSizeAtOrBefore(ts);
+            result.add(new SizeSnapshot(ts, size));
+        }
+        return result;
+    }
+
+    private int findLatestSizeAtOrBefore(long ts) {
+        Iterator<SizeSnapshot> it = sizeHistory.descendingIterator();
+        while (it.hasNext()) {
+            SizeSnapshot s = it.next();
+            if (s.timestamp() <= ts) return s.size();
+        }
+        return 0;
+    }
+
+    void recordSizeSnapshot() {
+        long now = nowSupplier.getAsLong();
+        long bucketStart = (now / bucketIntervalMs) * bucketIntervalMs;
+        sizeHistory.addLast(new SizeSnapshot(bucketStart, size()));
+        long cutoff = now - bucketIntervalMs * maxHistoryEntries;
+        while (!sizeHistory.isEmpty() && sizeHistory.peekFirst().timestamp() < cutoff) {
+            sizeHistory.pollFirst();
+        }
     }
 
     private boolean isKeep(DnsCacheEntry entry) {

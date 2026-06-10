@@ -139,3 +139,76 @@ function buildUpstreamPie(stats, canvasId = 'upstreamPie', maxSlices = 8) {
     }
   });
 }
+
+function buildCacheSizeChart(stats, canvasId = 'cacheSizeChart') {
+  const cache = stats?.cache;
+  const cacheTemporal = stats?.cacheTemporal;
+  const card = document.getElementById('cacheCard');
+  const msg = document.getElementById('cacheDisabledMsg');
+  const evictionLine = document.getElementById('cacheEvictionLine');
+
+  if (!cache || !cacheTemporal || !Array.isArray(cacheTemporal.columns) || !Array.isArray(cacheTemporal.rows)) {
+    if (card) card.classList.add('is-hidden');
+    return;
+  }
+  if (card) card.classList.remove('is-hidden');
+  if (msg) msg.classList.add('is-hidden');
+
+  const maxSize = Number(cache.maxSize) || 1;
+  const nf = new Intl.NumberFormat('pt-BR');
+  if (evictionLine) evictionLine.textContent = 'LRU eviction count: ' + nf.format(cache.evictionCount);
+
+  const colIndex = Object.fromEntries(cacheTemporal.columns.map((name, i) => [name, i]));
+  const labels = cacheTemporal.rows.map(r => r[colIndex.ts]);
+  const data = cacheTemporal.rows.map(r => Number(r[colIndex.size]) || 0);
+
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) {
+    console.error(`Canvas #${canvasId} not found`);
+    return;
+  }
+
+  if (window.__dnsaoCacheSizeChart) {
+    window.__dnsaoCacheSizeChart.destroy();
+  }
+
+  window.__dnsaoCacheSizeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cache Size',
+        data,
+        borderColor: '#10b981',
+        backgroundColor: '#10b981',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.15,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      plugins: {
+        legend: { display: false },
+        title: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed.y;
+              const pct = maxSize > 0 ? ((val / maxSize) * 100).toFixed(1) : '0.0';
+              return `${nf.format(val)} / ${nf.format(maxSize)} (${pct}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Timestamp' }, offset: true, ticks: { autoSkip: true } },
+        y: { min: 0, max: maxSize, title: { display: true, text: 'Utilization' } }
+      },
+      layout: { padding: { right: 8 } }
+    }
+  });
+}

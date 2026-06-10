@@ -20,6 +20,7 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static com.allanvital.dnsao.Constants.STATS_BUCKET_INTERVAL_MS;
 import static com.allanvital.dnsao.Constants.STATS_WINDOW_MS;
 
 /**
@@ -29,7 +30,7 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
 
 
     //10 minutes window
-    public static final long DEFAULT_BUCKET_INTERVAL_MS = 10 * 60_000L;
+    public static final long DEFAULT_BUCKET_INTERVAL_MS = STATS_BUCKET_INTERVAL_MS;
     // 24 hour retention
     public static final long DEFAULT_WINDOW_MS = STATS_WINDOW_MS;
     public static final int DEFAULT_PAGE_SIZE = 25;
