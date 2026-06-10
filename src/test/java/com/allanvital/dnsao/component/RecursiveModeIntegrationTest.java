@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.*;
+import org.xbill.DNS.Record;
 
 import java.io.IOException;
 
@@ -31,11 +32,11 @@ public class RecursiveModeIntegrationTest extends TestHolder {
         assertTrue(response.getHeader().getFlag(Flags.QR));
         assertTrue(response.getHeader().getFlag(Flags.RA));
 
-        org.xbill.DNS.Record question = response.getQuestion();
+        Record question = response.getQuestion();
         assertNotNull(question);
         assertEquals(Name.fromString("allanvital.com."), question.getName());
 
-        org.xbill.DNS.Record[] answers = response.getSectionArray(Section.ANSWER);
+        Record[] answers = response.getSectionArray(Section.ANSWER);
         assertEquals(1, answers.length);
         assertInstanceOf(ARecord.class, answers[0]);
         ARecord a = (ARecord) answers[0];
@@ -53,7 +54,7 @@ public class RecursiveModeIntegrationTest extends TestHolder {
 
     @Test
     public void preservesRdBitFromClientRequest() throws IOException {
-        Message request = Message.newQuery(org.xbill.DNS.Record.newRecord(Name.fromString("allanvital.com."), Type.A, DClass.IN));
+        Message request = Message.newQuery(Record.newRecord(Name.fromString("allanvital.com."), Type.A, DClass.IN));
         request.getHeader().setFlag(Flags.RD);
 
         SimpleResolver resolver = new SimpleResolver("127.0.0.1");

@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.processor.engine.unit;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.*;
@@ -12,7 +13,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class RecursiveUnitTest {
 
-    private final RecursiveUnit unit = new RecursiveUnit();
+    private final RecursiveSessionFactory sessionFactory = new RecursiveSessionFactory(3);
+    private final RecursiveUnit unit = new RecursiveUnit(sessionFactory);
 
     @Test
     public void respondsToStubDomain() throws Exception {

@@ -12,6 +12,7 @@ import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
+import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerProvider;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
@@ -61,7 +62,8 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        RecursiveUnit recursiveUnit = new RecursiveUnit();
+        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout());
+        RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
