@@ -56,6 +56,7 @@ public class DnsServerCacheTest extends TestHolder {
         doRequest(resolver, domain1);
         doRequest(resolver, domain2);
         doRequest(resolver, domain3);
+        eventListener.assertCount(CACHE_ADDED, 3, false);
 
         for (int i = 0; i < 10; i++) {
             doRequest(resolver, domain1);
