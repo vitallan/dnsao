@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class ResolverConf {
 
-    private List<Upstream> upstreams = buildDefault();
+    private List<Upstream> upstreams = new ArrayList<>();
     private int multiplier = 1;
     private int tlsPoolSize = 3;
     private List<LocalMapping> localMappings = new LinkedList<>();
@@ -24,6 +24,10 @@ public class ResolverConf {
 
     public void setUpstreams(List<Upstream> upstreams) {
         this.upstreams = upstreams;
+    }
+
+    public boolean hasUpstreams() {
+        return upstreams != null && !upstreams.isEmpty();
     }
 
     public int getMultiplier() {
@@ -69,14 +73,11 @@ public class ResolverConf {
         this.upstreamQueueSize = upstreamQueueSize;
     }
 
-    private static List<Upstream> buildDefault() {
-        List<Upstream> upstreams = new ArrayList<>();
-        Upstream upstream = new Upstream();
-        upstream.setIp("9.9.9.9");
-        upstream.setPort(53);
-        upstream.setProtocol("udp");
-        upstreams.add(upstream);
-        return upstreams;
+    public ResolverMode getResolverMode() {
+        if (this.hasUpstreams()) {
+            return ResolverMode.FORWARD;
+        }
+        return ResolverMode.RECURSIVE;
     }
 
 }

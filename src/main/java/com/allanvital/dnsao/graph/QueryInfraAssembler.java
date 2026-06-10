@@ -10,6 +10,7 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
+import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerProvider;
@@ -60,7 +61,8 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled());
+        RecursiveUnit recursiveUnit = new RecursiveUnit();
+        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
@@ -139,9 +141,11 @@ public class QueryInfraAssembler {
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
                                           UpstreamUnitConf upstreamUnitConf,
-                                          boolean blockingEnabled) {
+                                          boolean blockingEnabled,
+                                          RecursiveUnit recursiveUnit,
+                                          ResolverMode resolverMode) {
 
-        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
+        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled, recursiveUnit, resolverMode);
     }
 
     private PostHandlerFacade postHandlerFacade(PostHandlerProvider provider, ExecutorServiceFactory executorServiceFactory) {

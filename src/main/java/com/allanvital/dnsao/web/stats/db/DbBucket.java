@@ -15,6 +15,7 @@ public class DbBucket implements Bucket {
     private final long upstream;
     private final long refused;
     private final long servfail;
+    private final long recursion;
 
     public DbBucket(long total,
                     long cache,
@@ -22,7 +23,8 @@ public class DbBucket implements Bucket {
                     long local,
                     long upstream,
                     long refused,
-                    long servfail) {
+                    long servfail,
+                    long recursion) {
         this.total = total;
         this.cache = cache;
         this.blocked = blocked;
@@ -30,10 +32,11 @@ public class DbBucket implements Bucket {
         this.upstream = upstream;
         this.refused = refused;
         this.servfail = servfail;
+        this.recursion = recursion;
     }
 
     public static DbBucket zero() {
-        return new DbBucket(0, 0, 0, 0, 0, 0, 0);
+        return new DbBucket(0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     @Override
@@ -48,6 +51,7 @@ public class DbBucket implements Bucket {
             case UPSTREAM -> upstream;
             case REFUSED -> refused;
             case SERVFAIL -> servfail;
+            case RECURSION -> recursion;
         };
     }
 

@@ -24,6 +24,7 @@ public class MemoryBucket implements Bucket {
     private final LongAdder local = new LongAdder();
     private final LongAdder refused = new LongAdder();
     private final LongAdder servfail = new LongAdder();
+    private final LongAdder recursion = new LongAdder();
 
     private final long MAX_QUERY_EVENTS = 5_000;
 
@@ -52,6 +53,7 @@ public class MemoryBucket implements Bucket {
                         longAdder.increment();
                     }
                 }
+                case RECURSION -> recursion.increment();
             }
         }
     }
@@ -77,6 +79,7 @@ public class MemoryBucket implements Bucket {
             case LOCAL -> count = local.sum();
             case REFUSED -> count = refused.sum();
             case SERVFAIL -> count = servfail.sum();
+            case RECURSION -> count = recursion.sum();
         }
         return count;
     }

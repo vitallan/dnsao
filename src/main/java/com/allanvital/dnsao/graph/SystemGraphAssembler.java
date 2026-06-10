@@ -14,6 +14,7 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.infra.dir.TempDir;
+import com.allanvital.dnsao.infra.log.Log;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 import com.allanvital.dnsao.web.json.JsonBuilder;
 import com.allanvital.dnsao.web.stats.StatsCollector;
@@ -56,6 +57,8 @@ public class SystemGraphAssembler {
                 resolverConf.getUpstreamQueueSize()
         );
 
+        logResolverMode(resolverConf);
+
         QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, upstreamThreadPoolExecutor, conf, cacheManager, notificationManager);
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
@@ -68,6 +71,16 @@ public class SystemGraphAssembler {
         JsonBuilder jsonBuilder = new JsonBuilder(statsCollector, cacheManager.getCacheStats());
 
         return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
+    }
+
+    private void logResolverMode(ResolverConf resolverConf) {
+        if (resolverConf.hasUpstreams()) {
+            int count = resolverConf.getUpstreams().size();
+            Log.INFRA.info("Mode: forward ({} upstream(s) configured)", count);
+        } else {
+            Log.INFRA.info("Mode: recursive (no upstreams configured)");
+            Log.INFRA.warn("Recursive mode enabled; do not expose publicly (open resolver risk).");
+        }
     }
 
     KeepKickstarter keepKickStarter(KeepProvider keepProvider, QueryProcessorFactory queryProcessorFactory) {

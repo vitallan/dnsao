@@ -7,6 +7,7 @@ public enum QueryResolvedBy {
     BLOCKED,
     REFUSED,
     SERVFAIL,
-    LOCAL
+    LOCAL,
+    RECURSION
 
 }

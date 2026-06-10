@@ -147,6 +147,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                     "upstream INTEGER NOT NULL," +
                     "refused INTEGER NOT NULL," +
                     "servfail INTEGER NOT NULL," +
+                    "recursion INTEGER NOT NULL," +
                     "elapsed_sum INTEGER NOT NULL" +
                     ")");
 
@@ -156,6 +157,12 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                     "hits INTEGER NOT NULL," +
                     "PRIMARY KEY(bucket_start_ms, upstream)" +
                     ")");
+        }
+
+        try (Statement st = writerConn.createStatement()) {
+            st.execute("ALTER TABLE bucket_agg ADD COLUMN recursion INTEGER NOT NULL DEFAULT 0");
+        } catch (SQLException e) {
+            // column already exists on fresh databases where CREATE TABLE already includes it
         }
     }
 
@@ -205,7 +212,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
         long first = latestAllowedBucket - (long) (maxBuckets - 1) * bucketIntervalMs;
 
         Map<Long, DbBucket> byStart = new HashMap<>();
-        String sql = "SELECT bucket_start_ms, total, cache, blocked, local, upstream, refused, servfail " +
+        String sql = "SELECT bucket_start_ms, total, cache, blocked, local, upstream, refused, servfail, recursion " +
                 "FROM bucket_agg WHERE bucket_start_ms >= ? AND bucket_start_ms <= ?";
         try (PreparedStatement ps = readConn.prepareStatement(sql)) {
             ps.setLong(1, first);
@@ -220,7 +227,8 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                             rs.getLong(5),
                             rs.getLong(6),
                             rs.getLong(7),
-                            rs.getLong(8)
+                            rs.getLong(8),
+                            rs.getLong(9)
                     ));
                 }
             }
@@ -337,6 +345,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                 case UPSTREAM -> "upstream";
                 case REFUSED -> "refused";
                 case SERVFAIL -> "servfail";
+                case RECURSION -> "recursion";
             };
         }
 
@@ -403,8 +412,8 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
     private void writeBatch(Connection conn, List<QueryEvent> events) throws SQLException {
         String insertEvent = "INSERT INTO query_event(time_ms, resolved_by, client, type, domain, answer, source, elapsed_ms) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        String upsertBucket = "INSERT INTO bucket_agg(bucket_start_ms, total, cache, blocked, local, upstream, refused, servfail, elapsed_sum) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+        String upsertBucket = "INSERT INTO bucket_agg(bucket_start_ms, total, cache, blocked, local, upstream, refused, servfail, recursion, elapsed_sum) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT(bucket_start_ms) DO UPDATE SET " +
                 "total = total + excluded.total, " +
                 "cache = cache + excluded.cache, " +
@@ -413,6 +422,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                 "upstream = upstream + excluded.upstream, " +
                 "refused = refused + excluded.refused, " +
                 "servfail = servfail + excluded.servfail, " +
+                "recursion = recursion + excluded.recursion, " +
                 "elapsed_sum = elapsed_sum + excluded.elapsed_sum";
 
         String upsertUpstream = "INSERT INTO upstream_hit(bucket_start_ms, upstream, hits) VALUES(?, ?, ?) " +
@@ -439,7 +449,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
 
                 long bucketStart = truncateToWindow(e.getTime(), bucketIntervalMs);
 
-                long cache = 0, blocked = 0, local = 0, up = 0, refused = 0, servfail = 0;
+                long cache = 0, blocked = 0, local = 0, up = 0, refused = 0, servfail = 0, recursion = 0;
                 QueryResolvedBy rb = e.getQueryResolvedBy();
                 if (rb != null) {
                     switch (rb) {
@@ -449,6 +459,7 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                         case UPSTREAM -> up = 1;
                         case REFUSED -> refused = 1;
                         case SERVFAIL -> servfail = 1;
+                        case RECURSION -> recursion = 1;
                     }
                 }
 
@@ -460,7 +471,8 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
                 bucket.setLong(6, up);
                 bucket.setLong(7, refused);
                 bucket.setLong(8, servfail);
-                bucket.setLong(9, e.getElapsedTime());
+                bucket.setLong(9, recursion);
+                bucket.setLong(10, e.getElapsedTime());
                 bucket.addBatch();
 
                 if (rb == QueryResolvedBy.UPSTREAM && e.getSource() != null) {

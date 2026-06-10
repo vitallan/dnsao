@@ -2,12 +2,14 @@ package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
+import com.allanvital.dnsao.conf.inner.ResolverMode;
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
+import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
@@ -59,9 +61,11 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
                                           UpstreamUnitConf upstreamUnitConf,
-                                          boolean blockingEnabled) {
+                                          boolean blockingEnabled,
+                                          RecursiveUnit recursiveUnit,
+                                          ResolverMode resolverMode) {
 
-        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
+        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled, recursiveUnit, resolverMode);
         return this.engineUnitProvider;
     }
 

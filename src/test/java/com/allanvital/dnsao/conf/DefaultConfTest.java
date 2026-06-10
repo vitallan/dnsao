@@ -51,14 +51,10 @@ public class DefaultConfTest extends TestHolder {
         List<Upstream> upstreams = resolverConf.getUpstreams();
         assertEquals(resolverConfUpstreams, upstreams);
 
-        assertFalse(upstreams.isEmpty());
-        assertEquals(1, upstreams.size());
+        assertTrue(upstreams.isEmpty());
+        assertFalse(resolverConf.hasUpstreams());
 
-        Upstream upstream = upstreams.get(0);
-        assertEquals("9.9.9.9", upstream.getIp());
-        assertEquals("udp", upstream.getProtocol());
-        assertEquals(53, upstream.getPort());
-        assertNull(upstream.getTlsAuthName());
+        assertEquals(ResolverMode.RECURSIVE, resolverConf.getResolverMode());
     }
 
 }

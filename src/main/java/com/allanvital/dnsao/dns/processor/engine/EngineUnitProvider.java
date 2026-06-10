@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.dns.processor.engine;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.conf.inner.ResolverMode;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.*;
@@ -24,12 +25,20 @@ public class EngineUnitProvider {
                               Map<String, String> localMappings,
                               CacheManager cacheManager,
                               UpstreamUnitConf upstreamUnitConf,
-                              boolean blockingEnabled) {
+                              boolean blockingEnabled,
+                              RecursiveUnit recursiveUnit,
+                              ResolverMode resolverMode) {
 
         engineUnits.add(new BlockUnit(blockDecider, blockingEnabled));
         engineUnits.add(new LocalMappingUnit(localMappings));
         engineUnits.add(new CacheUnit(cacheManager));
-        engineUnits.add(new UpstreamUnit(upstreamThreadPoolExecutor, upstreamUnitConf));
+
+        if (resolverMode == ResolverMode.RECURSIVE) {
+            engineUnits.add(recursiveUnit);
+        } else {
+            engineUnits.add(new UpstreamUnit(upstreamThreadPoolExecutor, upstreamUnitConf));
+        }
+
         engineUnits.add(new StaleUnit(cacheManager));
         engineUnits.add(new ServFailUnit());
     }
