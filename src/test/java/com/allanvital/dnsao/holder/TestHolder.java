@@ -1,6 +1,8 @@
 package com.allanvital.dnsao.holder;
 
 import com.allanvital.dnsao.conf.inner.LogConf;
+import com.allanvital.dnsao.dns.recursive.NameServerAddress;
+import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
 import com.allanvital.dnsao.graph.TestTelemetryListener;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.ConfLoader;
@@ -46,8 +48,21 @@ public class TestHolder {
     protected TestTimeProvider testTimeProvider = TestTimeProvider.getInstance();
     protected DnsServer dnsServer;
     protected FakeServer fakeUpstreamServer;
+    protected FakeServer fakeRootServer;
     protected final String LOCAL = "127.0.0.1";
     protected TestTelemetryListener eventListener;
+
+    protected void setupAndStartFakeRootServer() throws Exception {
+        fakeRootServer = new FakeUdpServer(0);
+        fakeRootServer.start();
+        RootHintsProvider fakeHints = new RootHintsProvider() {
+            @Override
+            public List<NameServerAddress> getRootServers() {
+                return List.of(new NameServerAddress("127.0.0.1", fakeRootServer.getPort()));
+            }
+        };
+        registerOverride(fakeHints);
+    }
 
     protected void fixUpstreamPorts() {
         List<Upstream> upstreams = conf.getResolver().getUpstreams();
@@ -104,6 +119,13 @@ public class TestHolder {
         if (fakeUpstreamServer != null) {
             try {
                 fakeUpstreamServer.stop();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (fakeRootServer != null) {
+            try {
+                fakeRootServer.stop();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -184,6 +206,11 @@ public class TestHolder {
 
     protected Message executeRequestOnOwnServer(String domain) throws IOException {
         return executeRequestOnOwnServer(dnsServer, domain, false);
+    }
+
+    protected Message executeRequestOnOwnServer(Message request) throws IOException {
+        SimpleResolver simpleResolver = buildResolver(dnsServer.getUdpPort());
+        return simpleResolver.send(request);
     }
 
     protected Message executeRequestOnOwnServer(DnsServer realServer, String domain, boolean tcp) throws IOException {

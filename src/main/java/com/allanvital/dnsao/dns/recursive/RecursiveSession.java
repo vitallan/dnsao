@@ -1,74 +1,75 @@
 package com.allanvital.dnsao.dns.recursive;
 
-import com.allanvital.dnsao.dns.processor.engine.unit.EngineUnit;
-import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
-import org.xbill.DNS.ARecord;
-import org.xbill.DNS.Flags;
-import org.xbill.DNS.Header;
+import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
-import org.xbill.DNS.Record;
-import org.xbill.DNS.Section;
-import org.xbill.DNS.Type;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.util.List;
 
 public class RecursiveSession {
 
-    private static final String STUB_DOMAIN = "allanvital.com.";
-    private static final String STUB_IP = "192.0.2.1";
+    private static final int MAX_ITERATIONS = 30;
 
-    private final Message request;
-    private final int timeoutMs;
+    private final StepRequest request;
+    private final StepResolverFactory stepResolverFactory;
+    private final RootHintsProvider rootHintsProvider;
 
-    public RecursiveSession(Message request, int timeoutMs) {
-        this.request = request;
-        this.timeoutMs = timeoutMs;
+    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider) {
+        this.request = StepRequest.fromMessage(dnsQueryRequest);
+        this.stepResolverFactory = stepResolverFactory;
+        this.rootHintsProvider = rootHintsProvider;
     }
 
     public Message resolve() {
-        Record question = request.getQuestion();
-
-        if (question == null || question.getType() != Type.A) {
+        if (request == null) {
             return null;
         }
-
-        Name qname = question.getName();
-        if (!qname.equals(Name.fromConstantString(STUB_DOMAIN))) {
+        StepResponse stepResponse = resolveInternal();
+        if (stepResponse == null) {
             return null;
         }
-
-        return buildResponse(request, qname, question.getDClass());
+        return stepResponse.toWireMessage();
     }
 
-    private Message buildResponse(Message request, Name qname, int dclass) {
-        Header qh = request.getHeader();
-        Message response = new Message(qh.getID());
-        Header rh = response.getHeader();
+    private StepResponse resolveInternal() {
+        Name qname = request.qname();
+        int qtype = request.qtype();
 
-        rh.setOpcode(qh.getOpcode());
-        rh.setFlag(Flags.QR);
-        rh.setFlag(Flags.RA);
+        List<NameServerAddress> currentServers = rootHintsProvider.getRootServers();
 
-        if (qh.getFlag(Flags.RD)) {
-            rh.setFlag(Flags.RD);
+        for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
+            for (NameServerAddress server : currentServers) {
+                StepResolver resolver = stepResolverFactory.create(server.ip(), server.port());
+                StepResponse response = resolver.send(new StepRequest(qname, qtype, request.qclass()));
+
+                if (response == null) {
+                    continue;
+                }
+
+                if (response.isNXDOMAIN()) {
+                    return response;
+                }
+
+                if (response.hasAnswer(qname, qtype)) {
+                    return response;
+                }
+
+                Name cnameTarget = response.getCnameTarget(qname);
+                if (cnameTarget != null) {
+                    qname = cnameTarget;
+                    currentServers = rootHintsProvider.getRootServers();
+                    break;
+                }
+
+                List<NameServerAddress> referralServers = response.getReferralServers();
+                if (!referralServers.isEmpty()) {
+                    currentServers = referralServers;
+                    break;
+                }
+            }
         }
 
-        response.addRecord(request.getQuestion(), Section.QUESTION);
-
-        try {
-            ARecord arec = new ARecord(qname, dclass, EngineUnit.DEFAULT_LOCAL_TTL, InetAddress.getByName(STUB_IP));
-            response.addRecord(arec, Section.ANSWER);
-        } catch (UnknownHostException e) {
-            throw new RuntimeException("failed to create stub A record", e);
-        }
-
-        return response;
-    }
-
-    public QueryResolvedBy resolvedBy() {
-        return QueryResolvedBy.RECURSION;
+        return null;
     }
 
 }

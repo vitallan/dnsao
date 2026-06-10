@@ -1,17 +1,23 @@
 package com.allanvital.dnsao.dns.recursive;
 
-import org.xbill.DNS.Message;
+import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 
 public class RecursiveSessionFactory {
 
-    private final int timeoutMs;
+    private final StepResolverFactory stepResolverFactory;
+    private final RootHintsProvider rootHintsProvider;
 
     public RecursiveSessionFactory(int timeoutMs) {
-        this.timeoutMs = timeoutMs;
+        this(timeoutMs, new RootHintsProvider());
     }
 
-    public RecursiveSession createSession(Message request) {
-        return new RecursiveSession(request, timeoutMs);
+    public RecursiveSessionFactory(int timeoutMs, RootHintsProvider rootHintsProvider) {
+        this.stepResolverFactory = new StepResolverFactory(timeoutMs);
+        this.rootHintsProvider = rootHintsProvider;
+    }
+
+    public RecursiveSession createSession(DnsQueryRequest request) {
+        return new RecursiveSession(request, stepResolverFactory, rootHintsProvider);
     }
 
 }

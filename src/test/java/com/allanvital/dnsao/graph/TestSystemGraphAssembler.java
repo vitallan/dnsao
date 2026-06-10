@@ -8,6 +8,7 @@ import com.allanvital.dnsao.conf.inner.ExpiredConf;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
+import com.allanvital.dnsao.infra.notification.NotificationManager;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -17,6 +18,7 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     private CacheManager cacheManager;
     private QueryProcessorFactory queryProcessorFactory;
     private TestQueryInfraAssembler queryInfraAssembler;
+    private NotificationManager notificationManager;
 
     public TestSystemGraphAssembler() {
         super();
@@ -43,6 +45,12 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
         return this.queryInfraAssembler;
     }
 
+    @Override
+    NotificationManager notificationManager(boolean queryLogEnabled) {
+        this.notificationManager = new NotificationManager(queryLogEnabled);
+        return this.notificationManager;
+    }
+
     public TestQueryInfraAssembler getQueryInfraAssembler() {
         return this.queryInfraAssembler;
     }
@@ -53,6 +61,10 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
 
     public QueryProcessorFactory getQueryProcessorFactory() {
         return queryProcessorFactory;
+    }
+
+    public NotificationManager getNotificationManager() {
+        return notificationManager;
     }
 
 }
