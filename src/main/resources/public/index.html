@@ -191,19 +191,18 @@
                     </div>
                 </div>
 
-                <div class="card mt-4">
+                <div class="card mt-4" id="cacheCard">
                     <header class="card-header">
-                        <p class="card-header-title">Cache Stats</p>
+                        <p class="card-header-title">Cache</p>
                     </header>
                     <div class="card-content">
-                        <table class="table is-fullwidth" id="cacheStatsTable">
-                            <tbody>
-                                <tr><td><strong>Max Size</strong></td><td id="cacheMaxSize" class="has-text-right">—</td></tr>
-                                <tr><td><strong>Utilization</strong></td><td id="cacheUtilization" class="has-text-right">—</td></tr>
-                                <tr><td><strong>LRU Eviction Count</strong></td><td id="cacheEvictionCount" class="has-text-right">—</td></tr>
-                            </tbody>
-                        </table>
+                        <div class="content">
+                            <div class="box p-0" style="height: 320px;">
+                                <canvas id="cacheSizeChart"></canvas>
+                            </div>
+                        </div>
                         <p id="cacheDisabledMsg" class="has-text-grey is-hidden">Cache is disabled</p>
+                        <p class="mt-2 has-text-grey" id="cacheEvictionLine">LRU eviction count: —</p>
                     </div>
                 </div>
             </div>
@@ -255,7 +254,7 @@
         renderSummary(stats.summary);
         buildChart(stats);
         buildUpstreamPie(stats);
-        renderCacheStats(stats.cache);
+        buildCacheSizeChart(stats);
 
         computeCacheRate(stats.summary);
         fillUpstreamLegend(stats.upstream);
@@ -330,32 +329,6 @@
       if (tag) tag.textContent = `${entries.length} upstreams`;
     }
 
-    function renderCacheStats(cache) {
-      const table = document.getElementById('cacheStatsTable');
-      const msg = document.getElementById('cacheDisabledMsg');
-      if (!cache) {
-        if (table) table.classList.add('is-hidden');
-        if (msg) msg.classList.remove('is-hidden');
-        return;
-      }
-      if (table) table.classList.remove('is-hidden');
-      if (msg) msg.classList.add('is-hidden');
-
-      const nf = new Intl.NumberFormat('pt-BR');
-      const setText = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val != null ? nf.format(val) : '—';
-      };
-
-      setText('cacheMaxSize', cache.maxSize);
-      setText('cacheEvictionCount', cache.evictionCount);
-
-      const utilization = (cache.maxSize > 0)
-        ? (cache.size / cache.maxSize * 100).toFixed(1) + '%'
-        : '—';
-      const utilEl = document.getElementById('cacheUtilization');
-      if (utilEl) utilEl.textContent = utilization;
-    }
     document.addEventListener('DOMContentLoaded', () => {
       const burger = document.querySelector('.navbar-burger');
       const menu = document.getElementById(burger.dataset.target);

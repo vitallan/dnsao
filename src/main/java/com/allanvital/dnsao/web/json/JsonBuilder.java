@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.web.json;
 
 import com.allanvital.dnsao.cache.CacheStats;
+import com.allanvital.dnsao.cache.SizeSnapshot;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.stats.Bucket;
 import com.allanvital.dnsao.web.stats.StatsCollector;
@@ -8,6 +9,7 @@ import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonObject;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -30,6 +32,7 @@ public class JsonBuilder {
         addPerUpstreamCount(root);
         addQueriesPerBucket(root);
         addCacheStats(root);
+        addCacheTemporal(root);
         return root;
     }
 
@@ -95,6 +98,31 @@ public class JsonBuilder {
         inner.add("columns", columns);
         inner.add("rows", rows);
         root.add("temporal", inner);
+    }
+
+    private void addCacheTemporal(JsonObject root) {
+        if (cacheStats == null) {
+            return;
+        }
+        List<SizeSnapshot> history = cacheStats.getSizeHistory();
+        if (history.isEmpty()) {
+            return;
+        }
+
+        JsonArray columns = Json.array().add("ts").add("size");
+        JsonArray rows = Json.array();
+
+        for (SizeSnapshot snapshot : history) {
+            JsonArray cells = Json.array();
+            cells.add(formatMillis(snapshot.timestamp(), "HH:mm"));
+            cells.add(snapshot.size());
+            rows.add(cells);
+        }
+
+        JsonObject inner = Json.object();
+        inner.add("columns", columns);
+        inner.add("rows", rows);
+        root.add("cacheTemporal", inner);
     }
 
     private void addSummarization(JsonObject root) {
