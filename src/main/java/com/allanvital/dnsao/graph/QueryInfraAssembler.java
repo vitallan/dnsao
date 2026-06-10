@@ -14,6 +14,7 @@ import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
 import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
+import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerProvider;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
@@ -64,7 +65,8 @@ public class QueryInfraAssembler {
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         RootHintsProvider rootHintsProvider = rootHintsProvider();
-        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider);
+        StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf);
+        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, stepResolverFactory);
         RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 
@@ -110,6 +112,11 @@ public class QueryInfraAssembler {
     private RootHintsProvider rootHintsProvider() {
         return overrideRegistry.getRegisteredModule(RootHintsProvider.class)
                 .orElse(new RootHintsProvider());
+    }
+
+    StepResolverFactory stepResolverFactory(MiscConf miscConf) {
+        return overrideRegistry.getRegisteredModule(StepResolverFactory.class)
+                .orElse(new StepResolverFactory(miscConf.getTimeout()));
     }
 
     DOTConnectionPoolFactory dotConnectionPoolFactory(SSLSocketFactory socketFactory, int maxPoolSize) {

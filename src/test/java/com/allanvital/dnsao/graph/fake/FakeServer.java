@@ -3,6 +3,8 @@ package com.allanvital.dnsao.graph.fake;
 import com.allanvital.dnsao.graph.bean.DnsQueryKey;
 import org.xbill.DNS.Message;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,7 +20,8 @@ public abstract class FakeServer {
 
     protected int port;
     protected final AtomicInteger callCounter = new AtomicInteger(0);
-    private final Map<DnsQueryKey, Message> mockResponses = new ConcurrentHashMap<>();
+    private final Map<DnsQueryKey, Message> repeatedResponses = new ConcurrentHashMap<>();
+    private final List<DnsQueryKey> receivedQueries = new ArrayList<>();
     private final AtomicReference<Integer> lastMessageId = new AtomicReference<>(0);
 
     public int getPort() {
@@ -37,20 +40,39 @@ public abstract class FakeServer {
         return callCounter.getAcquire();
     }
 
+    public List<DnsQueryKey> getReceivedQueries() {
+        synchronized (receivedQueries) {
+            return List.copyOf(receivedQueries);
+        }
+    }
+
+    public void clearReceivedQueries() {
+        synchronized (receivedQueries) {
+            receivedQueries.clear();
+        }
+    }
+
     public void mockResponse(Message query, Message responseTemplate) {
-        mockResponses.put(DnsQueryKey.fromMessage(query), responseTemplate);
+        DnsQueryKey key = DnsQueryKey.fromMessage(query);
+        repeatedResponses.put(key, responseTemplate);
     }
 
     protected Message getMockedResponse(Message request) {
         lastMessageId.set(request.getHeader().getID());
         DnsQueryKey key = DnsQueryKey.fromMessage(request);
+        synchronized (receivedQueries) {
+            receivedQueries.add(key);
+        }
 
-        Message template = mockResponses.get(key);
+        Message template = repeatedResponses.get(key);
         if (template == null) return null;
 
+        return cloneWithIncomingId(template, request);
+    }
+
+    private Message cloneWithIncomingId(Message template, Message request) {
         Message response = template.clone();
         response.getHeader().setID(request.getHeader().getID());
-
         return response;
     }
 

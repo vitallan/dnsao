@@ -60,6 +60,22 @@ public class MessageHelper {
         return buildAResponse(request, ipAddress, ttl, false);
     }
 
+    public static Message buildNsReferralResponse(Message request, String nsHost, long ttl) {
+        try {
+            Message response = baseResponseFrom(request);
+            Record question = request.getQuestion();
+            if (question != null) {
+                String nsHostToUse = nsHost.endsWith(".") ? nsHost : nsHost + ".";
+                NSRecord ns = new NSRecord(question.getName(), question.getDClass(), ttl, Name.fromString(nsHostToUse));
+                response.addRecord(ns, Section.AUTHORITY);
+            }
+            return response;
+        } catch (TextParseException e) {
+            Assertions.fail("failed to create NS referral response: " + e.getMessage());
+            return null;
+        }
+    }
+
     public static Message buildAResponse(Message request, String ipAddress, long ttl, boolean authenticated) {
         try {
             Message response = baseResponseFrom(request);

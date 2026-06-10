@@ -36,6 +36,26 @@ public class StepResponse {
         return null;
     }
 
+    public List<Name> getNSTargets() {
+        List<Name> targets = new ArrayList<>();
+        for (Record r : message.getSection(Section.AUTHORITY)) {
+            if (r instanceof NSRecord ns) {
+                targets.add(ns.getTarget());
+            }
+        }
+        return targets;
+    }
+
+    public List<NameServerAddress> getARecordAddresses(Name name) {
+        List<NameServerAddress> result = new ArrayList<>();
+        for (Record r : message.getSection(Section.ANSWER)) {
+            if (r instanceof ARecord a && r.getName().equals(name)) {
+                result.add(new NameServerAddress(a.getAddress().getHostAddress()));
+            }
+        }
+        return result;
+    }
+
     public List<NameServerAddress> getReferralServers() {
         List<NSRecord> nsRecords = new ArrayList<>();
         for (Record r : message.getSection(Section.AUTHORITY)) {
@@ -52,7 +72,7 @@ public class StepResponse {
             Name target = ns.getTarget();
             for (Record r : message.getSection(Section.ADDITIONAL)) {
                 if (r instanceof ARecord a && r.getName().equals(target)) {
-                    result.add(new NameServerAddress(a.getAddress().getHostAddress(), 53));
+                    result.add(new NameServerAddress(a.getAddress().getHostAddress()));
                 }
             }
         }

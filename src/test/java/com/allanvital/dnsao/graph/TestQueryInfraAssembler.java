@@ -2,6 +2,7 @@ package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
+import com.allanvital.dnsao.conf.inner.MiscConf;
 import com.allanvital.dnsao.conf.inner.ResolverMode;
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
@@ -10,11 +11,13 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
+import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.dns.remote.resolver.dot.DOTConnectionPoolFactory;
 import com.allanvital.dnsao.exc.ConfException;
+import com.allanvital.dnsao.graph.bean.TestStepResolverFactory;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
 
 import java.util.List;
@@ -28,6 +31,7 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     private ResolverProvider resolverProvider;
     private UpstreamResolverBuilder resolverBuilder;
     private EngineUnitProvider engineUnitProvider;
+    private TestStepResolverFactory testStepResolverFactory;
 
     public TestQueryInfraAssembler(OverrideRegistry overrideRegistry) {
         super(overrideRegistry);
@@ -40,6 +44,12 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
                                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
                                                NotificationManager notificationManager) throws ConfException {
         return super.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager);
+    }
+
+    @Override
+    StepResolverFactory stepResolverFactory(MiscConf miscConf) {
+        testStepResolverFactory = new TestStepResolverFactory(miscConf.getTimeout());
+        return testStepResolverFactory;
     }
 
     @Override
@@ -83,6 +93,10 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
 
     public EngineUnitProvider getEngineUnitProvider() {
         return engineUnitProvider;
+    }
+
+    public TestStepResolverFactory getTestStepResolverFactory() {
+        return testStepResolverFactory;
     }
 
 }

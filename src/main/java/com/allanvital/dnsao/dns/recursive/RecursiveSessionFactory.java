@@ -12,7 +12,11 @@ public class RecursiveSessionFactory {
     }
 
     public RecursiveSessionFactory(int timeoutMs, RootHintsProvider rootHintsProvider) {
-        this.stepResolverFactory = new StepResolverFactory(timeoutMs);
+        this(timeoutMs, rootHintsProvider, new StepResolverFactory(timeoutMs));
+    }
+
+    public RecursiveSessionFactory(int timeoutMs, RootHintsProvider rootHintsProvider, StepResolverFactory stepResolverFactory) {
+        this.stepResolverFactory = stepResolverFactory;
         this.rootHintsProvider = rootHintsProvider;
     }
 

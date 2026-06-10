@@ -48,21 +48,8 @@ public class TestHolder {
     protected TestTimeProvider testTimeProvider = TestTimeProvider.getInstance();
     protected DnsServer dnsServer;
     protected FakeServer fakeUpstreamServer;
-    protected FakeServer fakeRootServer;
     protected final String LOCAL = "127.0.0.1";
     protected TestTelemetryListener eventListener;
-
-    protected void setupAndStartFakeRootServer() throws Exception {
-        fakeRootServer = new FakeUdpServer(0);
-        fakeRootServer.start();
-        RootHintsProvider fakeHints = new RootHintsProvider() {
-            @Override
-            public List<NameServerAddress> getRootServers() {
-                return List.of(new NameServerAddress("127.0.0.1", fakeRootServer.getPort()));
-            }
-        };
-        registerOverride(fakeHints);
-    }
 
     protected void fixUpstreamPorts() {
         List<Upstream> upstreams = conf.getResolver().getUpstreams();
@@ -100,9 +87,20 @@ public class TestHolder {
         registerOverride(this.testExecutorServiceFactory);
         LogConfigurator.reset();
         LogConfigurator.configure(this.conf.getLog());
+        setRootHints();
         dnsServer = assembler.assemble(this.conf);
         queryInfraAssembler = assembler.getQueryInfraAssembler();
         dnsServer.start();
+    }
+
+    protected void setRootHints() throws ConfException {
+        RootHintsProvider fakeHints = new RootHintsProvider() {
+            @Override
+            public List<NameServerAddress> getRootServers() {
+                return List.of(new NameServerAddress("127.0.0.1", fakeUpstreamServer.getPort()));
+            }
+        };
+        registerOverride(fakeHints);
     }
 
     protected void safeStartWithPresetConf() throws ConfException {
@@ -119,13 +117,6 @@ public class TestHolder {
         if (fakeUpstreamServer != null) {
             try {
                 fakeUpstreamServer.stop();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        if (fakeRootServer != null) {
-            try {
-                fakeRootServer.stop();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
