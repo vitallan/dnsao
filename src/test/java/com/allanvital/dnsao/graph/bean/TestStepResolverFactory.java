@@ -3,6 +3,9 @@ package com.allanvital.dnsao.graph.bean;
 import com.allanvital.dnsao.dns.recursive.StepResolver;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import static com.allanvital.dnsao.Constants.DEFAULT_DNS_PORT;
 
 /**
@@ -11,6 +14,7 @@ import static com.allanvital.dnsao.Constants.DEFAULT_DNS_PORT;
 public class TestStepResolverFactory extends StepResolverFactory {
 
     private int portToUse = DEFAULT_DNS_PORT;
+    private final Map<String, Integer> routePortByIp = new ConcurrentHashMap<>();
 
     public TestStepResolverFactory(int timeoutMs) {
         super(timeoutMs);
@@ -24,9 +28,17 @@ public class TestStepResolverFactory extends StepResolverFactory {
         return portToUse;
     }
 
+    public void setRoute(String ip, int port) {
+        routePortByIp.put(ip, port);
+    }
+
+    public void clearRoutes() {
+        routePortByIp.clear();
+    }
+
     @Override
     public StepResolver create(String ip, int port) {
-        return super.create(ip, portToUse);
+        return super.create(ip, routePortByIp.getOrDefault(ip, portToUse));
     }
 
 }

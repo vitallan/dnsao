@@ -1,4 +1,4 @@
-package com.allanvital.dnsao.component;
+package com.allanvital.dnsao.component.recursive;
 
 import com.allanvital.dnsao.component.fixture.RecursiveScenarioFixture;
 import com.allanvital.dnsao.graph.bean.DnsQueryKey;
