@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.dns.recursive;
 
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
@@ -26,11 +27,13 @@ public class RecursiveSession {
     private final StepRequest request;
     private final StepResolverFactory stepResolverFactory;
     private final RootHintsProvider rootHintsProvider;
+    private final DNSSecMode dnsSecMode;
 
-    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider) {
-        this.request = StepRequest.fromMessage(dnsQueryRequest);
+    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider, DNSSecMode dnsSecMode) {
+        this.request = StepRequest.fromMessage(dnsQueryRequest, dnsSecMode);
         this.stepResolverFactory = stepResolverFactory;
         this.rootHintsProvider = rootHintsProvider;
+        this.dnsSecMode = dnsSecMode;
     }
 
     public Message resolve() {
@@ -73,7 +76,7 @@ public class RecursiveSession {
 
         for (int i = 0; i < minimizedNames.size(); i++) {
             Name minimizedName = minimizedNames.get(i);
-            StepRequest stepRequest = new StepRequest(minimizedName, Type.NS, request.qclass());
+            StepRequest stepRequest = new StepRequest(minimizedName, Type.NS, request.qclass(), dnsSecMode);
             boolean lastStep = i == minimizedNames.size() - 1;
             if (lastStep) {
                 currentServers = resolveNextServers(currentServers, stepRequest);
@@ -93,7 +96,7 @@ public class RecursiveSession {
         List<NameServerAddress> currentServers = servers;
 
         for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            StepResponse response = queryServers(currentServers, new StepRequest(currentName, qtype, request.qclass()));
+            StepResponse response = queryServers(currentServers, new StepRequest(currentName, qtype, request.qclass(), dnsSecMode));
             if (response == null) {
                 return null;
             }

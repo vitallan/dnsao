@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.component.recursive;
 
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.recursive.NameServerAddress;
 import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
 import com.allanvital.dnsao.graph.bean.DnsQueryKey;
@@ -13,6 +14,7 @@ import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.xbill.DNS.Message;
 
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -32,11 +34,12 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
     @BeforeEach
     public final void setupRecursiveScenarioBase() throws Exception {
         beforeServerStart();
+        loadConf("recursive-mode-stub.yml");
+        conf.getMisc().setQueryLog(false);
+        conf.getMisc().setDnssec(recursiveDnssecMode().name());
         if (fakeUpstreamServer == null) {
-            safeStart("recursive-mode-stub.yml");
+            safeStartWithPresetConf();
         } else {
-            loadConf("recursive-mode-stub.yml");
-            conf.getMisc().setQueryLog(false);
             safeStartWithPresetConf(true);
         }
 
@@ -86,6 +89,10 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
     protected void configureResolverRouting(TestStepResolverFactory stepResolverFactory) {
     }
 
+    protected DNSSecMode recursiveDnssecMode() {
+        return DNSSecMode.SIMPLE;
+    }
+
     protected FakeServer startFakeUdpServer() throws Exception {
         FakeServer server = new FakeUdpServer(0);
         server.start();
@@ -114,6 +121,10 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
 
     protected void assertReceivedQueries(FakeServer server, List<DnsQueryKey> expectedQueries) {
         assertEquals(expectedQueries, server.getReceivedQueries());
+    }
+
+    protected List<Message> getReceivedMessages(FakeServer server) {
+        return server.getReceivedMessages();
     }
 
     protected void assertReceivedUdpQueries(FakeUdpTcpDnsServer server, List<DnsQueryKey> expectedQueries) {

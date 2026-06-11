@@ -2,6 +2,7 @@ package com.allanvital.dnsao.component.recursive;
 
 import com.allanvital.dnsao.component.fixture.recursive.RecursiveTcpFallbackReferralFixture;
 import com.allanvital.dnsao.component.fixture.recursive.RecursiveTransportServerHistories;
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import com.allanvital.dnsao.graph.bean.TestStepResolverFactory;
 import com.allanvital.dnsao.graph.fake.FakeUdpTcpDnsServer;
@@ -32,6 +33,11 @@ public class RecursiveTcpFallbackReferralTest extends AbstractRecursiveScenarioT
     private RecursiveTransportServerHistories expectedHistories;
 
     @Override
+    protected DNSSecMode recursiveDnssecMode() {
+        return DNSSecMode.OFF;
+    }
+
+    @Override
     protected void beforeServerStart() throws Exception {
         transportServer = startFakeUdpTcpDnsServer();
         fakeUpstreamServer = transportServer;
@@ -59,7 +65,6 @@ public class RecursiveTcpFallbackReferralTest extends AbstractRecursiveScenarioT
     @Test
     public void retriesReferralDiscoveryOverTcpWhenUdpNsStepIsTruncated() throws IOException {
         Message response = executeRequestOnOwnServer(DOMAIN);
-
         assertNotNull(response);
         assertEquals(Rcode.NOERROR, response.getRcode());
         assertEquals(FINAL_IP, MessageHelper.extractIpFromResponseMessage(response));

@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.component.recursive;
 
+import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.component.fixture.recursive.RecursiveTcpFallbackFinalAnswerFixture;
 import com.allanvital.dnsao.component.fixture.recursive.RecursiveTransportServerHistories;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
@@ -30,6 +31,11 @@ public class RecursiveTcpFallbackFinalAnswerTest extends AbstractRecursiveScenar
 
     private FakeUdpTcpDnsServer transportServer;
     private RecursiveTransportServerHistories expectedHistories;
+
+    @Override
+    protected DNSSecMode recursiveDnssecMode() {
+        return DNSSecMode.OFF;
+    }
 
     @Override
     protected void beforeServerStart() throws Exception {

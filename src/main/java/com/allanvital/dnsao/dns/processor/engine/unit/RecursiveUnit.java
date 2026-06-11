@@ -25,6 +25,7 @@ public class RecursiveUnit implements EngineUnit {
         }
         response.getHeader().setFlag(Flags.QR);
         response.getHeader().setFlag(Flags.RA);
+        response.getHeader().unsetFlag(Flags.AD);
         if (hasRdFlag(dnsQueryRequest)) {
             response.getHeader().setFlag(Flags.RD);
         }

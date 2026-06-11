@@ -25,6 +25,7 @@ public abstract class FakeServer {
     private final Map<DnsQueryKey, Message> repeatedResponses = new ConcurrentHashMap<>();
     private final Map<DnsQueryKey, Deque<Message>> chainedResponses = new ConcurrentHashMap<>();
     private final List<DnsQueryKey> receivedQueries = new ArrayList<>();
+    private final List<Message> receivedMessages = new ArrayList<>();
     private final AtomicReference<Integer> lastMessageId = new AtomicReference<>(0);
 
     public int getPort() {
@@ -49,9 +50,18 @@ public abstract class FakeServer {
         }
     }
 
+    public List<Message> getReceivedMessages() {
+        synchronized (receivedMessages) {
+            return List.copyOf(receivedMessages);
+        }
+    }
+
     public void clearReceivedQueries() {
         synchronized (receivedQueries) {
             receivedQueries.clear();
+        }
+        synchronized (receivedMessages) {
+            receivedMessages.clear();
         }
     }
 
@@ -70,11 +80,14 @@ public abstract class FakeServer {
         chainedResponses.put(key, queue);
     }
 
-    protected Message getMockedResponse(Message request) {
+    protected synchronized Message getMockedResponse(Message request) {
         lastMessageId.set(request.getHeader().getID());
         DnsQueryKey key = DnsQueryKey.fromMessage(request);
         synchronized (receivedQueries) {
             receivedQueries.add(key);
+        }
+        synchronized (receivedMessages) {
+            receivedMessages.add(request.clone());
         }
 
         Deque<Message> chain = chainedResponses.get(key);

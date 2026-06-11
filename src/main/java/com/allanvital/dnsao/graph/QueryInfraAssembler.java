@@ -66,7 +66,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         RootHintsProvider rootHintsProvider = rootHintsProvider();
         StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf);
-        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, stepResolverFactory);
+        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, stepResolverFactory, miscConf.getDnsSecMode());
         RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 

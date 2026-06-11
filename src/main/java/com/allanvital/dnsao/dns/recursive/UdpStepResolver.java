@@ -53,6 +53,7 @@ public class UdpStepResolver implements StepResolver {
             resolver.setPort(port);
             resolver.setTimeout(Duration.ofSeconds(timeoutMs));
             resolver.setTCP(tcp);
+            resolver.setIgnoreTruncation(true);
             return resolver;
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("unknown host: " + ip, e);
