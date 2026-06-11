@@ -30,12 +30,14 @@ public class RecursiveSession {
     private final StepRequest request;
     private final StepResolverFactory stepResolverFactory;
     private final RootHintsProvider rootHintsProvider;
+    private final RecursiveCache recursiveCache;
     private final DNSSecMode dnsSecMode;
 
-    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider, DNSSecMode dnsSecMode) {
+    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider, RecursiveCache recursiveCache, DNSSecMode dnsSecMode) {
         this.request = StepRequest.fromMessage(dnsQueryRequest, dnsSecMode);
         this.stepResolverFactory = stepResolverFactory;
         this.rootHintsProvider = rootHintsProvider;
+        this.recursiveCache = recursiveCache;
         this.dnsSecMode = dnsSecMode;
     }
 
@@ -172,20 +174,36 @@ public class RecursiveSession {
     }
 
     private List<NameServerAddress> resolveNavigationServers(List<NameServerAddress> currentServers, StepRequest request) {
+        StepResponse cachedResponse = recursiveCache.get(request);
+        if (cachedResponse != null) {
+            if (cachedResponse.isNXDOMAIN()) {
+                return List.of();
+            }
+            return currentServers;
+        }
+
         Map.Entry<NameServerAddress, StepResponse> responseEntry = queryServersWithSource(currentServers, request);
         if (responseEntry == null || responseEntry.getValue().isNXDOMAIN()) {
             return List.of();
         }
+        recursiveCache.put(request, responseEntry.getValue());
         NameServerAddress respondingServer = responseEntry.getKey();
         return List.of(new NameServerAddress(respondingServer.ip(), respondingServer.port()));
     }
 
     private StepResponse queryServers(List<NameServerAddress> servers, StepRequest request) {
+        StepResponse cachedResponse = recursiveCache.get(request);
+        if (cachedResponse != null) {
+            return cachedResponse;
+        }
+
         Map.Entry<NameServerAddress, StepResponse> responseEntry = queryServersWithSource(servers, request);
         if (responseEntry == null) {
             return null;
         }
-        return responseEntry.getValue();
+        StepResponse response = responseEntry.getValue();
+        recursiveCache.put(request, response);
+        return response;
     }
 
     private Map.Entry<NameServerAddress, StepResponse> queryServersWithSource(List<NameServerAddress> servers, StepRequest request) {

@@ -1,0 +1,14 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+cache:
+  enabled: true
+  maxCacheEntries: 100
+  rewarm: false
+
+misc:
+  timeout: 3
+  dnssec: "off"
