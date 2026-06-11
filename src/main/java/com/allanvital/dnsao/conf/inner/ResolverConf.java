@@ -13,6 +13,7 @@ public class ResolverConf {
     private int multiplier = 1;
     private int tlsPoolSize = 3;
     private List<LocalMapping> localMappings = new LinkedList<>();
+    private String rootHintsUrl;
 
     // Shared upstream execution pool (used only in forward mode)
     private Integer upstreamThreadPoolSize;
@@ -55,6 +56,14 @@ public class ResolverConf {
 
     public void setLocalMappings(List<LocalMapping> localMappings) {
         this.localMappings = localMappings;
+    }
+
+    public String getRootHintsUrl() {
+        return rootHintsUrl;
+    }
+
+    public void setRootHintsUrl(String rootHintsUrl) {
+        this.rootHintsUrl = rootHintsUrl;
     }
 
     public Integer getUpstreamThreadPoolSize() {

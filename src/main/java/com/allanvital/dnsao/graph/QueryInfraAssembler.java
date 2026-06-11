@@ -13,7 +13,9 @@ import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator;
 import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
+import com.allanvital.dnsao.dns.recursive.DownloadRootHintsFileReader;
 import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
+import com.allanvital.dnsao.dns.recursive.RootHintsFileReader;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerProvider;
@@ -64,7 +66,7 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        RootHintsProvider rootHintsProvider = rootHintsProvider();
+        RootHintsProvider rootHintsProvider = rootHintsProvider(resolverConf);
         StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf);
         RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, stepResolverFactory, miscConf.getDnsSecMode());
         RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
@@ -109,9 +111,22 @@ public class QueryInfraAssembler {
                 .orElse(new UpstreamResolverBuilder(connectionPoolFactory, upstreams));
     }
 
-    private RootHintsProvider rootHintsProvider() {
-        return overrideRegistry.getRegisteredModule(RootHintsProvider.class)
-                .orElse(new RootHintsProvider());
+    private RootHintsProvider rootHintsProvider(ResolverConf resolverConf) {
+        java.util.Optional<RootHintsProvider> override = overrideRegistry.getRegisteredModule(RootHintsProvider.class);
+        if (override.isPresent()) {
+            return override.get();
+        }
+
+        RootHintsProvider rootHintsProvider = new RootHintsProvider(resolverConf.getRootHintsUrl(), rootHintsFileReader());
+        if (ResolverMode.RECURSIVE.equals(resolverConf.getResolverMode())) {
+            rootHintsProvider.initialize();
+        }
+        return rootHintsProvider;
+    }
+
+    private RootHintsFileReader rootHintsFileReader() {
+        return overrideRegistry.getRegisteredModule(RootHintsFileReader.class)
+                .orElse(new DownloadRootHintsFileReader());
     }
 
     StepResolverFactory stepResolverFactory(MiscConf miscConf) {

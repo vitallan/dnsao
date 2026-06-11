@@ -1,0 +1,1 @@
+.                        3600000      NS    A.ROOT-SERVERS.NET.

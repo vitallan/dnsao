@@ -53,6 +53,7 @@ public class DefaultConfTest extends TestHolder {
 
         assertTrue(upstreams.isEmpty());
         assertFalse(resolverConf.hasUpstreams());
+        assertNull(resolverConf.getRootHintsUrl());
 
         assertEquals(ResolverMode.RECURSIVE, resolverConf.getResolverMode());
     }
