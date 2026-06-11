@@ -23,6 +23,9 @@ import java.util.Set;
 public class RecursiveSession {
 
     private static final int MAX_ITERATIONS = 30;
+    // SIMPLE mode may retry a single recursive step without DO when the upstream
+    // explicitly rejects the DNSSEC-capable form of the query.
+    private static final List<Integer> DNSSEC_DOWNGRADE_RCODES = List.of(Rcode.REFUSED, Rcode.NOTIMP, Rcode.FORMERR);
 
     private final StepRequest request;
     private final StepResolverFactory stepResolverFactory;
@@ -189,11 +192,31 @@ public class RecursiveSession {
         for (NameServerAddress server : servers) {
             StepResolver resolver = stepResolverFactory.create(server.ip(), server.port());
             StepResponse response = resolver.send(request);
-            if (response != null) {
-                return new AbstractMap.SimpleEntry<>(server, response);
+            if (response == null) {
+                continue;
             }
+            if (shouldRetryWithoutDo(request, response)) {
+                StepRequest downgradedRequest = new StepRequest(request.qname(), request.qtype(), request.qclass(), DNSSecMode.OFF);
+                StepResponse downgradedResponse = resolver.send(downgradedRequest);
+                if (downgradedResponse != null) {
+                    return new AbstractMap.SimpleEntry<>(server, downgradedResponse);
+                }
+            }
+            return new AbstractMap.SimpleEntry<>(server, response);
         }
         return null;
+    }
+
+    private boolean shouldRetryWithoutDo(StepRequest request, StepResponse response) {
+        if (dnsSecMode != DNSSecMode.SIMPLE || !request.dnssecEnabled()) {
+            return false;
+        }
+        for (Integer retryRcode : DNSSEC_DOWNGRADE_RCODES) {
+            if (response.isRcode(retryRcode)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<NameServerAddress> resolveNsTargets(List<Name> targets) {

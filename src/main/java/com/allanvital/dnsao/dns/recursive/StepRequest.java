@@ -54,6 +54,10 @@ public class StepRequest {
         return qclass;
     }
 
+    public boolean dnssecEnabled() {
+        return dnssecEnabled;
+    }
+
     public Message toWireMessage() {
         Record question = Record.newRecord(qname, qtype, qclass);
         Message message = new Message();

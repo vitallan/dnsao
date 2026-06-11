@@ -30,6 +30,10 @@ public class StepResponse {
         return message.getRcode() == Rcode.NXDOMAIN;
     }
 
+    public boolean isRcode(int rcode) {
+        return message.getRcode() == rcode;
+    }
+
     public boolean hasAnswer(Name qname, int qtype) {
         for (Record r : message.getSection(Section.ANSWER)) {
             if (r.getName().equals(qname) && r.getType() == qtype) {

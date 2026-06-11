@@ -145,10 +145,14 @@ public class MessageHelper {
     }
 
     public static Message buildRefused(Message request) {
+        return buildResponseWithRcode(request, Rcode.REFUSED);
+    }
+
+    public static Message buildResponseWithRcode(Message request, int rcode) {
         Message response = baseResponseFrom(request);
         Header h = response.getHeader();
         h.setFlag(Flags.QR);
-        h.setRcode(Rcode.REFUSED);
+        h.setRcode(rcode);
         h.unsetFlag(Flags.AD);
         return response;
     }
