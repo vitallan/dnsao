@@ -31,6 +31,8 @@ public class FakeUdpTcpDnsServer extends FakeServer {
     private ExecutorService tcpPool;
     private final List<DnsQueryKey> receivedUdpQueries = new ArrayList<>();
     private final List<DnsQueryKey> receivedTcpQueries = new ArrayList<>();
+    private final List<Message> receivedUdpMessages = new ArrayList<>();
+    private final List<Message> receivedTcpMessages = new ArrayList<>();
 
     public FakeUdpTcpDnsServer(int port) throws IOException {
         this.tcpSocket = new ServerSocket();
@@ -74,6 +76,12 @@ public class FakeUdpTcpDnsServer extends FakeServer {
         synchronized (receivedTcpQueries) {
             receivedTcpQueries.clear();
         }
+        synchronized (receivedUdpMessages) {
+            receivedUdpMessages.clear();
+        }
+        synchronized (receivedTcpMessages) {
+            receivedTcpMessages.clear();
+        }
     }
 
     public List<DnsQueryKey> getReceivedUdpQueries() {
@@ -85,6 +93,18 @@ public class FakeUdpTcpDnsServer extends FakeServer {
     public List<DnsQueryKey> getReceivedTcpQueries() {
         synchronized (receivedTcpQueries) {
             return List.copyOf(receivedTcpQueries);
+        }
+    }
+
+    public List<Message> getReceivedUdpMessages() {
+        synchronized (receivedUdpMessages) {
+            return List.copyOf(receivedUdpMessages);
+        }
+    }
+
+    public List<Message> getReceivedTcpMessages() {
+        synchronized (receivedTcpMessages) {
+            return List.copyOf(receivedTcpMessages);
         }
     }
 
@@ -188,12 +208,18 @@ public class FakeUdpTcpDnsServer extends FakeServer {
         synchronized (receivedUdpQueries) {
             receivedUdpQueries.add(key);
         }
+        synchronized (receivedUdpMessages) {
+            receivedUdpMessages.add(request.clone());
+        }
     }
 
     private void recordTcpQuery(Message request) {
         DnsQueryKey key = DnsQueryKey.fromMessage(request);
         synchronized (receivedTcpQueries) {
             receivedTcpQueries.add(key);
+        }
+        synchronized (receivedTcpMessages) {
+            receivedTcpMessages.add(request.clone());
         }
     }
 }

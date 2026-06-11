@@ -102,7 +102,9 @@ public abstract class FakeServer {
         }
 
         Message template = repeatedResponses.get(key);
-        if (template == null) return null;
+        if (template == null) {
+            return null;
+        }
 
         return cloneWithIncomingId(template, request);
     }
