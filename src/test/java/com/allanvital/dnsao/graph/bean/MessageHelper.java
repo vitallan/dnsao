@@ -60,6 +60,27 @@ public class MessageHelper {
         return buildAResponse(request, ipAddress, ttl, false);
     }
 
+    public static Message buildAaaaResponse(Message request, String ipAddress, long ttl) {
+        try {
+            Message response = baseResponseFrom(request);
+
+            Record question = request.getQuestion();
+            if (question != null && question.getType() == Type.AAAA) {
+                Name qname = question.getName();
+                int qclass = question.getDClass();
+
+                AAAARecord aaaaRecord = new AAAARecord(qname, qclass, ttl, InetAddress.getByName(ipAddress));
+                response.addRecord(aaaaRecord, Section.ANSWER);
+            }
+
+            response.getHeader().unsetFlag(Flags.AD);
+            return response;
+        } catch (IOException e) {
+            Assertions.fail("failed to create AAAA response: " + e.getMessage());
+            return null;
+        }
+    }
+
     public static Message buildNsReferralResponse(Message request, String nsHost, long ttl) {
         try {
             Message response = baseResponseFrom(request);
@@ -128,6 +149,14 @@ public class MessageHelper {
         Header h = response.getHeader();
         h.setFlag(Flags.QR);
         h.setRcode(Rcode.REFUSED);
+        h.unsetFlag(Flags.AD);
+        return response;
+    }
+
+    public static Message buildTruncatedResponse(Message request) {
+        Message response = baseResponseFrom(request);
+        Header h = response.getHeader();
+        h.setFlag(Flags.TC);
         h.unsetFlag(Flags.AD);
         return response;
     }

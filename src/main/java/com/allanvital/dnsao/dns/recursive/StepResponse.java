@@ -1,7 +1,9 @@
 package com.allanvital.dnsao.dns.recursive;
 
 import org.xbill.DNS.ARecord;
+import org.xbill.DNS.AAAARecord;
 import org.xbill.DNS.CNAMERecord;
+import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
@@ -80,6 +82,16 @@ public class StepResponse {
         return result;
     }
 
+    public List<NameServerAddress> getAaaaRecordAddresses(Name name) {
+        List<NameServerAddress> result = new ArrayList<>();
+        for (Record r : message.getSection(Section.ANSWER)) {
+            if (r instanceof AAAARecord aaaa && r.getName().equals(name)) {
+                result.add(new NameServerAddress(aaaa.getAddress().getHostAddress()));
+            }
+        }
+        return result;
+    }
+
     public List<NameServerAddress> getReferralServers() {
         List<NSRecord> nsRecords = new ArrayList<>();
         for (Record r : message.getSection(Section.AUTHORITY)) {
@@ -94,13 +106,14 @@ public class StepResponse {
         List<NameServerAddress> result = new ArrayList<>();
         for (NSRecord ns : nsRecords) {
             Name target = ns.getTarget();
-            for (Record r : message.getSection(Section.ADDITIONAL)) {
-                if (r instanceof ARecord a && r.getName().equals(target)) {
-                    result.add(new NameServerAddress(a.getAddress().getHostAddress()));
-                }
-            }
+            addGlueAddresses(result, target, ARecord.class);
+            addGlueAddresses(result, target, AAAARecord.class);
         }
         return result;
+    }
+
+    public boolean isTruncated() {
+        return message.getHeader().getFlag(Flags.TC);
     }
 
     public boolean isNoDataFor(Name qname, int qtype) {
@@ -118,6 +131,19 @@ public class StepResponse {
 
     public Message toWireMessage() {
         return message;
+    }
+
+    private <T extends Record> void addGlueAddresses(List<NameServerAddress> result, Name target, Class<T> recordType) {
+        for (Record r : message.getSection(Section.ADDITIONAL)) {
+            if (!recordType.isInstance(r) || !r.getName().equals(target)) {
+                continue;
+            }
+            if (r instanceof ARecord a) {
+                result.add(new NameServerAddress(a.getAddress().getHostAddress()));
+            } else if (r instanceof AAAARecord aaaa) {
+                result.add(new NameServerAddress(aaaa.getAddress().getHostAddress()));
+            }
+        }
     }
 
 }

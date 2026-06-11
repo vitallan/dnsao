@@ -120,4 +120,20 @@ public abstract class AbstractRecursiveScenarioFixture {
     protected List<DnsQueryKey> history(DnsQueryKey... queries) {
         return List.of(queries);
     }
+
+    protected List<DnsQueryKey> mergeHistories(List<DnsQueryKey>... histories) {
+        List<DnsQueryKey> combined = new ArrayList<>();
+        for (List<DnsQueryKey> history : histories) {
+            combined.addAll(history);
+        }
+        return List.copyOf(combined);
+    }
+
+    protected List<DnsQueryKey> repeat(DnsQueryKey query, int times) {
+        List<DnsQueryKey> repeated = new ArrayList<>();
+        for (int i = 0; i < times; i++) {
+            repeated.add(query);
+        }
+        return List.copyOf(repeated);
+    }
 }

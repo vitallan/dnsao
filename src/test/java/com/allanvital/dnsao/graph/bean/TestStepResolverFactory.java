@@ -3,6 +3,8 @@ package com.allanvital.dnsao.graph.bean;
 import com.allanvital.dnsao.dns.recursive.StepResolver;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,7 +33,7 @@ public class TestStepResolverFactory extends StepResolverFactory {
     }
 
     public void setRoute(String ip, int port) {
-        routePortByIp.put(ip, port);
+        routePortByIp.put(normalizeIp(ip), port);
     }
 
     public void clearRoutes() {
@@ -40,11 +42,19 @@ public class TestStepResolverFactory extends StepResolverFactory {
 
     @Override
     public StepResolver create(String ip, int port) {
-        Integer routedPort = routePortByIp.get(ip);
+        Integer routedPort = routePortByIp.get(normalizeIp(ip));
         if (routedPort != null) {
             return super.create(LOOPBACK_IP, routedPort);
         }
         return super.create(ip, portToUse);
+    }
+
+    private String normalizeIp(String ip) {
+        try {
+            return InetAddress.getByName(ip).getHostAddress();
+        } catch (UnknownHostException e) {
+            return ip;
+        }
     }
 
 }

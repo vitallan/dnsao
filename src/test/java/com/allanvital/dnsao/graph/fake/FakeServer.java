@@ -4,6 +4,8 @@ import com.allanvital.dnsao.graph.bean.DnsQueryKey;
 import org.xbill.DNS.Message;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +23,7 @@ public abstract class FakeServer {
     protected int port;
     protected final AtomicInteger callCounter = new AtomicInteger(0);
     private final Map<DnsQueryKey, Message> repeatedResponses = new ConcurrentHashMap<>();
+    private final Map<DnsQueryKey, Deque<Message>> chainedResponses = new ConcurrentHashMap<>();
     private final List<DnsQueryKey> receivedQueries = new ArrayList<>();
     private final AtomicReference<Integer> lastMessageId = new AtomicReference<>(0);
 
@@ -55,6 +58,16 @@ public abstract class FakeServer {
     public void mockResponse(Message query, Message responseTemplate) {
         DnsQueryKey key = DnsQueryKey.fromMessage(query);
         repeatedResponses.put(key, responseTemplate);
+        chainedResponses.remove(key);
+    }
+
+    public void mockResponseChain(Message query, Message... responseTemplates) {
+        DnsQueryKey key = DnsQueryKey.fromMessage(query);
+        Deque<Message> queue = new ArrayDeque<>();
+        for (Message responseTemplate : responseTemplates) {
+            queue.addLast(responseTemplate);
+        }
+        chainedResponses.put(key, queue);
     }
 
     protected Message getMockedResponse(Message request) {
@@ -62,6 +75,17 @@ public abstract class FakeServer {
         DnsQueryKey key = DnsQueryKey.fromMessage(request);
         synchronized (receivedQueries) {
             receivedQueries.add(key);
+        }
+
+        Deque<Message> chain = chainedResponses.get(key);
+        if (chain != null) {
+            Message chainedTemplate = chain.pollFirst();
+            if (chain.isEmpty()) {
+                chainedResponses.remove(key);
+            }
+            if (chainedTemplate != null) {
+                return cloneWithIncomingId(chainedTemplate, request);
+            }
         }
 
         Message template = repeatedResponses.get(key);

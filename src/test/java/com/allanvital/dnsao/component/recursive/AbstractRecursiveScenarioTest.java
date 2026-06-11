@@ -5,6 +5,7 @@ import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
 import com.allanvital.dnsao.graph.bean.DnsQueryKey;
 import com.allanvital.dnsao.graph.bean.TestStepResolverFactory;
 import com.allanvital.dnsao.graph.fake.FakeServer;
+import com.allanvital.dnsao.graph.fake.FakeUdpTcpDnsServer;
 import com.allanvital.dnsao.graph.fake.FakeUdpServer;
 import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.infra.notification.NotificationManager;
@@ -97,6 +98,12 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
         return server;
     }
 
+    protected FakeUdpTcpDnsServer startFakeUdpTcpDnsServer() throws Exception {
+        FakeUdpTcpDnsServer server = new FakeUdpTcpDnsServer(0);
+        server.start();
+        return server;
+    }
+
     protected void trackExtraFakeServer(FakeServer server) {
         extraFakeServers.add(server);
     }
@@ -107,6 +114,14 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
 
     protected void assertReceivedQueries(FakeServer server, List<DnsQueryKey> expectedQueries) {
         assertEquals(expectedQueries, server.getReceivedQueries());
+    }
+
+    protected void assertReceivedUdpQueries(FakeUdpTcpDnsServer server, List<DnsQueryKey> expectedQueries) {
+        assertEquals(expectedQueries, server.getReceivedUdpQueries());
+    }
+
+    protected void assertReceivedTcpQueries(FakeUdpTcpDnsServer server, List<DnsQueryKey> expectedQueries) {
+        assertEquals(expectedQueries, server.getReceivedTcpQueries());
     }
 
     protected void assertRecursiveResolvedEvent() {

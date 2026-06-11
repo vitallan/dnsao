@@ -7,32 +7,55 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 
+/**
+ * @author Allan Vital (https://allanvital.com)
+ */
 public class UdpStepResolver implements StepResolver {
 
-    private final SimpleResolver resolver;
+    private final String ip;
+    private final int port;
+    private final int timeoutMs;
 
     public UdpStepResolver(String ip, int port, int timeoutMs) {
-        try {
-            this.resolver = new SimpleResolver(ip);
-            this.resolver.setPort(port);
-            this.resolver.setTimeout(Duration.ofMillis(timeoutMs));
-            this.resolver.setTCP(false);
-        } catch (UnknownHostException e) {
-            throw new IllegalArgumentException("unknown host: " + ip, e);
-        }
+        this.ip = ip;
+        this.port = port;
+        this.timeoutMs = timeoutMs;
     }
 
     @Override
     public StepResponse send(StepRequest request) {
         Message query = request.toWireMessage();
         try {
-            Message response = resolver.send(query);
+            SimpleResolver udpResolver = buildResolver(false);
+            Message response = udpResolver.send(query);
             if (response == null) {
                 return null;
             }
-            return new StepResponse(response);
+            StepResponse stepResponse = new StepResponse(response);
+            if (!stepResponse.isTruncated()) {
+                return stepResponse;
+            }
+
+            SimpleResolver tcpResolver = buildResolver(true);
+            Message tcpResponse = tcpResolver.send(query);
+            if (tcpResponse == null) {
+                return null;
+            }
+            return new StepResponse(tcpResponse);
         } catch (IOException e) {
             return null;
+        }
+    }
+
+    private SimpleResolver buildResolver(boolean tcp) {
+        try {
+            SimpleResolver resolver = new SimpleResolver(ip);
+            resolver.setPort(port);
+            resolver.setTimeout(Duration.ofSeconds(timeoutMs));
+            resolver.setTCP(tcp);
+            return resolver;
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("unknown host: " + ip, e);
         }
     }
 

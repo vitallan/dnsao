@@ -11,8 +11,10 @@ import org.xbill.DNS.Type;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -35,7 +37,7 @@ public class RecursiveSession {
         if (request == null) {
             return null;
         }
-        StepResponse stepResponse = resolveInternal(request.qname(), request.qtype());
+        StepResponse stepResponse = resolveInternal(request.qname(), request.qtype(), new HashSet<>());
         if (stepResponse == null) {
             return null;
         }
@@ -43,11 +45,26 @@ public class RecursiveSession {
     }
 
     private StepResponse resolveInternal(Name qname, int qtype) {
-        List<NameServerAddress> authoritativeServers = resolveAuthoritativeServers(qname);
-        if (authoritativeServers.isEmpty()) {
+        return resolveInternal(qname, qtype, new HashSet<>());
+    }
+
+    private StepResponse resolveInternal(Name qname, int qtype, Set<Name> cnamePath) {
+        if (!cnamePath.add(qname)) {
             return null;
         }
-        return resolveFinalQuery(qname, qtype, authoritativeServers);
+        if (cnamePath.size() > MAX_ITERATIONS) {
+            cnamePath.remove(qname);
+            return null;
+        }
+
+        List<NameServerAddress> authoritativeServers = resolveAuthoritativeServers(qname);
+        if (authoritativeServers.isEmpty()) {
+            cnamePath.remove(qname);
+            return null;
+        }
+        StepResponse response = resolveFinalQuery(qname, qtype, authoritativeServers, cnamePath);
+        cnamePath.remove(qname);
+        return response;
     }
 
     private List<NameServerAddress> resolveAuthoritativeServers(Name qname) {
@@ -71,7 +88,7 @@ public class RecursiveSession {
         return currentServers;
     }
 
-    private StepResponse resolveFinalQuery(Name qname, int qtype, List<NameServerAddress> servers) {
+    private StepResponse resolveFinalQuery(Name qname, int qtype, List<NameServerAddress> servers, Set<Name> cnamePath) {
         Name currentName = qname;
         List<NameServerAddress> currentServers = servers;
 
@@ -95,7 +112,7 @@ public class RecursiveSession {
 
             Name cnameTarget = response.getCnameTarget(currentName);
             if (cnameTarget != null) {
-                StepResponse targetResponse = resolveInternal(cnameTarget, qtype);
+                StepResponse targetResponse = resolveInternal(cnameTarget, qtype, cnamePath);
                 if (targetResponse == null) {
                     return null;
                 }
@@ -178,16 +195,28 @@ public class RecursiveSession {
 
     private List<NameServerAddress> resolveNsTargets(List<Name> targets) {
         for (Name target : targets) {
-            StepResponse response = resolveInternal(target, Type.A);
-            if (response == null) {
-                continue;
-            }
-            List<NameServerAddress> addresses = response.getARecordAddresses(target);
+            List<NameServerAddress> addresses = resolveNsTargetAddresses(target);
             if (!addresses.isEmpty()) {
                 return addresses;
             }
         }
         return List.of();
+    }
+
+    private List<NameServerAddress> resolveNsTargetAddresses(Name target) {
+        StepResponse ipv4Response = resolveInternal(target, Type.A);
+        if (ipv4Response != null) {
+            List<NameServerAddress> ipv4Addresses = ipv4Response.getARecordAddresses(target);
+            if (!ipv4Addresses.isEmpty()) {
+                return ipv4Addresses;
+            }
+        }
+
+        StepResponse ipv6Response = resolveInternal(target, Type.AAAA);
+        if (ipv6Response == null) {
+            return List.of();
+        }
+        return ipv6Response.getAaaaRecordAddresses(target);
     }
 
     private List<Name> buildMinimizedNsNames(Name qname) {
