@@ -31,10 +31,14 @@ public abstract class AbstractRecursiveScenarioTest extends TestHolder {
     private final List<FakeServer> extraFakeServers = new ArrayList<>();
     protected final List<QueryEvent> eventsReceived = new LinkedList<>();
 
+    protected String recursiveConfigResource() {
+        return "recursive-mode-stub.yml";
+    }
+
     @BeforeEach
     public final void setupRecursiveScenarioBase() throws Exception {
         beforeServerStart();
-        loadConf("recursive-mode-stub.yml");
+        loadConf(recursiveConfigResource());
         conf.getMisc().setQueryLog(false);
         conf.getMisc().setDnssec(recursiveDnssecMode().name());
         if (fakeUpstreamServer == null) {

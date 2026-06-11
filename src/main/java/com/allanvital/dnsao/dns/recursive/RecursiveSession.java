@@ -16,6 +16,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -26,19 +31,26 @@ public class RecursiveSession {
     // SIMPLE mode may retry a single recursive step without DO when the upstream
     // explicitly rejects the DNSSEC-capable form of the query.
     private static final List<Integer> DNSSEC_DOWNGRADE_RCODES = List.of(Rcode.REFUSED, Rcode.NOTIMP, Rcode.FORMERR);
+    private static final ExecutorService RACE_EXECUTOR = Executors.newCachedThreadPool(r -> {
+        Thread t = new Thread(r, "dns-race-worker");
+        t.setDaemon(true);
+        return t;
+    });
 
     private final StepRequest request;
     private final StepResolverFactory stepResolverFactory;
     private final RootHintsProvider rootHintsProvider;
     private final RecursiveCache recursiveCache;
     private final DNSSecMode dnsSecMode;
+    private final int timeoutSeconds;
 
-    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider, RecursiveCache recursiveCache, DNSSecMode dnsSecMode) {
+    public RecursiveSession(DnsQueryRequest dnsQueryRequest, StepResolverFactory stepResolverFactory, RootHintsProvider rootHintsProvider, RecursiveCache recursiveCache, DNSSecMode dnsSecMode, int timeoutSeconds) {
         this.request = StepRequest.fromMessage(dnsQueryRequest, dnsSecMode);
         this.stepResolverFactory = stepResolverFactory;
         this.rootHintsProvider = rootHintsProvider;
         this.recursiveCache = recursiveCache;
         this.dnsSecMode = dnsSecMode;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     public Message resolve() {
@@ -207,22 +219,46 @@ public class RecursiveSession {
     }
 
     private Map.Entry<NameServerAddress, StepResponse> queryServersWithSource(List<NameServerAddress> servers, StepRequest request) {
-        for (NameServerAddress server : servers) {
-            StepResolver resolver = stepResolverFactory.create(server.ip(), server.port());
-            StepResponse response = resolver.send(request);
-            if (response == null) {
-                continue;
-            }
-            if (shouldRetryWithoutDo(request, response)) {
-                StepRequest downgradedRequest = new StepRequest(request.qname(), request.qtype(), request.qclass(), DNSSecMode.OFF);
-                StepResponse downgradedResponse = resolver.send(downgradedRequest);
-                if (downgradedResponse != null) {
-                    return new AbstractMap.SimpleEntry<>(server, downgradedResponse);
-                }
-            }
-            return new AbstractMap.SimpleEntry<>(server, response);
+        if (servers.isEmpty()) {
+            return null;
         }
-        return null;
+        if (servers.size() == 1) {
+            return querySingleServer(servers.get(0), request);
+        }
+
+        CompletableFuture<Map.Entry<NameServerAddress, StepResponse>> raceResult = new CompletableFuture<>();
+        for (NameServerAddress server : servers) {
+            CompletableFuture.supplyAsync(() -> querySingleServer(server, request), RACE_EXECUTOR)
+                    .thenAccept(result -> {
+                        if (result != null) {
+                            raceResult.complete(result);
+                        }
+                    });
+        }
+
+        try {
+            return raceResult.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Map.Entry<NameServerAddress, StepResponse> querySingleServer(NameServerAddress server, StepRequest request) {
+        StepResolver resolver = stepResolverFactory.create(server.ip(), server.port());
+        StepResponse response = resolver.send(request);
+        if (response == null) {
+            return null;
+        }
+        if (shouldRetryWithoutDo(request, response)) {
+            StepRequest downgradedRequest = new StepRequest(request.qname(), request.qtype(), request.qclass(), DNSSecMode.OFF);
+            StepResponse downgradedResponse = resolver.send(downgradedRequest);
+            if (downgradedResponse != null) {
+                return new AbstractMap.SimpleEntry<>(server, downgradedResponse);
+            }
+        }
+        return new AbstractMap.SimpleEntry<>(server, response);
     }
 
     private boolean shouldRetryWithoutDo(StepRequest request, StepResponse response) {
