@@ -1,0 +1,20 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+cache:
+  enabled: false
+
+misc:
+  timeout: 5
+  dnssec: "off"
+  queryLog: false
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - ip: "9.9.9.9"
+      port: 53
+      protocol: "udp"
