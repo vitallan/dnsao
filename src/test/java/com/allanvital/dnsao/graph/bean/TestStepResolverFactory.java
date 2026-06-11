@@ -13,6 +13,8 @@ import static com.allanvital.dnsao.Constants.DEFAULT_DNS_PORT;
  */
 public class TestStepResolverFactory extends StepResolverFactory {
 
+    private static final String LOOPBACK_IP = "127.0.0.1";
+
     private int portToUse = DEFAULT_DNS_PORT;
     private final Map<String, Integer> routePortByIp = new ConcurrentHashMap<>();
 
@@ -38,7 +40,11 @@ public class TestStepResolverFactory extends StepResolverFactory {
 
     @Override
     public StepResolver create(String ip, int port) {
-        return super.create(ip, routePortByIp.getOrDefault(ip, portToUse));
+        Integer routedPort = routePortByIp.get(ip);
+        if (routedPort != null) {
+            return super.create(LOOPBACK_IP, routedPort);
+        }
+        return super.create(ip, portToUse);
     }
 
 }

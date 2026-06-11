@@ -1,11 +1,21 @@
 package com.allanvital.dnsao.dns.recursive;
 
-import org.xbill.DNS.*;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.CNAMERecord;
+import org.xbill.DNS.Message;
+import org.xbill.DNS.NSRecord;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.Section;
+import org.xbill.DNS.Type;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author Allan Vital (https://allanvital.com)
+ */
 public class StepResponse {
 
     private final Message message;
@@ -30,10 +40,24 @@ public class StepResponse {
     public Name getCnameTarget(Name qname) {
         for (Record r : message.getSection(Section.ANSWER)) {
             if (r.getType() == Type.CNAME && r.getName().equals(qname)) {
-                return ((org.xbill.DNS.CNAMERecord) r).getTarget();
+                return ((CNAMERecord) r).getTarget();
             }
         }
         return null;
+    }
+
+    public List<Record> getCnameAnswers(Name qname) {
+        List<Record> result = new ArrayList<>();
+        for (Record r : message.getSection(Section.ANSWER)) {
+            if (r.getType() == Type.CNAME && r.getName().equals(qname)) {
+                result.add(r);
+            }
+        }
+        return result;
+    }
+
+    public List<Record> getAnswerRecords() {
+        return List.copyOf(message.getSection(Section.ANSWER));
     }
 
     public List<Name> getNSTargets() {
@@ -77,6 +101,19 @@ public class StepResponse {
             }
         }
         return result;
+    }
+
+    public boolean isNoDataFor(Name qname, int qtype) {
+        if (message.getRcode() != Rcode.NOERROR) {
+            return false;
+        }
+        if (hasAnswer(qname, qtype)) {
+            return false;
+        }
+        if (getCnameTarget(qname) != null) {
+            return false;
+        }
+        return getNSTargets().isEmpty();
     }
 
     public Message toWireMessage() {

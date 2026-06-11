@@ -3,11 +3,20 @@ package com.allanvital.dnsao.dns.recursive;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.Rcode;
+import org.xbill.DNS.Section;
 import org.xbill.DNS.Type;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * @author Allan Vital (https://allanvital.com)
+ */
 public class RecursiveSession {
 
     private static final int MAX_ITERATIONS = 30;
@@ -45,9 +54,15 @@ public class RecursiveSession {
         List<NameServerAddress> currentServers = rootHintsProvider.getRootServers();
         List<Name> minimizedNames = buildMinimizedNsNames(qname);
 
-        for (Name minimizedName : minimizedNames) {
+        for (int i = 0; i < minimizedNames.size(); i++) {
+            Name minimizedName = minimizedNames.get(i);
             StepRequest stepRequest = new StepRequest(minimizedName, Type.NS, request.qclass());
-            currentServers = resolveNextServers(currentServers, stepRequest);
+            boolean lastStep = i == minimizedNames.size() - 1;
+            if (lastStep) {
+                currentServers = resolveNextServers(currentServers, stepRequest);
+            } else {
+                currentServers = resolveNavigationServers(currentServers, stepRequest);
+            }
             if (currentServers.isEmpty()) {
                 return List.of();
             }
@@ -74,9 +89,20 @@ public class RecursiveSession {
                 return response;
             }
 
+            if (response.isNoDataFor(currentName, qtype)) {
+                return response;
+            }
+
             Name cnameTarget = response.getCnameTarget(currentName);
             if (cnameTarget != null) {
-                return resolveInternal(cnameTarget, qtype);
+                StepResponse targetResponse = resolveInternal(cnameTarget, qtype);
+                if (targetResponse == null) {
+                    return null;
+                }
+                if (targetResponse.toWireMessage().getRcode() != Rcode.NOERROR) {
+                    return targetResponse;
+                }
+                return buildClientFacingResponse(qname, qtype, response.getCnameAnswers(currentName), targetResponse.getAnswerRecords());
             }
 
             List<NameServerAddress> referralServers = response.getReferralServers();
@@ -113,18 +139,38 @@ public class RecursiveSession {
 
         List<Name> nsTargets = response.getNSTargets();
         if (!nsTargets.isEmpty()) {
-            return resolveNsTargets(nsTargets);
+            List<NameServerAddress> resolvedTargets = resolveNsTargets(nsTargets);
+            if (!resolvedTargets.isEmpty()) {
+                return resolvedTargets;
+            }
         }
 
-        return List.of();
+        return currentServers;
+    }
+
+    private List<NameServerAddress> resolveNavigationServers(List<NameServerAddress> currentServers, StepRequest request) {
+        Map.Entry<NameServerAddress, StepResponse> responseEntry = queryServersWithSource(currentServers, request);
+        if (responseEntry == null || responseEntry.getValue().isNXDOMAIN()) {
+            return List.of();
+        }
+        NameServerAddress respondingServer = responseEntry.getKey();
+        return List.of(new NameServerAddress(respondingServer.ip(), respondingServer.port()));
     }
 
     private StepResponse queryServers(List<NameServerAddress> servers, StepRequest request) {
+        Map.Entry<NameServerAddress, StepResponse> responseEntry = queryServersWithSource(servers, request);
+        if (responseEntry == null) {
+            return null;
+        }
+        return responseEntry.getValue();
+    }
+
+    private Map.Entry<NameServerAddress, StepResponse> queryServersWithSource(List<NameServerAddress> servers, StepRequest request) {
         for (NameServerAddress server : servers) {
             StepResolver resolver = stepResolverFactory.create(server.ip(), server.port());
             StepResponse response = resolver.send(request);
             if (response != null) {
-                return response;
+                return new AbstractMap.SimpleEntry<>(server, response);
             }
         }
         return null;
@@ -155,11 +201,31 @@ public class RecursiveSession {
 
         String[] labels = normalized.split("\\.");
         List<Name> result = new ArrayList<>();
-        for (int start = labels.length - 1; start >= 0; start--) {
-            String joined = String.join(".", java.util.Arrays.copyOfRange(labels, start, labels.length));
-            result.add(toName(joined));
+        result.add(toName(labels[labels.length - 1]));
+
+        if (labels.length > 1) {
+            String joined = String.join(".", Arrays.copyOfRange(labels, 0, labels.length));
+            Name fullName = toName(joined);
+            if (!fullName.equals(result.get(0))) {
+                result.add(fullName);
+            }
         }
         return result;
+    }
+
+    private StepResponse buildClientFacingResponse(Name qname, int qtype, List<Record> leadingAnswers, List<Record> trailingAnswers) {
+        Message response = new Message();
+        response.getHeader().setRcode(Rcode.NOERROR);
+        response.addRecord(Record.newRecord(qname, qtype, request.qclass()), Section.QUESTION);
+        addAnswerRecords(response, leadingAnswers);
+        addAnswerRecords(response, trailingAnswers);
+        return new StepResponse(response);
+    }
+
+    private void addAnswerRecords(Message response, List<Record> answers) {
+        for (Record answer : answers) {
+            response.addRecord(answer, Section.ANSWER);
+        }
     }
 
     private Name toName(String qname) {
