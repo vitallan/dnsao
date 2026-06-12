@@ -28,6 +28,10 @@ public class ExecutorServiceFactory {
         return Executors.newFixedThreadPool(size, buildThreadFactory(poolName));
     }
 
+    public ExecutorService buildCachedExecutor(String poolName) {
+        return Executors.newCachedThreadPool(buildThreadFactory(poolName));
+    }
+
     public ScheduledExecutorService buildScheduledExecutor(String poolName) {
         return Executors.newSingleThreadScheduledExecutor(buildThreadFactory(poolName));
     }

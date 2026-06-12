@@ -24,6 +24,13 @@ public class TestExecutorServiceFactory extends ExecutorServiceFactory {
     }
 
     @Override
+    public ExecutorService buildCachedExecutor(String poolName) {
+        ExecutorService service = super.buildCachedExecutor(poolName);
+        executorServices.add(service);
+        return service;
+    }
+
+    @Override
     public ScheduledExecutorService buildScheduledExecutor(String poolName) {
         ScheduledExecutorService service = super.buildScheduledExecutor(poolName);
         executorServices.add(service);
