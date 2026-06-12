@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -58,12 +59,11 @@ public class FakeUdpTcpDnsServer extends FakeServer {
         tcpSocket.close();
         if (tcpPool != null) {
             tcpPool.shutdownNow();
+            tcpPool.awaitTermination(3, TimeUnit.SECONDS);
         }
-        while (!udpSocket.isClosed() || tcpSocket.isClosed() && udpListenerThread.isAlive()) {
+        udpListenerThread.join(3000);
+        while (!udpSocket.isClosed() || !tcpSocket.isClosed()) {
             Thread.yield();
-            if (!udpListenerThread.isAlive()) {
-                break;
-            }
         }
     }
 

@@ -4,7 +4,6 @@ import com.allanvital.dnsao.dns.recursive.NameServerAddress;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import com.allanvital.dnsao.graph.bean.TestStepResolverFactory;
 import com.allanvital.dnsao.graph.fake.FakeServer;
-import com.allanvital.dnsao.graph.fake.FakeUdpServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xbill.DNS.Message;
@@ -12,7 +11,12 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Type;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,14 +34,17 @@ public class RecursiveConcurrentRaceAllServersReceiveQueryTest extends AbstractR
 
     private FakeServer firstRootServer;
     private FakeServer secondRootServer;
+    private CountDownLatch rootQueriesObserved;
 
     @Override
     protected void beforeServerStart() throws Exception {
-        firstRootServer = new FakeUdpServer(0);
+        rootQueriesObserved = new CountDownLatch(2);
+
+        firstRootServer = new BarrierFakeUdpServer(0, rootQueriesObserved);
         firstRootServer.start();
         trackExtraFakeServer(firstRootServer);
 
-        secondRootServer = new FakeUdpServer(0);
+        secondRootServer = new BarrierFakeUdpServer(0, rootQueriesObserved);
         secondRootServer.start();
         trackExtraFakeServer(secondRootServer);
     }
@@ -91,5 +98,81 @@ public class RecursiveConcurrentRaceAllServersReceiveQueryTest extends AbstractR
                 "First root hint server should have received at least one query");
         assertFalse(secondRootServer.getReceivedQueries().isEmpty(),
                 "Second root hint server should have received at least one query");
+    }
+
+    private static final class BarrierFakeUdpServer extends FakeServer {
+
+        private final DatagramSocket socket;
+        private final Thread listenerThread;
+        private final CountDownLatch receivedLatch;
+
+        private BarrierFakeUdpServer(int port, CountDownLatch receivedLatch) throws SocketException {
+            this.receivedLatch = receivedLatch;
+            this.socket = new DatagramSocket(port, null);
+            if (socket.getLocalPort() != this.port) {
+                this.port = socket.getLocalPort();
+            }
+            this.listenerThread = new Thread(() -> {
+                byte[] buffer = new byte[2048];
+                try {
+                    while (!socket.isClosed()) {
+                        try {
+                            DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                            try {
+                                socket.receive(packet);
+                            } catch (SocketException e) {
+                                break;
+                            }
+
+                            byte[] response = handleRequest(packet.getData(), packet.getLength());
+                            if (response != null) {
+                                callCounter.incrementAndGet();
+                                DatagramPacket responsePacket = new DatagramPacket(
+                                        response, response.length, packet.getAddress(), packet.getPort());
+                                socket.send(responsePacket);
+                            }
+
+                        } catch (IOException e) {
+                            if (!socket.isClosed()) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+                } finally {
+                    clearCallCount();
+                    socket.close();
+                }
+            });
+        }
+
+        @Override
+        public void start() {
+            listenerThread.start();
+        }
+
+        @Override
+        public void stop() throws Exception {
+            clearCallCount();
+            socket.close();
+            listenerThread.join(3000);
+        }
+
+        private byte[] handleRequest(byte[] requestData, int length) {
+            try {
+                Message request = new Message(requestData);
+                Message response = getMockedResponse(request);
+                receivedLatch.countDown();
+                receivedLatch.await(1, TimeUnit.SECONDS);
+                if (response == null) {
+                    return MessageHelper.buildServfailFrom(request).toWire();
+                }
+                return response.toWire();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
     }
 }

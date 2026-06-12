@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
@@ -134,9 +135,13 @@ public class TestHolder {
     }
 
     private void cleanDbFiles() {
-        try (var files = Files.list(Paths.get(TempDir.getTempDir()))) {
+        Path tempDirPath = Paths.get(TempDir.getTempDir());
+        try (var files = Files.list(tempDirPath)) {
             files.filter(f -> f.getFileName().toString().startsWith(DB_DEFAULT_NAME))
                     .forEach(f -> { try { Files.deleteIfExists(f); } catch (Exception ignored) {} });
+        } catch (Exception ignored) {}
+        try {
+            Files.deleteIfExists(tempDirPath);
         } catch (Exception ignored) {}
     }
 

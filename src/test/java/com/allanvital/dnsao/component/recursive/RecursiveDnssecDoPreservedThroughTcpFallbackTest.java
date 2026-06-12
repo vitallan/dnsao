@@ -45,6 +45,7 @@ public class RecursiveDnssecDoPreservedThroughTcpFallbackTest extends AbstractRe
     @Override
     protected void beforeServerStart() throws Exception {
         transportServer = startFakeUdpTcpDnsServer();
+        trackExtraFakeServer(transportServer);
         fakeUpstreamServer = startFakeUdpServer();
     }
 
