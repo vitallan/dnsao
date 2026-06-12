@@ -30,6 +30,7 @@ public class DnsServer {
     private final WebServer webServer;
     private final StatsCollector statsCollector;
     private final UpstreamThreadPoolExecutor upstreamThreadPoolExecutor;
+    private final ExecutorServiceFactory executorServiceFactory;
 
     public DnsServer(ServerConf conf,
                      QueryProcessorFactory factory,
@@ -40,6 +41,7 @@ public class DnsServer {
         this.port = conf.getPort();
         this.statsCollector = statsCollector;
         this.upstreamThreadPoolExecutor = upstreamThreadPoolExecutor;
+        this.executorServiceFactory = executorServiceFactory;
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
@@ -97,6 +99,9 @@ public class DnsServer {
             } catch (Exception e) {
                 Log.DNS.warn("failed closing upstream executor", e);
             }
+        }
+        if (executorServiceFactory != null) {
+            executorServiceFactory.closeAllExecutors();
         }
         running = false;
         Log.DNS.info("DNS server stopped");

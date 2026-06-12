@@ -110,6 +110,9 @@ public class StepResponse {
         List<NameServerAddress> result = new ArrayList<>();
         for (NSRecord ns : nsRecords) {
             Name target = ns.getTarget();
+            if (!isInBailiwick(target, ns.getName())) {
+                continue;
+            }
             addGlueAddresses(result, target, ARecord.class);
             addGlueAddresses(result, target, AAAARecord.class);
         }
@@ -148,6 +151,38 @@ public class StepResponse {
                 result.add(new NameServerAddress(aaaa.getAddress().getHostAddress()));
             }
         }
+    }
+
+    private boolean isInBailiwick(Name target, Name referralOwner) {
+        if (Name.root.equals(referralOwner)) {
+            return true;
+        }
+        if (isTopLevelDomain(referralOwner)) {
+            return true;
+        }
+        return topLevelDomain(target).equals(topLevelDomain(referralOwner));
+    }
+
+    private boolean isTopLevelDomain(Name name) {
+        String normalized = normalize(name);
+        return !normalized.contains(".");
+    }
+
+    private String topLevelDomain(Name name) {
+        String normalized = normalize(name);
+        int lastDot = normalized.lastIndexOf('.');
+        if (lastDot < 0) {
+            return normalized;
+        }
+        return normalized.substring(lastDot + 1);
+    }
+
+    private String normalize(Name name) {
+        String value = name.toString();
+        if (value.endsWith(".")) {
+            value = value.substring(0, value.length() - 1);
+        }
+        return value;
     }
 
 }

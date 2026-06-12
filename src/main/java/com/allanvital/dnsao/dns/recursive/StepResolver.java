@@ -4,4 +4,7 @@ public interface StepResolver {
 
     StepResponse send(StepRequest request);
 
+    default void close() {
+    }
+
 }
