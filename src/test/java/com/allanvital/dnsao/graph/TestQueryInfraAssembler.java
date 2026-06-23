@@ -11,6 +11,7 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
+import com.allanvital.dnsao.dns.recursive.RecursiveStatsCollector;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
@@ -32,6 +33,7 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     private UpstreamResolverBuilder resolverBuilder;
     private EngineUnitProvider engineUnitProvider;
     private TestStepResolverFactory testStepResolverFactory;
+    private RecursiveStatsCollector recursiveStatsCollector;
 
     public TestQueryInfraAssembler(OverrideRegistry overrideRegistry) {
         super(overrideRegistry);
@@ -47,9 +49,15 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     }
 
     @Override
-    StepResolverFactory stepResolverFactory(MiscConf miscConf) {
-        testStepResolverFactory = new TestStepResolverFactory(miscConf.getTimeout());
+    StepResolverFactory stepResolverFactory(MiscConf miscConf, RecursiveStatsCollector recursiveStatsCollector) {
+        testStepResolverFactory = new TestStepResolverFactory(miscConf.getTimeout(), recursiveStatsCollector);
         return testStepResolverFactory;
+    }
+
+    @Override
+    RecursiveStatsCollector recursiveStatsCollector() {
+        this.recursiveStatsCollector = super.recursiveStatsCollector();
+        return this.recursiveStatsCollector;
     }
 
     @Override
@@ -97,6 +105,10 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
 
     public TestStepResolverFactory getTestStepResolverFactory() {
         return testStepResolverFactory;
+    }
+
+    public RecursiveStatsCollector getRecursiveStatsCollector() {
+        return recursiveStatsCollector;
     }
 
 }

@@ -1,7 +1,9 @@
 package com.allanvital.dnsao.dns.recursive;
 
+import com.allanvital.dnsao.infra.log.Log;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.Type;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -20,13 +22,19 @@ public class UdpStepResolver implements StepResolver {
     private final String ip;
     private final int port;
     private final int timeoutSeconds;
+    private final RecursiveStatsCollector recursiveStatsCollector;
     private volatile DatagramSocket activeUdpSocket;
     private volatile Socket activeTcpSocket;
 
     public UdpStepResolver(String ip, int port, int timeoutSeconds) {
+        this(ip, port, timeoutSeconds, new NoOpRecursiveStatsCollector());
+    }
+
+    public UdpStepResolver(String ip, int port, int timeoutSeconds, RecursiveStatsCollector recursiveStatsCollector) {
         this.ip = ip;
         this.port = port;
         this.timeoutSeconds = timeoutSeconds;
+        this.recursiveStatsCollector = recursiveStatsCollector;
     }
 
     @Override
@@ -42,10 +50,14 @@ public class UdpStepResolver implements StepResolver {
                 return stepResponse;
             }
 
+            recursiveStatsCollector.increment(RecursiveMetric.TCP_FALLBACK_STARTED);
+            Log.DNS.trace("recursive tcp fallback started qtype={} qname={} server={}:{}", query.getQuestion().getType(), query.getQuestion().getName(), ip, port);
             Message tcpResponse = sendTcp(query);
             if (tcpResponse == null) {
+                recursiveStatsCollector.increment(RecursiveMetric.TCP_FALLBACK_FAILED);
                 return null;
             }
+            recursiveStatsCollector.increment(RecursiveMetric.TCP_FALLBACK_SUCCEEDED);
             return new StepResponse(tcpResponse);
         } catch (IOException e) {
             return null;
@@ -74,12 +86,32 @@ public class UdpStepResolver implements StepResolver {
                 DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
                 socket.receive(responsePacket);
 
+                if (!responsePacket.getAddress().equals(address) || responsePacket.getPort() != port) {
+                    recursiveStatsCollector.increment(RecursiveMetric.UDP_REJECTED_WRONG_SOURCE);
+                    Log.DNS.trace("recursive udp reply rejected reason=wrong-source qtype={} qname={} expected={}:{} received={}:{}",
+                            query.getQuestion().getType(),
+                            query.getQuestion().getName(),
+                            ip,
+                            port,
+                            responsePacket.getAddress().getHostAddress(),
+                            responsePacket.getPort());
+                    continue;
+                }
+
                 byte[] responseBytes = new byte[responsePacket.getLength()];
                 System.arraycopy(responsePacket.getData(), responsePacket.getOffset(), responseBytes, 0, responsePacket.getLength());
                 Message response = new Message(responseBytes);
-                if (isValidReply(query, response)) {
+                RecursiveMetric invalidReplyMetric = invalidReplyMetric(query, response);
+                if (invalidReplyMetric == null) {
                     return response;
                 }
+                recursiveStatsCollector.increment(invalidReplyMetric);
+                Log.DNS.trace("recursive udp reply rejected reason={} qtype={} qname={} server={}:{}",
+                        invalidReplyMetric.name().toLowerCase(),
+                        Type.string(query.getQuestion().getType()),
+                        query.getQuestion().getName(),
+                        ip,
+                        port);
             }
             return null;
         } finally {
@@ -113,28 +145,31 @@ public class UdpStepResolver implements StepResolver {
         }
     }
 
-    private boolean isValidReply(Message query, Message response) {
+    private RecursiveMetric invalidReplyMetric(Message query, Message response) {
         if (!response.getHeader().getFlag(org.xbill.DNS.Flags.QR)) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_MISSING_QR;
         }
         if (response.getHeader().getID() != query.getHeader().getID()) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_WRONG_ID;
         }
         if (response.getHeader().getOpcode() != query.getHeader().getOpcode()) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_WRONG_QUESTION;
         }
         Record queryQuestion = query.getQuestion();
         Record responseQuestion = response.getQuestion();
         if (queryQuestion == null || responseQuestion == null) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_WRONG_QUESTION;
         }
         if (!queryQuestion.getName().equals(responseQuestion.getName())) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_WRONG_QUESTION;
         }
         if (queryQuestion.getType() != responseQuestion.getType()) {
-            return false;
+            return RecursiveMetric.UDP_REJECTED_WRONG_QUESTION;
         }
-        return queryQuestion.getDClass() == responseQuestion.getDClass();
+        if (queryQuestion.getDClass() != responseQuestion.getDClass()) {
+            return RecursiveMetric.UDP_REJECTED_WRONG_QUESTION;
+        }
+        return null;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.allanvital.dnsao.dns.recursive;
 
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
+import com.allanvital.dnsao.infra.log.Log;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -15,6 +16,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -22,29 +25,54 @@ import java.util.Set;
 public class RecursiveSession {
 
     private static final int MAX_ITERATIONS = 30;
+    private static final AtomicLong SESSION_COUNTER = new AtomicLong(1);
 
     private final StepRequest request;
     private final ServerRacer serverRacer;
     private final RootHintsProvider rootHintsProvider;
     private final RecursiveCache recursiveCache;
     private final DNSSecMode dnsSecMode;
+    private final RecursiveStatsCollector recursiveStatsCollector;
+    private final long sessionId;
+    private int stepCount;
 
     public RecursiveSession(DnsQueryRequest dnsQueryRequest, ServerRacer serverRacer, RootHintsProvider rootHintsProvider, RecursiveCache recursiveCache, DNSSecMode dnsSecMode) {
+        this(dnsQueryRequest, serverRacer, rootHintsProvider, recursiveCache, dnsSecMode, new NoOpRecursiveStatsCollector());
+    }
+
+    public RecursiveSession(DnsQueryRequest dnsQueryRequest, ServerRacer serverRacer, RootHintsProvider rootHintsProvider, RecursiveCache recursiveCache, DNSSecMode dnsSecMode, RecursiveStatsCollector recursiveStatsCollector) {
         this.request = StepRequest.fromMessage(dnsQueryRequest, dnsSecMode);
         this.serverRacer = serverRacer;
         this.rootHintsProvider = rootHintsProvider;
         this.recursiveCache = recursiveCache;
         this.dnsSecMode = dnsSecMode;
+        this.recursiveStatsCollector = recursiveStatsCollector;
+        this.sessionId = SESSION_COUNTER.getAndIncrement();
     }
 
     public Message resolve() {
         if (request == null) {
             return null;
         }
+        recursiveStatsCollector.increment(RecursiveMetric.SESSION_STARTED);
+        long startNs = System.nanoTime();
+        Log.DNS.trace("recursive start session={} qtype={} qname={} dnssec={}", sessionId, Type.string(request.qtype()), request.qname(), dnsSecMode);
         StepResponse stepResponse = resolveInternal(request.qname(), request.qtype(), new HashSet<>());
+        recursiveStatsCollector.add(RecursiveMetric.SESSION_STEP_SUM, stepCount);
+        recursiveStatsCollector.add(RecursiveMetric.SESSION_ELAPSED_MS_SUM, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs));
         if (stepResponse == null) {
+            recursiveStatsCollector.increment(RecursiveMetric.SESSION_FAILED);
+            Log.DNS.trace("recursive done session={} qtype={} qname={} outcome=failed steps={}", sessionId, Type.string(request.qtype()), request.qname(), stepCount);
             return null;
         }
+        if (stepResponse.isNXDOMAIN()) {
+            recursiveStatsCollector.increment(RecursiveMetric.SESSION_NXDOMAIN);
+        } else if (stepResponse.isNoDataFor(request.qname(), request.qtype())) {
+            recursiveStatsCollector.increment(RecursiveMetric.SESSION_NODATA);
+        } else {
+            recursiveStatsCollector.increment(RecursiveMetric.SESSION_SUCCEEDED);
+        }
+        Log.DNS.trace("recursive done session={} qtype={} qname={} rcode={} steps={}", sessionId, Type.string(request.qtype()), request.qname(), stepResponse.toWireMessage().getRcode(), stepCount);
         return stepResponse.toWireMessage();
     }
 
@@ -78,6 +106,9 @@ public class RecursiveSession {
         for (int i = 0; i < minimizedNames.size(); i++) {
             Name minimizedName = minimizedNames.get(i);
             StepRequest stepRequest = new StepRequest(minimizedName, Type.NS, request.qclass(), dnsSecMode);
+            recursiveStatsCollector.increment(RecursiveMetric.WALK_STEP);
+            stepCount++;
+            Log.DNS.trace("recursive step session={} phase=walk qtype={} qname={} servers={}", sessionId, Type.string(stepRequest.qtype()), stepRequest.qname(), currentServers.size());
             boolean lastStep = i == minimizedNames.size() - 1;
             if (lastStep) {
                 currentServers = resolveNextServers(currentServers, stepRequest);
@@ -97,7 +128,11 @@ public class RecursiveSession {
         List<NameServerAddress> currentServers = servers;
 
         for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-            StepResponse response = queryServers(currentServers, new StepRequest(currentName, qtype, request.qclass(), dnsSecMode));
+            StepRequest stepRequest = new StepRequest(currentName, qtype, request.qclass(), dnsSecMode);
+            recursiveStatsCollector.increment(RecursiveMetric.FINAL_STEP);
+            stepCount++;
+            Log.DNS.trace("recursive step session={} phase=final qtype={} qname={} servers={} iteration={}", sessionId, Type.string(stepRequest.qtype()), stepRequest.qname(), currentServers.size(), iteration + 1);
+            StepResponse response = queryServers(currentServers, stepRequest);
             if (response == null) {
                 return null;
             }
@@ -116,6 +151,8 @@ public class RecursiveSession {
 
             Name cnameTarget = response.getCnameTarget(currentName);
             if (cnameTarget != null) {
+                recursiveStatsCollector.increment(RecursiveMetric.CNAME_FOLLOWED);
+                Log.DNS.trace("recursive cname session={} from={} to={}", sessionId, currentName, cnameTarget);
                 StepResponse targetResponse = resolveInternal(cnameTarget, qtype, cnamePath);
                 if (targetResponse == null) {
                     return null;
@@ -128,6 +165,8 @@ public class RecursiveSession {
 
             List<NameServerAddress> referralServers = response.getReferralServers();
             if (!referralServers.isEmpty()) {
+                recursiveStatsCollector.increment(RecursiveMetric.REFERRAL_FOLLOWED);
+                Log.DNS.trace("recursive referral session={} qname={} nextServers={}", sessionId, currentName, referralServers.size());
                 currentServers = referralServers;
                 continue;
             }
@@ -213,6 +252,8 @@ public class RecursiveSession {
     }
 
     private List<NameServerAddress> resolveNsTargetAddresses(Name target) {
+        recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_A);
+        Log.DNS.trace("recursive helper session={} qtype=A qname={}", sessionId, target);
         StepResponse ipv4Response = resolveInternal(target, Type.A);
         if (ipv4Response != null) {
             List<NameServerAddress> ipv4Addresses = ipv4Response.getARecordAddresses(target);
@@ -221,6 +262,8 @@ public class RecursiveSession {
             }
         }
 
+        recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_AAAA);
+        Log.DNS.trace("recursive helper session={} qtype=AAAA qname={}", sessionId, target);
         StepResponse ipv6Response = resolveInternal(target, Type.AAAA);
         if (ipv6Response == null) {
             return List.of();

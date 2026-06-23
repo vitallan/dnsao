@@ -15,6 +15,8 @@ import com.allanvital.dnsao.dns.processor.engine.unit.upstream.QueryOrchestrator
 import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
 import com.allanvital.dnsao.dns.recursive.DownloadRootHintsFileReader;
 import com.allanvital.dnsao.dns.recursive.RecursiveCache;
+import com.allanvital.dnsao.dns.recursive.RecursiveStatsCollector;
+import com.allanvital.dnsao.dns.recursive.MemoryRecursiveStatsCollector;
 import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
 import com.allanvital.dnsao.dns.recursive.RootHintsFileReader;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
@@ -68,9 +70,10 @@ public class QueryInfraAssembler {
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         RootHintsProvider rootHintsProvider = rootHintsProvider(resolverConf);
-        StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf);
-        RecursiveCache recursiveCache = new RecursiveCache(cacheManager);
-        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, recursiveCache, stepResolverFactory, miscConf.getDnsSecMode(), executorServiceFactory);
+        RecursiveStatsCollector recursiveStatsCollector = recursiveStatsCollector();
+        StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf, recursiveStatsCollector);
+        RecursiveCache recursiveCache = new RecursiveCache(cacheManager, recursiveStatsCollector);
+        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, recursiveCache, stepResolverFactory, miscConf.getDnsSecMode(), executorServiceFactory, recursiveStatsCollector);
         RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 
@@ -131,9 +134,14 @@ public class QueryInfraAssembler {
                 .orElse(new DownloadRootHintsFileReader());
     }
 
-    StepResolverFactory stepResolverFactory(MiscConf miscConf) {
+    StepResolverFactory stepResolverFactory(MiscConf miscConf, RecursiveStatsCollector recursiveStatsCollector) {
         return overrideRegistry.getRegisteredModule(StepResolverFactory.class)
-                .orElse(new StepResolverFactory(miscConf.getTimeout()));
+                .orElse(new StepResolverFactory(miscConf.getTimeout(), recursiveStatsCollector));
+    }
+
+    RecursiveStatsCollector recursiveStatsCollector() {
+        return overrideRegistry.getRegisteredModule(RecursiveStatsCollector.class)
+                .orElse(new MemoryRecursiveStatsCollector());
     }
 
     DOTConnectionPoolFactory dotConnectionPoolFactory(SSLSocketFactory socketFactory, int maxPoolSize) {

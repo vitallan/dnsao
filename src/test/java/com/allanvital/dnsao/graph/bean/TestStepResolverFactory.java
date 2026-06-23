@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.graph.bean;
 
 import com.allanvital.dnsao.dns.recursive.StepResolver;
+import com.allanvital.dnsao.dns.recursive.RecursiveStatsCollector;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 
 import java.net.InetAddress;
@@ -22,6 +23,10 @@ public class TestStepResolverFactory extends StepResolverFactory {
 
     public TestStepResolverFactory(int timeoutMs) {
         super(timeoutMs);
+    }
+
+    public TestStepResolverFactory(int timeoutMs, RecursiveStatsCollector recursiveStatsCollector) {
+        super(timeoutMs, recursiveStatsCollector);
     }
 
     public void setPortToUse(int port) {

@@ -1,5 +1,7 @@
 package com.allanvital.dnsao.dns.recursive;
 
+import com.allanvital.dnsao.infra.log.Log;
+
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,12 +24,18 @@ public class ServerRacer {
     private final int timeoutSeconds;
     private final StepResolverFactory resolverFactory;
     private final DnssecDowngradeHandler dnssecHandler;
+    private final RecursiveStatsCollector recursiveStatsCollector;
 
     public ServerRacer(ExecutorService executor, int timeoutSeconds, StepResolverFactory resolverFactory, DnssecDowngradeHandler dnssecHandler) {
+        this(executor, timeoutSeconds, resolverFactory, dnssecHandler, new NoOpRecursiveStatsCollector());
+    }
+
+    public ServerRacer(ExecutorService executor, int timeoutSeconds, StepResolverFactory resolverFactory, DnssecDowngradeHandler dnssecHandler, RecursiveStatsCollector recursiveStatsCollector) {
         this.executor = executor;
         this.timeoutSeconds = timeoutSeconds;
         this.resolverFactory = resolverFactory;
         this.dnssecHandler = dnssecHandler;
+        this.recursiveStatsCollector = recursiveStatsCollector;
     }
 
     public Map.Entry<NameServerAddress, StepResponse> race(List<NameServerAddress> servers, StepRequest request) {
@@ -38,11 +46,16 @@ public class ServerRacer {
             return querySingleServer(servers.get(0), request);
         }
 
+        recursiveStatsCollector.increment(RecursiveMetric.RACE_STARTED);
+        recursiveStatsCollector.add(RecursiveMetric.RACE_CANDIDATE_SUM, servers.size());
+
         CompletionService<Map.Entry<NameServerAddress, StepResponse>> completionService = new ExecutorCompletionService<>(executor);
         List<QueryTask> tasks = new ArrayList<>();
         int submittedCount = 0;
         int runningCount = 0;
         int initialQueryCount = Math.min(servers.size(), MAX_CONCURRENT_QUERIES);
+        recursiveStatsCollector.add(RecursiveMetric.RACE_FANOUT_SUM, initialQueryCount);
+        Log.DNS.trace("recursive race started qtype={} qname={} candidates={} fanout={}", request.qtype(), request.qname(), servers.size(), initialQueryCount);
         for (int i = 0; i < initialQueryCount; i++) {
             QueryTask task = submitTask(servers.get(submittedCount), request, completionService);
             tasks.add(task);
@@ -72,10 +85,16 @@ public class ServerRacer {
                     runningCount++;
                 }
                 if (result != null) {
+                    int losersCancelled = countLosersToCancel(tasks, completedFuture);
+                    recursiveStatsCollector.increment(RecursiveMetric.RACE_WON);
+                    recursiveStatsCollector.add(RecursiveMetric.RACE_LOSERS_CANCELLED, losersCancelled);
+                    Log.DNS.trace("recursive race winner qtype={} qname={} server={}:{} losersCancelled={}", request.qtype(), request.qname(), result.getKey().ip(), result.getKey().port(), losersCancelled);
                     cancelAndClose(tasks);
                     return result;
                 }
             }
+            recursiveStatsCollector.increment(RecursiveMetric.RACE_TIMEOUT);
+            Log.DNS.trace("recursive race timeout qtype={} qname={} candidates={}", request.qtype(), request.qname(), servers.size());
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -138,6 +157,19 @@ public class ServerRacer {
             task.resolver().close();
             task.future().cancel(true);
         }
+    }
+
+    private int countLosersToCancel(List<QueryTask> tasks, Future<Map.Entry<NameServerAddress, StepResponse>> winnerFuture) {
+        int losers = 0;
+        for (QueryTask task : tasks) {
+            if (task.future() == winnerFuture) {
+                continue;
+            }
+            if (!task.future().isDone()) {
+                losers++;
+            }
+        }
+        return losers;
     }
 
     private record QueryTask(StepResolver resolver, Future<Map.Entry<NameServerAddress, StepResponse>> future) {
