@@ -11,7 +11,10 @@ import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
 import com.allanvital.dnsao.dns.processor.engine.EngineUnitProvider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
+import com.allanvital.dnsao.dns.recursive.RecursiveCache;
+import com.allanvital.dnsao.dns.recursive.RecursiveSessionFactory;
 import com.allanvital.dnsao.dns.recursive.RecursiveStatsCollector;
+import com.allanvital.dnsao.dns.recursive.RootHintsProvider;
 import com.allanvital.dnsao.dns.recursive.StepResolverFactory;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
 import com.allanvital.dnsao.dns.remote.UpstreamThreadPoolExecutor;
@@ -34,6 +37,8 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     private EngineUnitProvider engineUnitProvider;
     private TestStepResolverFactory testStepResolverFactory;
     private RecursiveStatsCollector recursiveStatsCollector;
+    private Integer recursiveMaxNsNameResolutions;
+    private Long recursiveMaxSessionElapsedMs;
 
     public TestQueryInfraAssembler(OverrideRegistry overrideRegistry) {
         super(overrideRegistry);
@@ -58,6 +63,30 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     RecursiveStatsCollector recursiveStatsCollector() {
         this.recursiveStatsCollector = super.recursiveStatsCollector();
         return this.recursiveStatsCollector;
+    }
+
+    @Override
+    protected RecursiveSessionFactory recursiveSessionFactory(int timeoutSeconds,
+                                                             RootHintsProvider rootHintsProvider,
+                                                             RecursiveCache recursiveCache,
+                                                             StepResolverFactory stepResolverFactory,
+                                                             MiscConf miscConf,
+                                                             ExecutorServiceFactory executorServiceFactory,
+                                                             RecursiveStatsCollector recursiveStatsCollector) {
+        if (recursiveMaxNsNameResolutions == null || recursiveMaxSessionElapsedMs == null) {
+            return super.recursiveSessionFactory(timeoutSeconds, rootHintsProvider, recursiveCache, stepResolverFactory, miscConf, executorServiceFactory, recursiveStatsCollector);
+        }
+        return new RecursiveSessionFactory(
+                timeoutSeconds,
+                rootHintsProvider,
+                recursiveCache,
+                stepResolverFactory,
+                miscConf.getDnsSecMode(),
+                executorServiceFactory,
+                recursiveStatsCollector,
+                recursiveMaxNsNameResolutions,
+                recursiveMaxSessionElapsedMs
+        );
     }
 
     @Override
@@ -109,6 +138,11 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
 
     public RecursiveStatsCollector getRecursiveStatsCollector() {
         return recursiveStatsCollector;
+    }
+
+    public void setRecursiveBudgetOverrides(int maxNsNameResolutions, long maxSessionElapsedMs) {
+        this.recursiveMaxNsNameResolutions = maxNsNameResolutions;
+        this.recursiveMaxSessionElapsedMs = maxSessionElapsedMs;
     }
 
 }

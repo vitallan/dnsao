@@ -73,7 +73,7 @@ public class QueryInfraAssembler {
         RecursiveStatsCollector recursiveStatsCollector = recursiveStatsCollector();
         StepResolverFactory stepResolverFactory = stepResolverFactory(miscConf, recursiveStatsCollector);
         RecursiveCache recursiveCache = new RecursiveCache(cacheManager, recursiveStatsCollector);
-        RecursiveSessionFactory recursiveSessionFactory = new RecursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, recursiveCache, stepResolverFactory, miscConf.getDnsSecMode(), executorServiceFactory, recursiveStatsCollector);
+        RecursiveSessionFactory recursiveSessionFactory = recursiveSessionFactory(miscConf.getTimeout(), rootHintsProvider, recursiveCache, stepResolverFactory, miscConf, executorServiceFactory, recursiveStatsCollector);
         RecursiveUnit recursiveUnit = new RecursiveUnit(recursiveSessionFactory);
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled(), recursiveUnit, resolverConf.getResolverMode());
 
@@ -137,6 +137,24 @@ public class QueryInfraAssembler {
     StepResolverFactory stepResolverFactory(MiscConf miscConf, RecursiveStatsCollector recursiveStatsCollector) {
         return overrideRegistry.getRegisteredModule(StepResolverFactory.class)
                 .orElse(new StepResolverFactory(miscConf.getTimeout(), recursiveStatsCollector));
+    }
+
+    protected RecursiveSessionFactory recursiveSessionFactory(int timeoutSeconds,
+                                                             RootHintsProvider rootHintsProvider,
+                                                             RecursiveCache recursiveCache,
+                                                             StepResolverFactory stepResolverFactory,
+                                                             MiscConf miscConf,
+                                                             ExecutorServiceFactory executorServiceFactory,
+                                                             RecursiveStatsCollector recursiveStatsCollector) {
+        return new RecursiveSessionFactory(
+                timeoutSeconds,
+                rootHintsProvider,
+                recursiveCache,
+                stepResolverFactory,
+                miscConf.getDnsSecMode(),
+                executorServiceFactory,
+                recursiveStatsCollector
+        );
     }
 
     RecursiveStatsCollector recursiveStatsCollector() {

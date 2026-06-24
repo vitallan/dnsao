@@ -19,6 +19,8 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     private QueryProcessorFactory queryProcessorFactory;
     private TestQueryInfraAssembler queryInfraAssembler;
     private NotificationManager notificationManager;
+    private Integer recursiveMaxNsNameResolutions;
+    private Long recursiveMaxSessionElapsedMs;
 
     public TestSystemGraphAssembler() {
         super();
@@ -42,6 +44,9 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     @Override
     QueryInfraAssembler queryInfraAssembler() {
         this.queryInfraAssembler = new TestQueryInfraAssembler(overrideRegistry);
+        if (recursiveMaxNsNameResolutions != null && recursiveMaxSessionElapsedMs != null) {
+            this.queryInfraAssembler.setRecursiveBudgetOverrides(recursiveMaxNsNameResolutions, recursiveMaxSessionElapsedMs);
+        }
         return this.queryInfraAssembler;
     }
 
@@ -65,6 +70,14 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
 
     public NotificationManager getNotificationManager() {
         return notificationManager;
+    }
+
+    public void setRecursiveBudgetOverrides(int maxNsNameResolutions, long maxSessionElapsedMs) {
+        this.recursiveMaxNsNameResolutions = maxNsNameResolutions;
+        this.recursiveMaxSessionElapsedMs = maxSessionElapsedMs;
+        if (queryInfraAssembler != null) {
+            queryInfraAssembler.setRecursiveBudgetOverrides(maxNsNameResolutions, maxSessionElapsedMs);
+        }
     }
 
 }
