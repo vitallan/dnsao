@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class RecursiveLameReferralTest extends AbstractRecursiveScenarioTest {
 
     private static final String DOMAIN = "lame-referral.com";
-    private static final String DELEGATED_NAMESERVER_HOST = "ns1.lame.com";
+    private static final String DELEGATED_NAMESERVER_HOST = "ns1.lame-referral.com";
     private static final String DELEGATED_NAMESERVER_IP = "127.0.0.50";
     private static final String LAME_NAMESERVER_HOST = "ns2.lame-helper.com";
     private static final String BOOTSTRAP_NS_HOST = "ns-root.com";

@@ -21,9 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class RecursiveMixedGlueTest extends AbstractRecursiveScenarioTest {
 
     private static final String DOMAIN = "mixed-glue.com";
-    private static final String GLUED_NAMESERVER_HOST = "ns1.mix.com";
+    private static final String GLUED_NAMESERVER_HOST = "ns1.mixed-glue.com";
     private static final String GLUED_NAMESERVER_IP = "127.0.0.60";
-    private static final String GLUE_LESS_NAMESERVER_HOST = "ns2.mix.com";
+    private static final String GLUE_LESS_NAMESERVER_HOST = "ns2.mixed-glue.com";
     private static final String BOOTSTRAP_NS_HOST = "ns-root.com";
     private static final String BOOTSTRAP_NS_IP = "127.0.0.1";
     private static final String FINAL_IP = "10.0.0.13";

@@ -34,7 +34,7 @@ public class RecursiveHelperAaaaFallbackFixture extends AbstractRecursiveScenari
         fakeServer.mockResponse(domainNsQuery, MessageHelper.buildNsReferralResponse(domainNsQuery, helperNameserverHost, referralTtl));
 
         Message helperNsQuery = buildRequest(helperNameserverHost, Type.NS);
-        fakeServer.mockResponse(helperNsQuery, buildNsReferralWithGlueResponse(helperNsQuery, bootstrapNsHost, bootstrapNsIpv4, referralTtl));
+        fakeServer.mockResponse(helperNsQuery, buildNoDataResponse(helperNsQuery));
 
         Message helperAQuery = MessageHelper.buildARequest(helperNameserverHost);
         fakeServer.mockResponse(helperAQuery, buildNoDataResponse(helperAQuery));

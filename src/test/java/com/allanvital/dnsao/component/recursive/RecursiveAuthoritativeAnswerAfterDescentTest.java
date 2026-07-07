@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class RecursiveAuthoritativeAnswerAfterDescentTest extends AbstractRecursiveScenarioTest {
 
     private static final String DOMAIN = "delegated-answer.com";
-    private static final String DELEGATED_NAMESERVER_HOST = "ns1.auth.com";
+    private static final String DELEGATED_NAMESERVER_HOST = "ns1.delegated-answer.com";
     private static final String DELEGATED_NAMESERVER_IP = "127.0.0.70";
     private static final String BOOTSTRAP_NS_HOST = "ns-root.com";
     private static final String BOOTSTRAP_NS_IP = "127.0.0.1";

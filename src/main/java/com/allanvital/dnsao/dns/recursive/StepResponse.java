@@ -157,24 +157,28 @@ public class StepResponse {
         if (Name.root.equals(referralOwner)) {
             return true;
         }
-        if (isTopLevelDomain(referralOwner)) {
+        if (target.subdomain(referralOwner)) {
             return true;
         }
-        return topLevelDomain(target).equals(topLevelDomain(referralOwner));
+        Name parent = parentOf(referralOwner);
+        return parent != null && isDirectChildOf(target, parent);
     }
 
-    private boolean isTopLevelDomain(Name name) {
-        String normalized = normalize(name);
-        return !normalized.contains(".");
+    private boolean isDirectChildOf(Name target, Name zone) {
+        return target.subdomain(zone) && target.labels() == zone.labels() + 1;
     }
 
-    private String topLevelDomain(Name name) {
+    private Name parentOf(Name name) {
         String normalized = normalize(name);
-        int lastDot = normalized.lastIndexOf('.');
-        if (lastDot < 0) {
-            return normalized;
+        int firstDot = normalized.indexOf('.');
+        if (firstDot < 0 || firstDot == normalized.length() - 1) {
+            return Name.root;
         }
-        return normalized.substring(lastDot + 1);
+        try {
+            return Name.fromString(normalized.substring(firstDot + 1) + ".");
+        } catch (org.xbill.DNS.TextParseException e) {
+            throw new IllegalArgumentException("invalid name: " + name, e);
+        }
     }
 
     private String normalize(Name name) {

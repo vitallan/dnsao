@@ -20,7 +20,7 @@ public abstract class AbstractRecursiveDnssecPhaseOneTest extends AbstractRecurs
     protected static final String DOMAIN = "allanvital.com";
     protected static final String NXDOMAIN = "doesnotexist.allanvital.com";
     protected static final String FINAL_IP = "10.0.0.21";
-    protected static final String NS_HOST = "ns1.com";
+    protected static final String NS_HOST = "ns1.allanvital.com";
     protected static final String NS_IP = "127.0.0.1";
     protected static final long REFERRAL_TTL = 300;
 

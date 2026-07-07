@@ -37,12 +37,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class RecursiveIntermediateCacheTest extends TestHolder {
 
     private static final String DOMAIN = "allanvital.com";
+    private static final String SECOND_DOMAIN = "example.com";
     private static final String COM_NS_HOST = "ns1.com";
     private static final String COM_NS_IP = "127.0.0.10";
     private static final String AUTH_NS_HOST = "ns1.allanvital.com";
     private static final String AUTH_NS_IP = "127.0.0.11";
+    private static final String SECOND_AUTH_NS_HOST = "ns1.example.com";
+    private static final String SECOND_AUTH_NS_IP = "127.0.0.12";
     private static final String FINAL_IPV4 = "10.0.0.31";
     private static final String FINAL_IPV6 = "2001:db8::31";
+    private static final String SECOND_FINAL_IPV4 = "10.0.0.32";
     private static final long FINAL_TTL = 300;
 
     private CacheManager cacheManager;
@@ -73,6 +77,7 @@ public class RecursiveIntermediateCacheTest extends TestHolder {
         stepResolverFactory.setPortToUse(fakeUpstreamServer.getPort());
         stepResolverFactory.setRoute(COM_NS_IP, authoritativeServer.getPort());
         stepResolverFactory.setRoute(AUTH_NS_IP, authoritativeServer.getPort());
+        stepResolverFactory.setRoute(SECOND_AUTH_NS_IP, authoritativeServer.getPort());
     }
 
     @AfterEach
@@ -115,6 +120,25 @@ public class RecursiveIntermediateCacheTest extends TestHolder {
     }
 
     @Test
+    public void reusesCachedIntermediateNsEntriesAcrossDifferentDomainsUnderSameTld() throws Exception {
+        loadCrossDomainGlueScenario(300);
+
+        Message firstResponse = executeRequestOnOwnServer(buildQuery(DOMAIN, Type.A));
+        assertNotNull(firstResponse);
+        assertEquals(Rcode.NOERROR, firstResponse.getRcode());
+
+        fakeUpstreamServer.clearReceivedQueries();
+        authoritativeServer.clearReceivedQueries();
+
+        Message secondResponse = executeRequestOnOwnServer(buildQuery(SECOND_DOMAIN, Type.A));
+
+        assertNotNull(secondResponse);
+        assertEquals(Rcode.NOERROR, secondResponse.getRcode());
+        assertEquals(List.of(key(SECOND_DOMAIN, Type.NS)), fakeUpstreamServer.getReceivedQueries());
+        assertEquals(List.of(key(SECOND_DOMAIN, Type.A)), authoritativeServer.getReceivedQueries());
+    }
+
+    @Test
     public void removesExpiredIntermediateNsEntriesAndQueriesThemAgain() throws Exception {
         loadGlueScenario(1);
 
@@ -154,6 +178,16 @@ public class RecursiveIntermediateCacheTest extends TestHolder {
 
         Message domainAaaaQuery = buildQuery(DOMAIN, Type.AAAA);
         authoritativeServer.mockResponse(domainAaaaQuery, com.allanvital.dnsao.graph.bean.MessageHelper.buildAaaaResponse(domainAaaaQuery, FINAL_IPV6, FINAL_TTL));
+    }
+
+    private void loadCrossDomainGlueScenario(long nsTtl) throws Exception {
+        loadGlueScenario(nsTtl);
+
+        Message secondDomainNsQuery = buildQuery(SECOND_DOMAIN, Type.NS);
+        fakeUpstreamServer.mockResponse(secondDomainNsQuery, buildNsReferralWithGlueResponse(secondDomainNsQuery, SECOND_AUTH_NS_HOST, SECOND_AUTH_NS_IP, nsTtl));
+
+        Message secondDomainAQuery = buildQuery(SECOND_DOMAIN, Type.A);
+        authoritativeServer.mockResponse(secondDomainAQuery, buildAResponse(secondDomainAQuery, SECOND_FINAL_IPV4, FINAL_TTL));
     }
 
     private void assertCacheEntryPresent(String key) {

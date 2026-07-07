@@ -26,7 +26,7 @@ public class RecursiveHappyPathWithGlueTest extends AbstractRecursiveScenarioTes
     private static final String DOMAIN = "allanvital.com";
     private static final String DOMAIN_DOT = DOMAIN + ".";
     private static final String FINAL_IP = "192.0.2.1";
-    private static final String NS_HOST = "ns1.com";
+    private static final String NS_HOST = "ns1.allanvital.com";
     private static final String NS_IP = "127.0.0.1";
     private static final long REFERRAL_TTL = 300;
 

@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 public class RecursiveReferralLoopTest extends AbstractRecursiveScenarioTest {
 
     private static final String DOMAIN = "loop.allanvital.com";
-    private static final String NS_HOST = "ns1.loop.com";
+    private static final String NS_HOST = "ns1.loop.allanvital.com";
     private static final String NS_IP = "127.0.0.1";
     private static final long REFERRAL_TTL = 300;
 
