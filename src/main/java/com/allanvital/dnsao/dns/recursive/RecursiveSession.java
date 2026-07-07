@@ -242,7 +242,13 @@ public class RecursiveSession {
 
         List<Name> nsTargets = response.getNSTargets();
         if (!nsTargets.isEmpty()) {
-            return resolveNsTargets(nsTargets);
+            List<NameServerAddress> resolved = resolveNsTargets(nsTargets);
+            if (!resolved.isEmpty()) {
+                return resolved;
+            }
+            if (helperResolutionCount >= maxNsNameResolutions) {
+                return List.of();
+            }
         }
 
         return currentServers;
