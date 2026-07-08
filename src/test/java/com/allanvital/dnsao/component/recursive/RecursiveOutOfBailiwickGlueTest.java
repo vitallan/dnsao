@@ -58,14 +58,14 @@ public class RecursiveOutOfBailiwickGlueTest extends AbstractRecursiveScenarioTe
         Message domainNsQuery = fixture.request(DOMAIN, Type.NS);
         Message comNsQuery = fixture.request("com", Type.NS);
         Message netNsQuery = fixture.request("net", Type.NS);
-        Message nsTargetNsQuery = fixture.request(NS_TARGET, Type.NS);
+        Message evilNetNsQuery = fixture.request("evil.net", Type.NS);
         Message nsTargetAQuery = fixture.request(NS_TARGET, Type.A);
         Message domainAQuery = MessageHelper.buildARequest(DOMAIN);
 
         fakeUpstreamServer.mockResponse(comNsQuery, fixture.referralWithGlue(comNsQuery, "ns1.com", "127.0.0.21", TTL));
         fakeUpstreamServer.mockResponse(domainNsQuery, fixture.referralWithGlue(domainNsQuery, NS_TARGET, BAD_GLUE_IP, TTL));
         fakeUpstreamServer.mockResponse(netNsQuery, fixture.referralWithGlue(netNsQuery, "ns1.net", "127.0.0.22", TTL));
-        fakeUpstreamServer.mockResponse(nsTargetNsQuery, fixture.referralWithGlue(nsTargetNsQuery, NS_TARGET, REAL_NS_IP, TTL));
+        fakeUpstreamServer.mockResponse(evilNetNsQuery, fixture.referralWithGlue(evilNetNsQuery, NS_TARGET, REAL_NS_IP, TTL));
 
         realAuthorityServer.mockResponse(nsTargetAQuery, MessageHelper.buildAResponse(nsTargetAQuery, REAL_NS_IP, TTL));
         realAuthorityServer.mockResponse(domainAQuery, MessageHelper.buildAResponse(domainAQuery, FINAL_IP, TTL));
@@ -86,7 +86,7 @@ public class RecursiveOutOfBailiwickGlueTest extends AbstractRecursiveScenarioTe
                 fixture.key("com", Type.NS),
                 fixture.key(DOMAIN, Type.NS),
                 fixture.key("net", Type.NS),
-                fixture.key(NS_TARGET, Type.NS)
+                fixture.key("evil.net", Type.NS)
         ));
         assertReceivedQueries(realAuthorityServer, List.of(
                 fixture.key(NS_TARGET, Type.A),

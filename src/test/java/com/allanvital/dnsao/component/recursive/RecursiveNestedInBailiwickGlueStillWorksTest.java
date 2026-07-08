@@ -49,9 +49,11 @@ public class RecursiveNestedInBailiwickGlueStillWorksTest extends AbstractRecurs
 
         Message domainNsQuery = fixture.request(DOMAIN, Type.NS);
         Message comNsQuery = fixture.request("com", Type.NS);
+        Message exampleNsQuery = fixture.request("example.com", Type.NS);
         Message domainAQuery = MessageHelper.buildARequest(DOMAIN);
 
         fakeUpstreamServer.mockResponse(comNsQuery, fixture.referralWithGlue(comNsQuery, "ns1.com", "127.0.0.41", TTL));
+        fakeUpstreamServer.mockResponse(exampleNsQuery, fixture.referralWithGlue(exampleNsQuery, IN_BAILIWICK_NS_HOST, IN_BAILIWICK_NS_IP, TTL));
         fakeUpstreamServer.mockResponse(domainNsQuery, fixture.referralWithGlue(domainNsQuery, IN_BAILIWICK_NS_HOST, IN_BAILIWICK_NS_IP, TTL));
         authoritativeServer.mockResponse(domainAQuery, MessageHelper.buildAResponse(domainAQuery, FINAL_IP, TTL));
     }
@@ -68,7 +70,7 @@ public class RecursiveNestedInBailiwickGlueStillWorksTest extends AbstractRecurs
 
         assertReceivedQueries(fakeUpstreamServer, List.of(
                 fixture.key("com", Type.NS),
-                fixture.key(DOMAIN, Type.NS)
+                fixture.key("example.com", Type.NS)
         ));
         assertReceivedQueries(authoritativeServer, List.of(fixture.key(DOMAIN, Type.A)));
     }

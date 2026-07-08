@@ -57,13 +57,13 @@ public class RecursiveSiblingDomainGlueIgnoredTest extends AbstractRecursiveScen
 
         Message domainNsQuery = fixture.request(DOMAIN, Type.NS);
         Message comNsQuery = fixture.request("com", Type.NS);
-        Message nsTargetNsQuery = fixture.request(NS_TARGET, Type.NS);
+        Message evilComNsQuery = fixture.request("evil.com", Type.NS);
         Message nsTargetAQuery = fixture.request(NS_TARGET, Type.A);
         Message domainAQuery = MessageHelper.buildARequest(DOMAIN);
 
         fakeUpstreamServer.mockResponse(comNsQuery, fixture.referralWithGlue(comNsQuery, "ns1.com", "127.0.0.45", TTL));
         fakeUpstreamServer.mockResponse(domainNsQuery, fixture.referralWithGlue(domainNsQuery, NS_TARGET, BAD_GLUE_IP, TTL));
-        fakeUpstreamServer.mockResponse(nsTargetNsQuery, fixture.referralWithGlue(nsTargetNsQuery, NS_TARGET, REAL_NS_IP, TTL));
+        fakeUpstreamServer.mockResponse(evilComNsQuery, fixture.referralWithGlue(evilComNsQuery, NS_TARGET, REAL_NS_IP, TTL));
 
         realAuthorityServer.mockResponse(nsTargetAQuery, MessageHelper.buildAResponse(nsTargetAQuery, REAL_NS_IP, TTL));
         realAuthorityServer.mockResponse(domainAQuery, MessageHelper.buildAResponse(domainAQuery, FINAL_IP, TTL));
@@ -84,7 +84,7 @@ public class RecursiveSiblingDomainGlueIgnoredTest extends AbstractRecursiveScen
                 fixture.key("com", Type.NS),
                 fixture.key(DOMAIN, Type.NS),
                 fixture.key("com", Type.NS),
-                fixture.key(NS_TARGET, Type.NS)
+                fixture.key("evil.com", Type.NS)
         ));
         assertReceivedQueries(realAuthorityServer, List.of(
                 fixture.key(NS_TARGET, Type.A),

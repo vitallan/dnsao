@@ -39,6 +39,10 @@ public class RecursiveLameReferralFixture extends AbstractRecursiveScenarioFixtu
         Message lameNsNsQuery = buildRequest(lameNameserverHost, Type.NS);
         fakeServer.mockResponse(lameNsNsQuery, buildNoDataResponse(lameNsNsQuery));
 
+        String lameZone = lameNameserverHost.substring(lameNameserverHost.indexOf('.') + 1);
+        Message lameZoneNsQuery = buildRequest(lameZone, Type.NS);
+        fakeServer.mockResponse(lameZoneNsQuery, buildNoDataResponse(lameZoneNsQuery));
+
         Message domainAQuery = MessageHelper.buildARequest(domain);
         delegatedServer.mockResponse(domainAQuery, MessageHelper.buildNsReferralResponse(domainAQuery, lameNameserverHost, referralTtl));
 
@@ -47,10 +51,10 @@ public class RecursiveLameReferralFixture extends AbstractRecursiveScenarioFixtu
                         key("com", Type.NS),
                         key(domain, Type.NS),
                         key("com", Type.NS),
-                        key(lameNameserverHost, Type.NS),
+                        key(lameZone, Type.NS),
                         key(lameNameserverHost, Type.A),
                         key("com", Type.NS),
-                        key(lameNameserverHost, Type.NS),
+                        key(lameZone, Type.NS),
                         key(lameNameserverHost, Type.AAAA)
                 ),
                 history(key(domain, Type.A)),

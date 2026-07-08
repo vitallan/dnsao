@@ -61,15 +61,16 @@ public class RecursiveDnssecPhaseOneFixture extends AbstractRecursiveScenarioFix
         Message comNsQuery = buildRequest("com", Type.NS);
         fakeServer.mockResponse(comNsQuery, buildNsReferralWithGlueResponse(comNsQuery, nsHost, nsIp, referralTtl));
 
-        Message domainNsQuery = buildRequest(domain, Type.NS);
-        fakeServer.mockResponse(domainNsQuery, buildNsReferralWithGlueResponse(domainNsQuery, nsHost, nsIp, referralTtl));
+        String parentZone = domain.substring(domain.indexOf('.') + 1);
+        Message parentNsQuery = buildRequest(parentZone, Type.NS);
+        fakeServer.mockResponse(parentNsQuery, buildNsReferralWithGlueResponse(parentNsQuery, nsHost, nsIp, referralTtl));
 
         Message domainAQuery = MessageHelper.buildARequest(domain);
         fakeServer.mockResponse(domainAQuery, MessageHelper.buildNxdomainResponseFrom(domainAQuery, true));
 
         return history(
                 key("com", Type.NS),
-                key(domain, Type.NS),
+                key(parentZone, Type.NS),
                 key(domain, Type.A)
         );
     }

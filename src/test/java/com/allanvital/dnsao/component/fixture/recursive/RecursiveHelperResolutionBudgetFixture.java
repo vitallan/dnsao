@@ -29,14 +29,20 @@ public class RecursiveHelperResolutionBudgetFixture extends AbstractRecursiveSce
         Message firstNsNsQuery = buildRequest(firstNameserverHost, Type.NS);
         fakeServer.mockResponse(firstNsNsQuery, com.allanvital.dnsao.graph.bean.MessageHelper.buildNsReferralResponse(firstNsNsQuery, secondNameserverHost, referralTtl));
 
+        String helperZone = firstNameserverHost.substring(firstNameserverHost.indexOf('.') + 1);
+        Message helperZoneNsQuery = buildRequest(helperZone, Type.NS);
+        fakeServer.mockResponse(helperZoneNsQuery, buildNsReferralWithGlueResponse(helperZoneNsQuery, secondNameserverHost, secondNameserverIp, referralTtl));
+
         return new RecursiveServerHistories(
                 history(
                         key("com", Type.NS),
                         key(domain, Type.NS),
                         key("com", Type.NS),
-                        key(firstNameserverHost, Type.NS),
+                        key(helperZone, Type.NS),
+                        key(firstNameserverHost, Type.A),
                         key("com", Type.NS),
-                        key(firstNameserverHost, Type.NS)
+                        key(helperZone, Type.NS),
+                        key(firstNameserverHost, Type.AAAA)
                 ),
                 history(),
                 history()

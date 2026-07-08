@@ -60,7 +60,6 @@ public class RecursiveScenarioFixture {
         Message comNsQuery = buildRequest("com", Type.NS);
         fakeServer.mockResponse(comNsQuery, buildNsReferralWithGlueResponse(comNsQuery, nsHost, nsIp, referralTtl));
 
-        // Zone discovery step for the target name; we intentionally omit the final A answer.
         Message domainNsQuery = buildRequest(domain, Type.NS);
         fakeServer.mockResponse(domainNsQuery, buildNsReferralWithGlueResponse(domainNsQuery, nsHost, nsIp, referralTtl));
 

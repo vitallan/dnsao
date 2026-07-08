@@ -32,7 +32,7 @@ public class RecursiveReferralLoopFixture extends AbstractRecursiveScenarioFixtu
         fakeServer.mockResponse(domainAQuery, buildNsReferralWithGlueResponse(domainAQuery, nsHost, nsIp, referralTtl));
 
         return mergeHistories(
-                history(key("com", Type.NS), key(domain, Type.NS)),
+                history(key("com", Type.NS), key(domain.substring(domain.indexOf('.') + 1), Type.NS)),
                 repeat(key(domain, Type.A), MAX_ITERATIONS)
         );
     }

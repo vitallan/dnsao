@@ -107,6 +107,9 @@ class AuthoritativeServerLocator {
         for (int i = labels.length - 1; i > 0; i--) {
             result.add(toName(String.join(".", Arrays.copyOfRange(labels, i, labels.length))));
         }
+        if (labels.length == 2) {
+            result.add(toName(normalized));
+        }
         return result;
     }
 

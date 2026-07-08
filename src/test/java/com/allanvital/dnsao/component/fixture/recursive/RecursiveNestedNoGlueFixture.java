@@ -35,6 +35,9 @@ public class RecursiveNestedNoGlueFixture extends AbstractRecursiveScenarioFixtu
         Message firstNsNsQuery = buildRequest(firstNameserverHost, Type.NS);
         fakeServer.mockResponse(firstNsNsQuery, MessageHelper.buildNsReferralResponse(firstNsNsQuery, secondNameserverHost, referralTtl));
 
+        Message helperZoneNsQuery = buildRequest(firstNameserverHost.substring(firstNameserverHost.indexOf('.') + 1), Type.NS);
+        fakeServer.mockResponse(helperZoneNsQuery, buildNsReferralWithGlueResponse(helperZoneNsQuery, secondNameserverHost, secondNameserverIp, referralTtl));
+
         Message secondNsNsQuery = buildRequest(secondNameserverHost, Type.NS);
         fakeServer.mockResponse(secondNsNsQuery, buildNsReferralWithGlueResponse(secondNsNsQuery, secondNameserverHost, secondNameserverIp, referralTtl));
 
@@ -51,10 +54,7 @@ public class RecursiveNestedNoGlueFixture extends AbstractRecursiveScenarioFixtu
                 key("com", Type.NS),
                 key(domain, Type.NS),
                 key("com", Type.NS),
-                key(firstNameserverHost, Type.NS),
-                key("com", Type.NS),
-                key(secondNameserverHost, Type.NS),
-                key(secondNameserverHost, Type.A),
+                key(firstNameserverHost.substring(firstNameserverHost.indexOf('.') + 1), Type.NS),
                 key(firstNameserverHost, Type.A),
                 key(domain, Type.A)
         );

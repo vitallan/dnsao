@@ -29,14 +29,18 @@ public class RecursiveEmptyReferralFixture extends AbstractRecursiveScenarioFixt
         Message emptyNsNsQuery = buildRequest(emptyNameserverHost, Type.NS);
         fakeServer.mockResponse(emptyNsNsQuery, buildNoDataResponse(emptyNsNsQuery));
 
+        String emptyZone = emptyNameserverHost.substring(emptyNameserverHost.indexOf('.') + 1);
+        Message emptyZoneNsQuery = buildRequest(emptyZone, Type.NS);
+        fakeServer.mockResponse(emptyZoneNsQuery, buildNoDataResponse(emptyZoneNsQuery));
+
         return history(
                 key("com", Type.NS),
                 key(domain, Type.NS),
                 key("com", Type.NS),
-                key(emptyNameserverHost, Type.NS),
+                key(emptyZone, Type.NS),
                 key(emptyNameserverHost, Type.A),
                 key("com", Type.NS),
-                key(emptyNameserverHost, Type.NS),
+                key(emptyZone, Type.NS),
                 key(emptyNameserverHost, Type.AAAA),
                 key(domain, Type.A)
         );
