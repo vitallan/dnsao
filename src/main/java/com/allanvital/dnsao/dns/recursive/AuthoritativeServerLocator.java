@@ -104,14 +104,8 @@ class AuthoritativeServerLocator {
 
         String[] labels = normalized.split("\\.");
         List<Name> result = new ArrayList<>();
-        result.add(toName(labels[labels.length - 1]));
-
-        if (labels.length > 1) {
-            String joined = String.join(".", Arrays.copyOfRange(labels, 0, labels.length));
-            Name fullName = toName(joined);
-            if (!fullName.equals(result.get(0))) {
-                result.add(fullName);
-            }
+        for (int i = labels.length - 1; i > 0; i--) {
+            result.add(toName(String.join(".", Arrays.copyOfRange(labels, i, labels.length))));
         }
         return result;
     }
