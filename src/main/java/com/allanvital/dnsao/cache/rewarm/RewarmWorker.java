@@ -93,8 +93,8 @@ public class RewarmWorker implements Runnable {
                     continue;
                 }
                 int currentRewarmCount = entry.getRewarmCount();
-                boolean isInCacheKeep = keepProvider.contain(question);
-                if (currentRewarmCount >= maxRewarmCount && !isInCacheKeep) { //better to remove scheduled afterward to ensure cache is correctly clean
+                boolean shouldAlwaysRewarm = cache.shouldAlwaysRewarm(key, question);
+                if (currentRewarmCount >= maxRewarmCount && !shouldAlwaysRewarm) { //better to remove scheduled afterward to ensure cache is correctly clean
                     Log.CACHE.debug("max rewarm count for key={}", key);
                     telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
                     continue;

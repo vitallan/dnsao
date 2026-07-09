@@ -10,6 +10,7 @@ import com.allanvital.dnsao.infra.clock.Clock;
 import org.xbill.DNS.Record;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,6 +61,25 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
         return prev;
     }
 
+    public void replaceValuePreservingOrder(String key, DnsCacheEntry value) {
+        if (!containsKey(key)) {
+            put(key, value);
+            return;
+        }
+        List<Map.Entry<String, DnsCacheEntry>> orderedEntries = new ArrayList<>(entrySet().size());
+        for (Map.Entry<String, DnsCacheEntry> entry : entrySet()) {
+            if (entry.getKey().equals(key)) {
+                orderedEntries.add(Map.entry(entry.getKey(), value));
+                continue;
+            }
+            orderedEntries.add(Map.entry(entry.getKey(), entry.getValue()));
+        }
+        super.clear();
+        for (Map.Entry<String, DnsCacheEntry> entry : orderedEntries) {
+            super.put(entry.getKey(), entry.getValue());
+        }
+    }
+
     private void trimIfNeeded() {
         if (maxSize <= 0) {
             return;
@@ -93,6 +113,30 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
             }
         }
         return false;
+    }
+
+    public List<String> getTopNonKeepKeys(int threshold) {
+        if (threshold <= 0 || isEmpty()) {
+            return List.of();
+        }
+        List<String> nonKeepKeys = new ArrayList<>();
+        for (Map.Entry<String, DnsCacheEntry> entry : entrySet()) {
+            if (entry == null || isKeep(entry.getValue())) {
+                continue;
+            }
+            nonKeepKeys.add(entry.getKey());
+        }
+        if (nonKeepKeys.isEmpty()) {
+            return List.of();
+        }
+        int fromIndex = Math.max(0, nonKeepKeys.size() - threshold);
+        List<String> hottest = new ArrayList<>(nonKeepKeys.subList(fromIndex, nonKeepKeys.size()));
+        Collections.reverse(hottest);
+        return List.copyOf(hottest);
+    }
+
+    public boolean isTopNonKeepKey(String key, int threshold) {
+        return getTopNonKeepKeys(threshold).contains(key);
     }
 
     @Override

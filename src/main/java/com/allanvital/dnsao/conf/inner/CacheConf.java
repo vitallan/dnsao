@@ -13,6 +13,7 @@ public class CacheConf {
     private boolean rewarm = false;
     private int maxRewarmCount = 3;
     private int secsBeforeTtlToRewarm = 20;
+    private int alwaysRewarmTopEntries = 0;
     private List<String> keep = new LinkedList<>();
 
     public boolean isRewarm() {
@@ -37,6 +38,20 @@ public class CacheConf {
 
     public void setMaxCacheEntries(int maxCacheEntries) {
         this.maxCacheEntries = maxCacheEntries;
+        if (alwaysRewarmTopEntries > maxCacheEntries) {
+            alwaysRewarmTopEntries = maxCacheEntries;
+        }
+    }
+
+    public int getAlwaysRewarmTopEntries() {
+        if (alwaysRewarmTopEntries < 0) {
+            return 0;
+        }
+        return Math.min(alwaysRewarmTopEntries, maxCacheEntries);
+    }
+
+    public void setAlwaysRewarmTopEntries(int alwaysRewarmTopEntries) {
+        this.alwaysRewarmTopEntries = Math.max(0, Math.min(alwaysRewarmTopEntries, maxCacheEntries));
     }
 
     public int getMaxRewarmCount() {
