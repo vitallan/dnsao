@@ -10,7 +10,6 @@ import com.allanvital.dnsao.infra.clock.Clock;
 import org.xbill.DNS.Record;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
+import java.util.function.Consumer;
 
 
 public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> implements CacheStats {
@@ -32,19 +32,30 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
     private final ConcurrentLinkedDeque<SizeSnapshot> sizeHistory = new ConcurrentLinkedDeque<>();
     private final ScheduledExecutorService sizeSampler;
     private final LongSupplier nowSupplier;
+    private final Consumer<String> evictionListener;
     private boolean warnedAllKeepOverCapacity;
 
     public KeepAwareLruDnsCache(int maxSize, KeepProvider keepProvider) {
-        this(maxSize, keepProvider, Constants.STATS_BUCKET_INTERVAL_MS, Constants.STATS_WINDOW_MS, Clock::currentTimeInMillis);
+        this(maxSize, keepProvider, Constants.STATS_BUCKET_INTERVAL_MS, Constants.STATS_WINDOW_MS, Clock::currentTimeInMillis, null);
     }
 
     public KeepAwareLruDnsCache(int maxSize, KeepProvider keepProvider, long bucketIntervalMs, long windowMs, LongSupplier nowSupplier) {
+        this(maxSize, keepProvider, bucketIntervalMs, windowMs, nowSupplier, null);
+    }
+
+    public KeepAwareLruDnsCache(int maxSize,
+                                KeepProvider keepProvider,
+                                long bucketIntervalMs,
+                                long windowMs,
+                                LongSupplier nowSupplier,
+                                Consumer<String> evictionListener) {
         super(Math.max(16, maxSize), 0.75f, true);
         this.maxSize = maxSize;
         this.keepProvider = keepProvider;
         this.bucketIntervalMs = bucketIntervalMs;
         this.maxHistoryEntries = (int) (windowMs / bucketIntervalMs);
         this.nowSupplier = nowSupplier;
+        this.evictionListener = evictionListener;
         this.sizeSampler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "cache-size-sampler");
             t.setDaemon(true);
@@ -59,25 +70,6 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
         DnsCacheEntry prev = super.put(key, value);
         trimIfNeeded();
         return prev;
-    }
-
-    public void replaceValuePreservingOrder(String key, DnsCacheEntry value) {
-        if (!containsKey(key)) {
-            put(key, value);
-            return;
-        }
-        List<Map.Entry<String, DnsCacheEntry>> orderedEntries = new ArrayList<>(entrySet().size());
-        for (Map.Entry<String, DnsCacheEntry> entry : entrySet()) {
-            if (entry.getKey().equals(key)) {
-                orderedEntries.add(Map.entry(entry.getKey(), value));
-                continue;
-            }
-            orderedEntries.add(Map.entry(entry.getKey(), entry.getValue()));
-        }
-        super.clear();
-        for (Map.Entry<String, DnsCacheEntry> entry : orderedEntries) {
-            super.put(entry.getKey(), entry.getValue());
-        }
     }
 
     private void trimIfNeeded() {
@@ -107,36 +99,16 @@ public class KeepAwareLruDnsCache extends LinkedHashMap<String, DnsCacheEntry> i
             }
             DnsCacheEntry entry = e.getValue();
             if (!isKeep(entry)) {
+                String key = e.getKey();
                 it.remove();
                 evictionTimes.addLast(Clock.currentTimeInMillis());
+                if (evictionListener != null) {
+                    evictionListener.accept(key);
+                }
                 return true;
             }
         }
         return false;
-    }
-
-    public List<String> getTopNonKeepKeys(int threshold) {
-        if (threshold <= 0 || isEmpty()) {
-            return List.of();
-        }
-        List<String> nonKeepKeys = new ArrayList<>();
-        for (Map.Entry<String, DnsCacheEntry> entry : entrySet()) {
-            if (entry == null || isKeep(entry.getValue())) {
-                continue;
-            }
-            nonKeepKeys.add(entry.getKey());
-        }
-        if (nonKeepKeys.isEmpty()) {
-            return List.of();
-        }
-        int fromIndex = Math.max(0, nonKeepKeys.size() - threshold);
-        List<String> hottest = new ArrayList<>(nonKeepKeys.subList(fromIndex, nonKeepKeys.size()));
-        Collections.reverse(hottest);
-        return List.copyOf(hottest);
-    }
-
-    public boolean isTopNonKeepKey(String key, int threshold) {
-        return getTopNonKeepKeys(threshold).contains(key);
     }
 
     @Override

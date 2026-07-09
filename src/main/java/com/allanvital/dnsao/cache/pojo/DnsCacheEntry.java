@@ -18,6 +18,7 @@ public class DnsCacheEntry {
     private final long expiryTime;
     private final long configuredTtlInSeconds;
     private int rewarmCount = 0;
+    private long lastAccessSeq = 0;
 
     public DnsCacheEntry(Message response, Long ttlInSeconds) {
         this.response = response;
@@ -67,6 +68,14 @@ public class DnsCacheEntry {
 
     public void setRewarmCount(int rewarmCount) {
         this.rewarmCount = rewarmCount;
+    }
+
+    public long getLastAccessSeq() {
+        return lastAccessSeq;
+    }
+
+    public void setLastAccessSeq(long lastAccessSeq) {
+        this.lastAccessSeq = lastAccessSeq;
     }
 
     @Override

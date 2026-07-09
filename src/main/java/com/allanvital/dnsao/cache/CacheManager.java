@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.cache;
+import com.allanvital.dnsao.Constants;
 import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.keep.KeepProvider;
@@ -7,6 +8,7 @@ import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
+import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Record;
@@ -28,10 +30,9 @@ public class CacheManager {
 
     private final boolean enabled;
     private final Map<String, DnsCacheEntry> cache;
-    private final KeepAwareLruDnsCache keepAwareLruDnsCache;
     private final CacheStats cacheStats;
     private final KeepProvider keepProvider;
-    private final int alwaysRewarmTopEntries;
+    private final AlwaysRewarmTopEntriesTracker alwaysRewarmTopEntriesTracker;
 
     private final FixedTimeRewarmScheduler fixedTimeRewarmScheduler;
     private final ExpiredConf expiredConf;
@@ -43,23 +44,26 @@ public class CacheManager {
         if (cacheConf == null || !cacheConf.isEnabled()) {
             enabled = false;
             cache = null;
-            keepAwareLruDnsCache = null;
             cacheStats = null;
             this.fixedTimeRewarmScheduler = null;
             this.expiredConf = null;
             this.keepProvider = null;
-            this.alwaysRewarmTopEntries = 0;
+            this.alwaysRewarmTopEntriesTracker = null;
             return;
         }
         this.expiredConf = expiredConf;
         enabled = true;
         this.fixedTimeRewarmScheduler = fixedTimeRewarmScheduler;
         this.keepProvider = keepProvider;
-        this.alwaysRewarmTopEntries = cacheConf.getAlwaysRewarmTopEntries();
+        this.alwaysRewarmTopEntriesTracker = new AlwaysRewarmTopEntriesTracker(cacheConf.getAlwaysRewarmTopEntries());
 
         int maxEntries = cacheConf.getMaxCacheEntries();
-        KeepAwareLruDnsCache keepAwareLruDnsCache = new KeepAwareLruDnsCache(maxEntries, keepProvider);
-        this.keepAwareLruDnsCache = keepAwareLruDnsCache;
+        KeepAwareLruDnsCache keepAwareLruDnsCache = new KeepAwareLruDnsCache(maxEntries,
+                keepProvider,
+                Constants.STATS_BUCKET_INTERVAL_MS,
+                Constants.STATS_WINDOW_MS,
+                Clock::currentTimeInMillis,
+                this::onCacheEntryRemoved);
         this.cache = Collections.synchronizedMap(keepAwareLruDnsCache);
         this.cacheStats = keepAwareLruDnsCache;
     }
@@ -100,6 +104,7 @@ public class CacheManager {
             Log.CACHE.info("cache hit for {}", key);
             entry.setRewarmCount(0);
             cache.put(key, entry);
+            recordClientAccess(key, entry);
             telemetryNotify(EventType.CACHE_HIT);
             return entry;
         }
@@ -120,30 +125,24 @@ public class CacheManager {
             return;
         }
         Log.CACHE.debug("rewarming entry {}", key);
-        if (keepAwareLruDnsCache != null) {
-            synchronized (cache) {
-                keepAwareLruDnsCache.replaceValuePreservingOrder(key, entry);
-                telemetryNotify(CACHE_ADDED);
-                fixedTimeRewarmScheduler.schedule(key, entry.getExpiryTime());
-            }
-            return;
+        DnsCacheEntry currentEntry = cache.get(key);
+        if (currentEntry != null) {
+            entry.setLastAccessSeq(currentEntry.getLastAccessSeq());
         }
-        addEntry(key, entry);
+        addEntry(key, entry, false);
     }
 
     public boolean shouldAlwaysRewarm(String key, Record question) {
         if (!enabled || question == null) {
             return false;
         }
-        if (keepProvider != null && keepProvider.contain(question)) {
+        if (isKeep(question)) {
             return true;
         }
-        if (keepAwareLruDnsCache == null || alwaysRewarmTopEntries <= 0) {
+        if (alwaysRewarmTopEntriesTracker == null) {
             return false;
         }
-        synchronized (cache) {
-            return keepAwareLruDnsCache.isTopNonKeepKey(key, alwaysRewarmTopEntries);
-        }
+        return alwaysRewarmTopEntriesTracker.isProtected(key);
     }
 
     public void put(String key, Message response, Long ttlSecs) {
@@ -151,7 +150,7 @@ public class CacheManager {
             return;
         }
         Log.CACHE.info("adding {} to cache", key);
-        addEntry(key, new DnsCacheEntry(response, ttlSecs));
+        addEntry(key, new DnsCacheEntry(response, ttlSecs), true);
     }
 
     public void purgeExpired() {
@@ -172,6 +171,7 @@ public class CacheManager {
 
     private void remove(String key) {
         cache.remove(key);
+        onCacheEntryRemoved(key);
         telemetryNotify(CACHE_REMOVED);
     }
 
@@ -185,10 +185,35 @@ public class CacheManager {
         return true;
     }
 
-    private void addEntry(String key, DnsCacheEntry entry) {
+    private void addEntry(String key, DnsCacheEntry entry, boolean recordAccess) {
         cache.put(key, entry);
+        if (recordAccess) {
+            recordClientAccess(key, entry);
+        }
         telemetryNotify(CACHE_ADDED);
         fixedTimeRewarmScheduler.schedule(key, entry.getExpiryTime());
+    }
+
+    private void recordClientAccess(String key, DnsCacheEntry entry) {
+        if (alwaysRewarmTopEntriesTracker == null || entry == null) {
+            return;
+        }
+        Record question = entry.getResponse() != null ? entry.getResponse().getQuestion() : null;
+        if (isKeep(question)) {
+            return;
+        }
+        long accessSeq = alwaysRewarmTopEntriesTracker.recordAccess(key);
+        entry.setLastAccessSeq(accessSeq);
+    }
+
+    private void onCacheEntryRemoved(String key) {
+        if (alwaysRewarmTopEntriesTracker != null) {
+            alwaysRewarmTopEntriesTracker.remove(key);
+        }
+    }
+
+    private boolean isKeep(Record question) {
+        return question != null && keepProvider != null && keepProvider.contain(question);
     }
 
 }

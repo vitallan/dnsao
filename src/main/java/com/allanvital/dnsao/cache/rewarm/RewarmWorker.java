@@ -29,7 +29,6 @@ public class RewarmWorker implements Runnable {
     private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
     private final QueryProcessorFactory queryProcessorFactory;
-    private final KeepProvider keepProvider;
     private final int maxRewarmCount;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private long lastBeat = Clock.currentTimeInMillis();
@@ -43,7 +42,6 @@ public class RewarmWorker implements Runnable {
         this.scheduler = scheduler;
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
-        this.keepProvider = keepProvider;
         this.maxRewarmCount = maxRewarmCount;
         Log.CACHE.debug("starting RewarWorker");
     }
