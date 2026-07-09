@@ -7,6 +7,7 @@ import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Rcode;
+import org.xbill.DNS.RRSIGRecord;
 import org.xbill.DNS.Section;
 import org.xbill.DNS.Type;
 
@@ -163,7 +164,7 @@ public class RecursiveSession {
                 if (usedFreshQuery) {
                     queryExecutor.cacheResponse(stepRequest, response);
                 }
-                return response;
+                return buildClientFacingPositiveResponse(qname, qtype, response.getAnswerRecords());
             }
 
             if (response.isNoDataFor(currentName, qtype)) {
@@ -256,6 +257,24 @@ public class RecursiveSession {
         for (Record answer : answers) {
             response.addRecord(answer, Section.ANSWER);
         }
+    }
+
+    private StepResponse buildClientFacingPositiveResponse(Name qname, int qtype, List<Record> authoritativeAnswers) {
+        Message response = new Message();
+        response.getHeader().setRcode(Rcode.NOERROR);
+        response.addRecord(Record.newRecord(qname, qtype, request.qclass()), Section.QUESTION);
+        for (Record answer : authoritativeAnswers) {
+            if (answer.getName().equals(qname) && answer.getType() == qtype) {
+                response.addRecord(answer, Section.ANSWER);
+                continue;
+            }
+            if (answer instanceof RRSIGRecord rrsig
+                    && answer.getName().equals(qname)
+                    && rrsig.getTypeCovered() == qtype) {
+                response.addRecord(answer, Section.ANSWER);
+            }
+        }
+        return new StepResponse(response);
     }
 
 }
