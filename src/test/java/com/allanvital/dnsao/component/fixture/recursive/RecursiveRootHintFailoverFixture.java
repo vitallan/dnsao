@@ -27,7 +27,7 @@ public class RecursiveRootHintFailoverFixture extends AbstractRecursiveScenarioF
         fakeServer.mockResponse(domainAQuery, MessageHelper.buildAResponse(domainAQuery, finalIp, referralTtl));
 
         return new RecursiveServerHistories(
-                history(key("com", Type.NS)),
+                history(key("com", Type.NS), key(domain, Type.NS)),
                 history(key("com", Type.NS), key(domain, Type.NS), key(domain, Type.A)),
                 history()
         );

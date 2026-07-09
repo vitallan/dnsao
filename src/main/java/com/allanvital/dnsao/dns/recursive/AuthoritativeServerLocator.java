@@ -55,7 +55,7 @@ class AuthoritativeServerLocator {
             if (lastStep) {
                 currentServers = resolveNextServers(currentServers, stepRequest);
             } else {
-                currentServers = queryExecutor.resolveNavigationServers(currentServers, stepRequest);
+                currentServers = resolveNavigationServers(currentServers, stepRequest);
             }
             if (!sessionState.hasRemainingSessionBudget()) {
                 return List.of();
@@ -91,6 +91,44 @@ class AuthoritativeServerLocator {
         }
 
         return currentServers;
+    }
+
+    private List<NameServerAddress> resolveNavigationServers(List<NameServerAddress> currentServers, StepRequest request) {
+        StepResponse response = queryExecutor.queryServers(currentServers, request);
+        if (response == null || response.isNXDOMAIN()) {
+            return List.of();
+        }
+
+        List<Name> nsTargets = response.getNSTargets();
+        if (shouldKeepCurrentServers(nsTargets, request.qname())) {
+            return currentServers;
+        }
+
+        List<NameServerAddress> referralServers = response.getReferralServers();
+        if (!referralServers.isEmpty()) {
+            return referralServers;
+        }
+
+        if (!nsTargets.isEmpty()) {
+            List<NameServerAddress> resolved = nameServerTargetResolver.resolveNsTargets(nsTargets);
+            if (!resolved.isEmpty()) {
+                return resolved;
+            }
+        }
+
+        return List.of();
+    }
+
+    private boolean shouldKeepCurrentServers(List<Name> nsTargets, Name qname) {
+        if (nsTargets.isEmpty()) {
+            return false;
+        }
+        for (Name target : nsTargets) {
+            if (!target.subdomain(qname)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private List<Name> buildMinimizedNsNames(Name qname) {

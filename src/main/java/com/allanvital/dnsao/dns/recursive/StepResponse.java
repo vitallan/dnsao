@@ -181,10 +181,14 @@ public class StepResponse {
         if (Name.root.equals(referralOwner)) {
             return true;
         }
+        Name parent = parentOf(referralOwner);
+        if (Name.root.equals(parent)) {
+            // Root responses commonly provide glue for TLD nameservers outside the delegated TLD itself.
+            return true;
+        }
         if (target.subdomain(referralOwner)) {
             return true;
         }
-        Name parent = parentOf(referralOwner);
         return parent != null && isDirectChildOf(target, parent);
     }
 
