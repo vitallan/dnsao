@@ -13,6 +13,7 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import java.net.UnknownHostException;
 import java.util.Objects;
 
+import static com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector.DEFAULT_PAGE_SIZE;
 import static java.net.InetAddress.getByName;
 import static java.util.Base64.getUrlDecoder;
 
@@ -68,17 +69,16 @@ public class WebServer {
         });
 
         app.get("/queries", ctx -> {
-            String pageParam = ctx.queryParam("page");
-            int page = 0;
-            if (pageParam != null) {
-                try {
-                    page = Integer.parseInt(pageParam);
-                } catch (NumberFormatException e) {
-                    //ignored
-                }
-            }
+            int page = parseIntParam(ctx.queryParam("page"), 0);
+            int pageSize = parseIntParam(ctx.queryParam("pageSize"), DEFAULT_PAGE_SIZE);
+            String filter = ctx.queryParam("filter");
+            if (filter == null) filter = "";
+            String sortKey = ctx.queryParam("sortKey");
+            if (sortKey == null) sortKey = "time";
+            String sortDir = ctx.queryParam("sortDir");
+            if (sortDir == null) sortDir = "desc";
             ctx.contentType("application/json; charset=utf-8").result(
-                    builder.buildQueriesArray(page).toString()
+                    builder.buildQueriesArray(page, pageSize, filter, sortKey, sortDir).toString()
             );
         });
         
@@ -168,6 +168,17 @@ public class WebServer {
 
     public int getPort() {
         return this.port;
+    }
+
+    private static int parseIntParam(String param, int defaultValue) {
+        if (param == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(param);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     public void stop() {

@@ -4,6 +4,7 @@ import com.allanvital.dnsao.cache.CacheStats;
 import com.allanvital.dnsao.cache.SizeSnapshot;
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.web.stats.Bucket;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
@@ -47,15 +48,16 @@ public class JsonBuilder {
         root.add("cache", cache);
     }
 
-    public JsonObject buildQueriesArray(int page) {
+    public JsonObject buildQueriesArray(int page, int pageSize, String filter, String sortKey, String sortDir) {
         JsonObject root = Json.object();
-        addOrderedQueries(root, page);
+        addOrderedQueries(root, page, pageSize, filter, sortKey, sortDir);
         return root;
     }
 
-    private void addOrderedQueries(JsonObject root, int page) {
+    private void addOrderedQueries(JsonObject root, int page, int pageSize, String filter, String sortKey, String sortDir) {
+        PagedQueryResult result = statsCollector.getOrderedQueryEvents(page, pageSize, filter, sortKey, sortDir);
         JsonArray rows = Json.array();
-        for (QueryEvent queryEvent : statsCollector.getOrderedQueryEvents(page)) {
+        for (QueryEvent queryEvent : result.items()) {
             JsonArray row = Json.array();
             row.add(formatMillis(queryEvent.getTime(), "yyyy-MM-dd HH:mm:ss.SSS"));
             row.add(queryEvent.getQueryResolvedBy().toString());
@@ -68,6 +70,9 @@ public class JsonBuilder {
             rows.add(row);
         }
         root.add("queries", rows);
+        root.add("total", result.total());
+        root.add("page", page);
+        root.add("pageSize", pageSize);
     }
 
     private void addQueriesPerBucket(JsonObject root) {

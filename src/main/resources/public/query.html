@@ -139,49 +139,18 @@
       const FILTER_ALL = document.getElementById('filterAll');
       const HEADERS = Array.from(document.querySelectorAll('thead th.is-clickable'));
 
-      let allRows = [];
+      let pageCache = {};
+      let totalFiltered = 0;
       let currentPage = 1;
       let pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
       let sortKey = 'time';
       let sortDir = 'desc';
+      let currentFilter = '';
 
-      // Used to cancel in-flight loads when Refresh is clicked.
       let activeLoad = { id: 0, abort: null };
 
       function setStatus(text) { STATUS.textContent = text; }
       function fmtSource(v) { return (v === null || v === undefined || v === '') ? '—' : v; }
-
-      const FILTERABLE_KEYS = ['resolvedBy', 'client', 'type', 'domain', 'answers', 'source'];
-
-      function applyGlobalFilter(rows) {
-        const q = FILTER_ALL.value.trim().toLowerCase();
-        if (!q) return rows;
-        return rows.filter(r => {
-          for (const k of FILTERABLE_KEYS) {
-            const v = (r[k] ?? '').toString().toLowerCase();
-            if (v.includes(q)) return true;
-          }
-          return false;
-        });
-      }
-
-      function compare(a, b) {
-        const dir = (sortDir === 'asc') ? 1 : -1;
-        const ka = a[sortKey];
-        const kb = b[sortKey];
-
-        if (sortKey === 'elapsed') {
-          const na = Number(ka) || 0;
-          const nb = Number(kb) || 0;
-          if (na === nb) return 0;
-          return (na < nb ? -1 : 1) * dir;
-        }
-
-        const sa = (ka ?? '').toString().toLowerCase();
-        const sb = (kb ?? '').toString().toLowerCase();
-        if (sa === sb) return 0;
-        return (sa < sb ? -1 : 1) * dir;
-      }
 
       function updateSortIndicators() {
         HEADERS.forEach(th => th.removeAttribute('data-sort'));
@@ -190,26 +159,18 @@
       }
 
       function renderTable() {
-        const filtered = applyGlobalFilter(allRows).slice();
-        const total = filtered.length;
-
-        filtered.sort(compare);
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
-        currentPage = Math.min(currentPage, totalPages);
-        const start = (currentPage - 1) * pageSize;
-        const pageRows = filtered.slice(start, start + pageSize);
-
+        const rows = pageCache[currentPage - 1];
         T_BODY.innerHTML = '';
-        if (pageRows.length === 0) {
+        if (!rows || rows.length === 0) {
           const tr = document.createElement('tr');
           const td = document.createElement('td');
           td.colSpan = 8;
           td.className = 'has-text-centered has-text-grey';
-          td.textContent = 'No queries to display.';
+          td.textContent = totalFiltered === 0 ? 'No queries to display.' : 'No queries on this page.';
           tr.appendChild(td);
           T_BODY.appendChild(tr);
         } else {
-          for (const r of pageRows) {
+          for (const r of rows) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>${r.time}</td>
@@ -225,14 +186,16 @@
           }
         }
 
-        renderPagination(totalPages);
-        const from = total === 0 ? 0 : (start + 1);
-        const to = start + pageRows.length;
-        setStatus(`Showing ${from}–${to} of ${total} • Sorted by ${sortKey} (${sortDir})`);
+        renderPagination();
+        const total = totalFiltered;
+        const start = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const end = Math.min(start - 1 + (rows ? rows.length : 0), total);
+        setStatus(`Showing ${start}–${end} of ${total} • Sorted by ${sortKey} (${sortDir})`);
         updateSortIndicators();
       }
 
-      function renderPagination(totalPages) {
+      function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
         PAGINATION_LIST.innerHTML = '';
         BTN_PREV.classList.toggle('is-disabled', currentPage <= 1);
         BTN_NEXT.classList.toggle('is-disabled', currentPage >= totalPages);
@@ -262,15 +225,20 @@
             a.className = 'pagination-link' + (p === currentPage ? ' is-current' : '');
             a.textContent = p;
             a.setAttribute('aria-label', `Go to page ${p}`);
-            a.addEventListener('click', () => { currentPage = p; renderTable(); });
+            a.addEventListener('click', () => { goToPage(p); });
             li.appendChild(a);
           }
           PAGINATION_LIST.appendChild(li);
         });
       }
 
-      async function fetchData() {
-        // Cancel any in-flight load.
+      async function fetchPage(page) {
+        if (pageCache[page]) {
+          currentPage = page + 1;
+          renderTable();
+          return;
+        }
+
         activeLoad.id++;
         if (activeLoad.abort) {
           try { activeLoad.abort.abort(); } catch (_) { /* ignored */ }
@@ -279,60 +247,35 @@
         const loadId = activeLoad.id;
 
         try {
-          setStatus('Loading…');
+          const params = new URLSearchParams({
+            page: page,
+            pageSize: pageSize,
+            filter: currentFilter,
+            sortKey: sortKey,
+            sortDir: sortDir
+          });
+          const res = await fetch(`/queries?${params}`, { cache: 'no-store', signal: activeLoad.abort.signal });
+          if (loadId !== activeLoad.id) return;
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
 
-          // Reset immediately so the user sees progress as pages arrive.
-          allRows = [];
-          currentPage = 1;
+          const chunk = (json.queries || []).map(a => ({
+            time: a[0],
+            resolvedBy: a[1],
+            client: a[2],
+            type: a[3],
+            domain: a[4],
+            answers: a[5],
+            source: a[6],
+            elapsed: a[7]
+          }));
+
+          pageCache[page] = chunk;
+          totalFiltered = json.total || 0;
+          currentPage = page + 1;
           renderTable();
-
-          let lastRenderAt = 0;
-          let pagesLoaded = 0;
-          const maybeRender = async (force) => {
-            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-            if (!force && (now - lastRenderAt) < 150) {
-              return;
-            }
-            lastRenderAt = now;
-            renderTable();
-            // Yield so the browser can paint between page fetches.
-            await new Promise(requestAnimationFrame);
-          };
-
-          for (let page = 0; ; page++) {
-            if (loadId !== activeLoad.id) {
-              return;
-            }
-            const res = await fetch(`/queries?page=${page}`, { cache: 'no-store', signal: activeLoad.abort.signal });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-
-            const chunk = (json.queries || []).map(a => ({
-              time: a[0],
-              resolvedBy: a[1],
-              client: a[2],
-              type: a[3],
-              domain: a[4],
-              answers: a[5],
-              source: a[6],
-              elapsed: a[7]
-            }));
-
-            if (chunk.length === 0) break;
-
-            allRows.push(...chunk);
-            pagesLoaded++;
-            setStatus(`Loading… ${allRows.length} loaded (${pagesLoaded} page${pagesLoaded === 1 ? '' : 's'})`);
-            await maybeRender(false);
-          }
-
-          setStatus(`Loaded ${allRows.length} quer${allRows.length === 1 ? 'y' : 'ies'} • Sorted by ${sortKey} (${sortDir})`);
-          await maybeRender(true);
         } catch (err) {
-          if (err && err.name === 'AbortError') {
-            // A newer fetchData() call took over.
-            return;
-          }
+          if (err && err.name === 'AbortError') return;
           console.error(err);
           T_BODY.innerHTML = '';
           const tr = document.createElement('tr');
@@ -346,20 +289,42 @@
         }
       }
 
+      function goToPage(p) {
+        currentPage = p;
+        fetchPage(p - 1);
+      }
+
+      function resetAndFetchPage0() {
+        pageCache = {};
+        totalFiltered = 0;
+        currentPage = 1;
+        fetchPage(0);
+      }
+
+      function debounce(fn, ms) {
+        let timer;
+        return function () {
+          clearTimeout(timer);
+          timer = setTimeout(fn, ms);
+        };
+      }
+
       PAGE_SIZE_SEL.addEventListener('change', () => {
         pageSize = parseInt(PAGE_SIZE_SEL.value, 10);
-        currentPage = 1;
-        renderTable();
+        resetAndFetchPage0();
       });
       BTN_PREV.addEventListener('click', () => {
-        if (currentPage > 1) { currentPage--; renderTable(); }
+        if (currentPage > 1) { goToPage(currentPage - 1); }
       });
       BTN_NEXT.addEventListener('click', () => {
-        const totalPages = Math.max(1, Math.ceil(applyGlobalFilter(allRows).length / pageSize));
-        if (currentPage < totalPages) { currentPage++; renderTable(); }
+        const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+        if (currentPage < totalPages) { goToPage(currentPage + 1); }
       });
-      BTN_REFRESH.addEventListener('click', fetchData);
-      FILTER_ALL.addEventListener('input', () => { currentPage = 1; renderTable(); });
+      BTN_REFRESH.addEventListener('click', resetAndFetchPage0);
+      FILTER_ALL.addEventListener('input', debounce(() => {
+        currentFilter = FILTER_ALL.value.trim();
+        resetAndFetchPage0();
+      }, 300));
 
       HEADERS.forEach(th => {
         th.addEventListener('click', () => {
@@ -370,11 +335,11 @@
             sortKey = key;
             sortDir = (key === 'elapsed') ? 'desc' : 'asc';
           }
-          renderTable();
+          resetAndFetchPage0();
         });
       });
 
-      fetchData();
+      resetAndFetchPage0();
     })();
 </script>
 
