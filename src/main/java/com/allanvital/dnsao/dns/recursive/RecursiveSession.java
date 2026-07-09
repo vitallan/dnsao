@@ -11,6 +11,7 @@ import org.xbill.DNS.Section;
 import org.xbill.DNS.Type;
 
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -118,7 +119,7 @@ public class RecursiveSession {
 
     private StepResponse resolveFinalQuery(Name qname, int qtype, List<NameServerAddress> servers, Set<Name> cnamePath) {
         Name currentName = qname;
-        List<NameServerAddress> currentServers = servers;
+        List<NameServerAddress> currentServers = new ArrayList<>(servers);
 
         for (int iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
             if (!sessionState.hasRemainingSessionBudget()) {
@@ -128,23 +129,47 @@ public class RecursiveSession {
             recursiveStatsCollector.increment(RecursiveMetric.FINAL_STEP);
             sessionState.recordStep();
             Log.DNS.trace("recursive step session={} phase=final qtype={} qname={} servers={} iteration={}", sessionId, Type.string(stepRequest.qtype()), stepRequest.qname(), currentServers.size(), iteration + 1);
-            StepResponse response = queryExecutor.queryServers(currentServers, stepRequest);
-            if (response == null) {
-                return null;
+            NameServerAddress respondingServer;
+            StepResponse response;
+            boolean usedFreshQuery;
+            if (currentServers.size() == 1) {
+                usedFreshQuery = false;
+                respondingServer = currentServers.get(0);
+                response = queryExecutor.queryServers(currentServers, stepRequest);
+                if (response == null) {
+                    return null;
+                }
+            } else {
+                usedFreshQuery = true;
+                java.util.Map.Entry<NameServerAddress, StepResponse> responseEntry = queryExecutor.queryServersFresh(currentServers, stepRequest);
+                if (responseEntry == null) {
+                    return null;
+                }
+                respondingServer = responseEntry.getKey();
+                response = responseEntry.getValue();
             }
             if (!sessionState.hasRemainingSessionBudget()) {
                 return null;
             }
 
             if (response.isNXDOMAIN()) {
+                if (usedFreshQuery) {
+                    queryExecutor.cacheResponse(stepRequest, response);
+                }
                 return response;
             }
 
             if (response.hasAnswer(currentName, qtype)) {
+                if (usedFreshQuery) {
+                    queryExecutor.cacheResponse(stepRequest, response);
+                }
                 return response;
             }
 
             if (response.isNoDataFor(currentName, qtype)) {
+                if (usedFreshQuery) {
+                    queryExecutor.cacheResponse(stepRequest, response);
+                }
                 return response;
             }
 
@@ -157,6 +182,10 @@ public class RecursiveSession {
                 }
                 StepResponse targetResponse = resolveInternal(cnameTarget, qtype, cnamePath);
                 if (targetResponse == null) {
+                    currentServers = excludeServer(currentServers, respondingServer);
+                    if (!currentServers.isEmpty()) {
+                        continue;
+                    }
                     return null;
                 }
                 if (targetResponse.toWireMessage().getRcode() != Rcode.NOERROR) {
@@ -190,10 +219,28 @@ public class RecursiveSession {
                 }
             }
 
+            currentServers = excludeServer(currentServers, respondingServer);
+            if (!currentServers.isEmpty()) {
+                continue;
+            }
             return null;
         }
 
         return null;
+    }
+
+    private List<NameServerAddress> excludeServer(List<NameServerAddress> servers, NameServerAddress respondingServer) {
+        if (respondingServer == null || servers.size() <= 1) {
+            return List.of();
+        }
+        List<NameServerAddress> remaining = new ArrayList<>();
+        for (NameServerAddress server : servers) {
+            if (server.ip().equals(respondingServer.ip()) && server.port() == respondingServer.port()) {
+                continue;
+            }
+            remaining.add(server);
+        }
+        return List.copyOf(remaining);
     }
 
     private StepResponse buildClientFacingResponse(Name qname, int qtype, List<Record> leadingAnswers, List<Record> trailingAnswers) {

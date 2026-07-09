@@ -36,6 +36,17 @@ class RecursiveQueryExecutor {
         return response;
     }
 
+    Map.Entry<NameServerAddress, StepResponse> queryServersFresh(List<NameServerAddress> servers, StepRequest request) {
+        if (!sessionState.hasRemainingSessionBudget()) {
+            return null;
+        }
+        return serverRacer.race(servers, request);
+    }
+
+    void cacheResponse(StepRequest request, StepResponse response) {
+        recursiveCache.put(request, response);
+    }
+
     List<NameServerAddress> resolveNavigationServers(List<NameServerAddress> currentServers, StepRequest request) {
         StepResponse cachedResponse = recursiveCache.get(request);
         if (cachedResponse != null) {

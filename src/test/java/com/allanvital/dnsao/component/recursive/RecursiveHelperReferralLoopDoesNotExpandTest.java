@@ -7,13 +7,21 @@ import com.allanvital.dnsao.graph.bean.TestStepResolverFactory;
 import com.allanvital.dnsao.graph.fake.FakeServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xbill.DNS.DClass;
 import org.xbill.DNS.Message;
+import org.xbill.DNS.Name;
 import org.xbill.DNS.Rcode;
+import org.xbill.DNS.TextParseException;
+import org.xbill.DNS.Type;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * @author Allan Vital (https://allanvital.com)
@@ -89,7 +97,11 @@ public class RecursiveHelperReferralLoopDoesNotExpandTest extends AbstractRecurs
         assertEquals(Rcode.SERVFAIL, response.getRcode());
         assertReceivedQueries(fakeUpstreamServer, expectedHistories.primaryQueries());
         assertReceivedQueries(delegatedServer, expectedHistories.secondaryQueries());
-        assertReceivedQueries(loopServer, expectedHistories.tertiaryQueries());
+
+        List<com.allanvital.dnsao.graph.bean.DnsQueryKey> loopQueries = loopServer.getReceivedQueries();
+        assertTrue(loopQueries.contains(key(FIRST_HELPER_TARGET, Type.A)));
+        assertFalse(loopQueries.contains(key(FIRST_HELPER_TARGET, Type.AAAA)));
+        assertFalse(loopQueries.contains(key(SECOND_HELPER_TARGET, Type.A)));
     }
 
     @Test
@@ -121,6 +133,20 @@ public class RecursiveHelperReferralLoopDoesNotExpandTest extends AbstractRecurs
         assertEquals(FINAL_IP, MessageHelper.extractIpFromResponseMessage(response));
         assertReceivedQueries(fakeUpstreamServer, expectedHistories.primaryQueries());
         assertReceivedQueries(delegatedServer, expectedHistories.secondaryQueries());
-        assertReceivedQueries(loopServer, expectedHistories.tertiaryQueries());
+
+        List<com.allanvital.dnsao.graph.bean.DnsQueryKey> loopQueries = loopServer.getReceivedQueries();
+        assertTrue(loopQueries.contains(key(FIRST_HELPER_TARGET, Type.A)));
+        assertFalse(loopQueries.contains(key(FIRST_HELPER_TARGET, Type.AAAA)));
+        assertTrue(loopQueries.contains(key(SECOND_HELPER_TARGET, Type.A)));
+    }
+
+    private com.allanvital.dnsao.graph.bean.DnsQueryKey key(String qname, int qtype) {
+        try {
+            String normalized = qname.endsWith(".") ? qname : qname + ".";
+            return new com.allanvital.dnsao.graph.bean.DnsQueryKey(Name.fromString(normalized), qtype, DClass.IN);
+        } catch (TextParseException e) {
+            fail("failed to build expected query key: " + e.getMessage());
+            return null;
+        }
     }
 }

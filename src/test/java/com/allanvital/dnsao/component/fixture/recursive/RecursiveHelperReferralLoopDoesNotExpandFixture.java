@@ -117,7 +117,6 @@ public class RecursiveHelperReferralLoopDoesNotExpandFixture extends AbstractRec
                 history(
                         key(firstHelperTargetHost, Type.A),
                         key(firstHelperTargetHost, Type.A),
-                        key(firstHelperTargetHost, Type.A),
                         key(secondHelperTargetHost, Type.A)
                 )
         );
