@@ -6,6 +6,7 @@ import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryEventListener;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.stats.Bucket;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 
 import java.util.*;
@@ -17,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -159,6 +161,62 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
             }
         }
         return queryEvents;
+    }
+
+    @Override
+    public PagedQueryResult getOrderedQueryEvents(int page, int pageSize, String filter, String sortKey, String sortDir) {
+        maybeTrimByNow();
+        List<QueryEvent> all = new ArrayList<>();
+        NavigableMap<Long, MemoryBucket> countsRaw = getMemoryBucketsFilledToNow();
+        countsRaw.forEach((interval, memoryBucket) -> {
+            all.addAll(memoryBucket.getQueryEvents());
+        });
+
+        Predicate<QueryEvent> filterPred = e -> {
+            if (filter == null || filter.isBlank()) {
+                return true;
+            }
+            String q = filter.toLowerCase();
+            return (e.getDomain() != null && e.getDomain().toLowerCase().contains(q))
+                    || (e.getClient() != null && e.getClient().toLowerCase().contains(q))
+                    || (e.getType() != null && e.getType().toLowerCase().contains(q))
+                    || (e.getAnswer() != null && e.getAnswer().toLowerCase().contains(q))
+                    || (e.getSource() != null && e.getSource().toLowerCase().contains(q))
+                    || (e.getQueryResolvedBy() != null && e.getQueryResolvedBy().name().toLowerCase().contains(q))
+                    || Long.toString(e.getElapsedTime()).contains(q);
+        };
+
+        Stream<QueryEvent> stream = all.stream().filter(filterPred);
+
+        Comparator<QueryEvent> comparator = switch (sortKey != null ? sortKey : "time") {
+            case "time" -> Comparator.comparingLong(QueryEvent::getTime);
+            case "resolvedBy" -> Comparator.comparing(QueryEvent::getQueryResolvedBy,
+                    Comparator.nullsLast(Comparator.comparing(Enum::name)));
+            case "client" -> Comparator.comparing(QueryEvent::getClient, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "type" -> Comparator.comparing(QueryEvent::getType, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "domain" -> Comparator.comparing(QueryEvent::getDomain, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "answers" -> Comparator.comparing(QueryEvent::getAnswer, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "source" -> Comparator.comparing(QueryEvent::getSource, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "elapsed" -> Comparator.comparingLong(QueryEvent::getElapsedTime);
+            default -> Comparator.comparingLong(QueryEvent::getTime);
+        };
+
+        if (!"asc".equalsIgnoreCase(sortDir)) {
+            comparator = comparator.reversed();
+        }
+
+        if (page < 0) {
+            return new PagedQueryResult(List.of(), 0);
+        }
+
+        List<QueryEvent> sorted = stream.sorted(comparator).toList();
+        long total = sorted.size();
+        int from = page * pageSize;
+        int to = Math.min(from + pageSize, sorted.size());
+        if (from >= sorted.size()) {
+            return new PagedQueryResult(List.of(), total);
+        }
+        return new PagedQueryResult(sorted.subList(from, to), total);
     }
 
     @Override

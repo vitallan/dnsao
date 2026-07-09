@@ -6,6 +6,7 @@ import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryEventListener;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
 import com.allanvital.dnsao.web.stats.Bucket;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import com.allanvital.dnsao.web.stats.StatsCollector;
 import com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector;
 
@@ -294,6 +295,84 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
             throw new RuntimeException(e);
         }
         return out;
+    }
+
+    @Override
+    public PagedQueryResult getOrderedQueryEvents(int page, int pageSize, String filter, String sortKey, String sortDir) {
+        if (page < 0) {
+            return new PagedQueryResult(List.of(), 0);
+        }
+
+        long now = nowSupplier.getAsLong();
+        long nowBucket = truncateToWindow(now, bucketIntervalMs);
+        long latestAllowedBucket = Math.max(nowBucket, maxBucketStartPresent());
+        long earliestAllowed = latestAllowedBucket - (long) (maxBuckets - 1) * bucketIntervalMs;
+        long latestAllowed = Math.max(now, latestAllowedBucket + bucketIntervalMs - 1);
+
+        String filterClause = "";
+        if (filter != null && !filter.isBlank()) {
+            filterClause = " AND (domain LIKE ? OR client LIKE ? OR type LIKE ? OR answer LIKE ? OR source LIKE ? OR resolved_by LIKE ? OR CAST(elapsed_ms AS TEXT) LIKE ?)";
+        }
+
+        String orderClause = switch (sortKey != null ? sortKey : "time") {
+            case "resolvedBy" -> "resolved_by";
+            case "client" -> "client";
+            case "type" -> "type";
+            case "domain" -> "domain";
+            case "answers" -> "answer";
+            case "source" -> "source";
+            case "elapsed" -> "elapsed_ms";
+            default -> "time_ms";
+        };
+
+        String dir = "asc".equalsIgnoreCase(sortDir) ? "ASC" : "DESC";
+        String orderSql = "ORDER BY " + orderClause + " " + dir + ", id " + dir;
+
+        String countSql = "SELECT COUNT(*) FROM query_event WHERE time_ms >= ? AND time_ms <= ?" + filterClause;
+        String dataSql = "SELECT time_ms, resolved_by, client, type, domain, answer, source, elapsed_ms " +
+                "FROM query_event WHERE time_ms >= ? AND time_ms <= ?" + filterClause + " " + orderSql + " LIMIT ? OFFSET ?";
+
+        int offset = page * pageSize;
+
+        try (PreparedStatement psCount = readConn.prepareStatement(countSql)) {
+            psCount.setLong(1, earliestAllowed);
+            psCount.setLong(2, latestAllowed);
+            int idx = 3;
+            if (filter != null && !filter.isBlank()) {
+                String likeVal = "%" + filter + "%";
+                for (int i = 0; i < 7; i++) {
+                    psCount.setString(idx++, likeVal);
+                }
+            }
+            long total;
+            try (ResultSet rs = psCount.executeQuery()) {
+                total = rs.getLong(1);
+            }
+
+            List<QueryEvent> items;
+            try (PreparedStatement psData = readConn.prepareStatement(dataSql)) {
+                psData.setLong(1, earliestAllowed);
+                psData.setLong(2, latestAllowed);
+                idx = 3;
+                if (filter != null && !filter.isBlank()) {
+                    String likeVal = "%" + filter + "%";
+                    for (int i = 0; i < 7; i++) {
+                        psData.setString(idx++, likeVal);
+                    }
+                }
+                psData.setInt(idx++, pageSize);
+                psData.setInt(idx, offset);
+                items = new ArrayList<>();
+                try (ResultSet rs = psData.executeQuery()) {
+                    while (rs.next()) {
+                        items.add(readQueryEventRow(rs));
+                    }
+                }
+            }
+            return new PagedQueryResult(items, total);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
