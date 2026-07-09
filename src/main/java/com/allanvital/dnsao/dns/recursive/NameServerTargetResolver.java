@@ -47,9 +47,13 @@ class NameServerTargetResolver {
             Log.DNS.trace("recursive helper dedup session={} qtype=A qname={} (already attempted)", sessionId, target);
             return List.of();
         }
+        sessionState.resetReferralLoopSignal();
         recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_A);
         Log.DNS.trace("recursive helper session={} qtype=A qname={}", sessionId, target);
         StepResponse ipv4Response = recursiveLookup.resolve(target, Type.A);
+        if (sessionState.consumeReferralLoopDetected()) {
+            return List.of();
+        }
         if (ipv4Response != null) {
             List<NameServerAddress> ipv4Addresses = ipv4Response.getARecordAddresses(target);
             if (!ipv4Addresses.isEmpty()) {
@@ -64,9 +68,13 @@ class NameServerTargetResolver {
             Log.DNS.trace("recursive helper dedup session={} qtype=AAAA qname={} (already attempted)", sessionId, target);
             return List.of();
         }
+        sessionState.resetReferralLoopSignal();
         recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_AAAA);
         Log.DNS.trace("recursive helper session={} qtype=AAAA qname={}", sessionId, target);
         StepResponse ipv6Response = recursiveLookup.resolve(target, Type.AAAA);
+        if (sessionState.consumeReferralLoopDetected()) {
+            return List.of();
+        }
         if (ipv6Response == null) {
             return List.of();
         }

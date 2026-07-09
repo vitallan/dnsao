@@ -226,19 +226,9 @@ public class RecursiveFullWalkBehaviorTest extends AbstractRecursiveScenarioTest
         assertReceivedQueries(fakeUpstreamServer, List.of(
                 fixture.key("com", Type.NS),
                 fixture.key(EXAMPLE_ZONE, Type.NS),
-                fixture.key(DEV_ZONE, Type.NS),
-                fixture.key("com", Type.NS),
-                fixture.key(EXAMPLE_ZONE, Type.NS),
-                fixture.key(DEV_ZONE, Type.NS),
-                fixture.key("com", Type.NS),
-                fixture.key(EXAMPLE_ZONE, Type.NS),
                 fixture.key(DEV_ZONE, Type.NS)
         ));
-        assertReceivedQueries(delegatedServer, List.of(
-                fixture.key(LOOP_DOMAIN, Type.A),
-                fixture.key("ns1.dev.example.com", Type.A),
-                fixture.key("ns1.dev.example.com", Type.AAAA)
-        ));
+        assertReceivedQueries(delegatedServer, List.of(fixture.key(LOOP_DOMAIN, Type.A)));
     }
 
     private FixtureHelper loadMultiLevelDelegationScenario() {

@@ -19,6 +19,7 @@ class RecursiveSessionState {
     private long sessionDeadlineNs;
     private boolean helperBudgetLogged;
     private boolean sessionBudgetLogged;
+    private boolean referralLoopDetected;
     private long sessionId;
     private Name sessionQname;
     private final Set<String> seenHelperKeys = new HashSet<>();
@@ -35,6 +36,7 @@ class RecursiveSessionState {
         this.helperResolutionCount = 0;
         this.helperBudgetLogged = false;
         this.sessionBudgetLogged = false;
+        this.referralLoopDetected = false;
         this.seenHelperKeys.clear();
         this.sessionDeadlineNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxSessionElapsedMillis);
     }
@@ -65,6 +67,20 @@ class RecursiveSessionState {
 
     boolean tryHelperAttempt(Name target, int qtype) {
         return seenHelperKeys.add(target + ":" + qtype);
+    }
+
+    void resetReferralLoopSignal() {
+        referralLoopDetected = false;
+    }
+
+    void markReferralLoopDetected() {
+        referralLoopDetected = true;
+    }
+
+    boolean consumeReferralLoopDetected() {
+        boolean detected = referralLoopDetected;
+        referralLoopDetected = false;
+        return detected;
     }
 
     boolean hasRemainingSessionBudget() {

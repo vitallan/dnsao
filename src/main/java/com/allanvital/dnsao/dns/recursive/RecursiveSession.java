@@ -171,6 +171,8 @@ public class RecursiveSession {
                 Set<String> referralIps = referralServers.stream().map(NameServerAddress::ip).collect(Collectors.toSet());
                 if (currentIps.containsAll(referralIps)) {
                     Log.DNS.trace("recursive referral loop session={} qname={} servers={}", sessionId, currentName, referralServers.size());
+                    sessionState.markReferralLoopDetected();
+                    return null;
                 } else {
                     recursiveStatsCollector.increment(RecursiveMetric.REFERRAL_FOLLOWED);
                     Log.DNS.trace("recursive referral session={} qname={} nextServers={}", sessionId, currentName, referralServers.size());

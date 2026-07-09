@@ -29,21 +29,10 @@ public class RecursiveReferralLoopFixture extends AbstractRecursiveScenarioFixtu
         Message domainAQuery = MessageHelper.buildARequest(domain);
         fakeServer.mockResponse(domainAQuery, buildNsReferralWithGlueResponse(domainAQuery, nsHost, nsIp, referralTtl));
 
-        return mergeHistories(
-                history(key("com", Type.NS), key(domain.substring(domain.indexOf('.') + 1), Type.NS)),
-                history(key(domain, Type.A)),
-                history(
-                        key("com", Type.NS),
-                        key(domain.substring(domain.indexOf('.') + 1), Type.NS),
-                        key(domain, Type.NS),
-                        key(nsHost, Type.A)
-                ),
-                history(
-                        key("com", Type.NS),
-                        key(domain.substring(domain.indexOf('.') + 1), Type.NS),
-                        key(domain, Type.NS),
-                        key(nsHost, Type.AAAA)
-                )
+        return history(
+                key("com", Type.NS),
+                key(domain.substring(domain.indexOf('.') + 1), Type.NS),
+                key(domain, Type.A)
         );
     }
 }
