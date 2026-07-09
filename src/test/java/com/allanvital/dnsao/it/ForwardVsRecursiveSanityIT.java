@@ -1,4 +1,4 @@
-package com.allanvital.dnsao.component;
+package com.allanvital.dnsao.it;
 
 import com.allanvital.dnsao.dns.DnsServer;
 import com.allanvital.dnsao.exc.ConfException;
@@ -27,6 +27,8 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
+ * mvn -Plive-sanity -Dit.test=ForwardVsRecursiveSanityIT failsafe:integration-test failsafe:verify
+ *
  * @author Allan Vital (https://allanvital.com)
  */
 public class ForwardVsRecursiveSanityIT extends TestHolder {
