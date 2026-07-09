@@ -12,7 +12,6 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Type;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +45,6 @@ public class RecursiveFullWalkBehaviorTest extends AbstractRecursiveScenarioTest
     private static final String BAD_FINAL_IP = "10.0.0.82";
     private static final String CNAME_FINAL_IP = "10.0.0.83";
     private static final long TTL = 300;
-    private static final int MAX_ITERATIONS = 30;
 
     private FakeServer delegatedServer;
     private FakeServer badDelegatedServer;
@@ -225,17 +223,22 @@ public class RecursiveFullWalkBehaviorTest extends AbstractRecursiveScenarioTest
         assertNotNull(response);
         assertEquals(Rcode.SERVFAIL, response.getRcode());
 
-        List<DnsQueryKey> delegatedQueries = new ArrayList<>();
-        for (int i = 0; i < MAX_ITERATIONS; i++) {
-            delegatedQueries.add(fixture.key(LOOP_DOMAIN, Type.A));
-        }
-
         assertReceivedQueries(fakeUpstreamServer, List.of(
+                fixture.key("com", Type.NS),
+                fixture.key(EXAMPLE_ZONE, Type.NS),
+                fixture.key(DEV_ZONE, Type.NS),
+                fixture.key("com", Type.NS),
+                fixture.key(EXAMPLE_ZONE, Type.NS),
+                fixture.key(DEV_ZONE, Type.NS),
                 fixture.key("com", Type.NS),
                 fixture.key(EXAMPLE_ZONE, Type.NS),
                 fixture.key(DEV_ZONE, Type.NS)
         ));
-        assertReceivedQueries(delegatedServer, delegatedQueries);
+        assertReceivedQueries(delegatedServer, List.of(
+                fixture.key(LOOP_DOMAIN, Type.A),
+                fixture.key("ns1.dev.example.com", Type.A),
+                fixture.key("ns1.dev.example.com", Type.AAAA)
+        ));
     }
 
     private FixtureHelper loadMultiLevelDelegationScenario() {

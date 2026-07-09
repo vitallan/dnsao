@@ -109,9 +109,12 @@
             </div>
 
             <div class="column is-6-tablet is-3-desktop">
-                <div class="card" data-key="avgTime">
+                <div class="card" data-key="recursion">
                     <header class="card-header">
-                        <p class="card-header-title">Avg Response Time (ms)</p>
+                        <p class="card-header-title">Recursion</p>
+                        <span class="card-header-icon">
+                          <span class="tag is-success is-light" data-key="recursionRateTag">—%</span>
+                        </span>
                     </header>
                     <div class="card-content has-text-centered">
                         <p class="title is-4 value">—</p>
@@ -187,6 +190,7 @@
                             <div class="box p-0" style="height: 320px;">
                                 <canvas id="queriesChart"></canvas>
                             </div>
+                            <div id="queriesLegend" class="mt-2" style="display: grid; grid-template-columns: repeat(5, auto); gap: 4px 12px; justify-content: center;"></div>
                         </div>
                     </div>
                 </div>
@@ -224,6 +228,20 @@
                         </div>
                     </div>
                 </div>
+                <div class="card mt-3">
+                    <header class="card-header">
+                        <p class="card-header-title is-size-7">Response Times (ms)</p>
+                    </header>
+                    <div class="card-content py-2 px-3">
+                        <table class="table is-narrow is-fullwidth" id="responseTimesTable">
+                            <tbody>
+                                <tr><td class="has-text-grey">Average</td><td class="has-text-right" id="rtAvg">—</td></tr>
+                                <tr><td class="has-text-grey">P95</td><td class="has-text-right" id="rtP95">—</td></tr>
+                                <tr><td class="has-text-grey">P99</td><td class="has-text-right" id="rtP99">—</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -255,6 +273,8 @@
         buildChart(stats);
         buildUpstreamPie(stats);
         buildCacheSizeChart(stats);
+
+        renderResponseTimes(stats.summary);
 
         computeCacheRate(stats.summary);
         fillUpstreamLegend(stats.upstream);
@@ -290,7 +310,8 @@
         const local = Number(summary.local || 0);
         const upstream = Number(summary.upstream || 0);
         const refused = Number(summary.refused || 0);
-        const servFail = Number(summary.refused || 0);
+        const servFail = Number(summary.servfail || 0);
+        const recursion = Number(summary.recursion || 0);
 
         const cacheRate = total > 0 ? Math.round((cache / total) * 100) : 0;
         const blockedRate = total > 0 ? Math.round((blocked / total) * 100) : 0;
@@ -298,6 +319,7 @@
         const upstreamRate = total > 0 ? Math.round((upstream / total) * 100) : 0;
         const refusedRate = total > 0 ? Math.round((refused / total) * 100) : 0;
         const servFailRate = total > 0 ? Math.round((servFail / total) * 100) : 0;
+        const recursionRate = total > 0 ? Math.round((recursion / total) * 100) : 0;
 
         const cacheTag = document.querySelector('[data-key="cacheRateTag"]');
         if (cacheTag) cacheTag.textContent = cacheRate + '%';
@@ -311,7 +333,20 @@
         if (refusedTag) refusedTag.textContent = refusedRate + '%';
         const servFailTag = document.querySelector('[data-key="servFailRateTag"]');
         if (servFailTag) servFailTag.textContent = servFailRate + '%';
+        const recursionTag = document.querySelector('[data-key="recursionRateTag"]');
+        if (recursionTag) recursionTag.textContent = recursionRate + '%';
       } catch {}
+    }
+
+    function renderResponseTimes(summary) {
+      if (!summary || !summary.responseTimes) return;
+      const f = (v) => Number(v).toFixed(2);
+      const avgEl = document.getElementById('rtAvg');
+      const p95El = document.getElementById('rtP95');
+      const p99El = document.getElementById('rtP99');
+      if (avgEl) avgEl.textContent = f(summary.responseTimes.avg);
+      if (p95El) p95El.textContent = f(summary.responseTimes.p95);
+      if (p99El) p99El.textContent = f(summary.responseTimes.p99);
     }
 
     function fillUpstreamLegend(upstream) {

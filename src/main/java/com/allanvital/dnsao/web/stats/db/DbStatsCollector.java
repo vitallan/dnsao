@@ -305,6 +305,21 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
     }
 
     @Override
+    public double getPercentile(int percentile) {
+        List<QueryEvent> events = getOrderedQueryEvents();
+        if (events.isEmpty()) {
+            return 0.0;
+        }
+        List<Long> times = events.stream()
+                .map(QueryEvent::getElapsedTime)
+                .sorted()
+                .toList();
+        int index = (int) Math.ceil(percentile / 100.0 * times.size()) - 1;
+        index = Math.max(0, Math.min(index, times.size() - 1));
+        return times.get(index);
+    }
+
+    @Override
     public double getQueryElapsedTime() {
         long now = nowSupplier.getAsLong();
         long nowBucket = truncateToWindow(now, bucketIntervalMs);

@@ -13,8 +13,6 @@ import java.util.List;
  */
 public class RecursiveReferralLoopFixture extends AbstractRecursiveScenarioFixture {
 
-    private static final int MAX_ITERATIONS = 30;
-
     public RecursiveReferralLoopFixture(FakeServer fakeServer) {
         super(fakeServer);
     }
@@ -33,7 +31,19 @@ public class RecursiveReferralLoopFixture extends AbstractRecursiveScenarioFixtu
 
         return mergeHistories(
                 history(key("com", Type.NS), key(domain.substring(domain.indexOf('.') + 1), Type.NS)),
-                repeat(key(domain, Type.A), MAX_ITERATIONS)
+                history(key(domain, Type.A)),
+                history(
+                        key("com", Type.NS),
+                        key(domain.substring(domain.indexOf('.') + 1), Type.NS),
+                        key(domain, Type.NS),
+                        key(nsHost, Type.A)
+                ),
+                history(
+                        key("com", Type.NS),
+                        key(domain.substring(domain.indexOf('.') + 1), Type.NS),
+                        key(domain, Type.NS),
+                        key(nsHost, Type.AAAA)
+                )
         );
     }
 }

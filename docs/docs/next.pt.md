@@ -1,12 +1,12 @@
 # Backlog
 
-Para deixar registrado quais são as ideias de próximos passos da ferramenta, seguem abaixo:
+Esta página registra os próximos passos e pendências maiores do projeto.
 
 - [Javalin](#remover-javalin)
-- [Resolução Recursiva de DNS](#resolucao-recursiva)
+- [Modo Recursivo](#modo-recursivo)
 - [Sair do MkDocs](#sair-do-mkdocs)
 
-Esse são objetivos de longo prazo. No momento o foco é no funcionamento via upstreams.
+Esses são objetivos de longo prazo e itens de backlog.
 
 ## Remover Javalin
 
@@ -14,9 +14,25 @@ Os servidores UDP e TCP são criados e manipulados diretamente no **DNSao**, mas
 
 Embora **Javalin** seja um ótimo projeto e bem aderente aos propósitos de um runtime leve, faz mais sentido ter um servidor http interno para lidar com a disponibilização de métricas.
 
-## Resolução Recursiva
+## Modo Recursivo
 
-Similar ao [Unbound](https://nlnetlabs.nl/projects/unbound/about/){:target="_blank"}, isso tornaria **DNSao** em um resolvedor DNS, e não um encaminhador. Com essa feature, as queries DNS não seriam propagadas para um "upstream": seriam consultadas diretamente nos servidores raiz e resolvidas diretamente por **DNSao**. 
+O modo recursivo já está disponível no **DNSao** e hoje já é utilizável, especialmente em cenários de homelab. Os itens abaixo registram o que ainda falta para deixá-lo mais completo.
+
+### Cache negativo
+
+Respostas NXDOMAIN e NODATA ainda precisam de um tratamento de cache mais completo, incluindo TTL negativo derivado de SOA.
+
+### Suporte a DNAME
+
+O modo recursivo já suporta CNAME, mas o comportamento de DNAME ainda precisa ser implementado.
+
+### Regras mais fortes de aceitação de referral e answer
+
+O modo recursivo já trata glue, referrals sem glue e regras de bailiwick mais rígidas, mas ainda precisa de regras mais completas para aceitar referrals e answers.
+
+### Melhor tratamento para nameservers quebrados ou lame
+
+O modo recursivo ainda precisa de um tratamento melhor para nameservers lame, vazios ou defeituosos, incluindo comportamento de retry e supressão temporária.
 
 ## Sair do MkDocs
 

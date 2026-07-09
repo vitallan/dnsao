@@ -26,7 +26,7 @@
 </p>
 
 
-**DNSao** is a multi-upstream DNS forwarder written in Java, featuring caching, privacy-oriented DNS querying support (DoT and DoH), and a built-in dashboard for real-time metrics.
+**DNSao** is a multi-upstream DNS forwarder written in Java, featuring caching, privacy-oriented DNS querying support (DoT and DoH), available recursive mode, and a built-in dashboard for real-time metrics.
 
 > DNSao is currently under active development
 
@@ -42,6 +42,7 @@ It handles UDP, TCP and HTTP queries, and supports modern encrypted upstreams (D
 
 - Answers UDP, TCP and HTTP for local DNS queries
 - Multiple upstream DNS resolvers (UDP/DoT/DoH)
+- Recursive mode available for direct resolution from root hints
 - TTL-aware caching system with asynchronous rewarm
 - DNSSEC aware with configurable policies
 - Query history and metrics 
@@ -84,9 +85,7 @@ mvn exec:java
 ```
 ---
 
-The main branch should be stable. 
-
-New releases and docker images are generated based on commit/push on main.
+The main branch should be stable.
 
 ## Configuration
 
@@ -145,4 +144,3 @@ DNSao makes use of open-source libraries, including:
 ---
 
 Licensed under the MIT License © 2025 Allan Vital
-

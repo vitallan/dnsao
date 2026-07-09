@@ -6,6 +6,10 @@
 
 You can find configuration examples [in the GitHub project]({{sample_conf_url}}), but below are examples and references.
 
+## Recursive mode
+
+Recursive mode is documented separately in [Recursive Mode](recursive.md). This page remains focused on the general `application.yml` structure.
+
 ## Configuration YML
 
 This is the only configuration file for the application. Here you can define which ports will be used, which features are enabled, which upstreams will be used, local mappings, and which DNS blocklists will be applied. Below is a complete example:

@@ -37,6 +37,7 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Configuration: configuration.md
+  - Recursive Mode: recursive.md
   - Backlog: next.md
 
 plugins:
@@ -60,6 +61,7 @@ plugins:
             Home: Início
             Configuration: Configuração
             Installation: Instalação
+            Recursive Mode: Modo Recursivo
             Backlog: Backlog
 
 markdown_extensions:

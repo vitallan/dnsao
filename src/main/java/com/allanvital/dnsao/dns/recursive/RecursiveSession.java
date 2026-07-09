@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static com.allanvital.dnsao.dns.recursive.RecursiveMetric.*;
 
@@ -166,10 +167,16 @@ public class RecursiveSession {
 
             List<NameServerAddress> referralServers = response.getReferralServers();
             if (!referralServers.isEmpty()) {
-                recursiveStatsCollector.increment(RecursiveMetric.REFERRAL_FOLLOWED);
-                Log.DNS.trace("recursive referral session={} qname={} nextServers={}", sessionId, currentName, referralServers.size());
-                currentServers = referralServers;
-                continue;
+                Set<String> currentIps = currentServers.stream().map(NameServerAddress::ip).collect(Collectors.toSet());
+                Set<String> referralIps = referralServers.stream().map(NameServerAddress::ip).collect(Collectors.toSet());
+                if (currentIps.containsAll(referralIps)) {
+                    Log.DNS.trace("recursive referral loop session={} qname={} servers={}", sessionId, currentName, referralServers.size());
+                } else {
+                    recursiveStatsCollector.increment(RecursiveMetric.REFERRAL_FOLLOWED);
+                    Log.DNS.trace("recursive referral session={} qname={} nextServers={}", sessionId, currentName, referralServers.size());
+                    currentServers = referralServers;
+                    continue;
+                }
             }
 
             List<Name> nsTargets = response.getNSTargets();

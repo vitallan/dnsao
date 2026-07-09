@@ -43,6 +43,10 @@ class NameServerTargetResolver {
         if (!sessionState.hasRemainingSessionBudget()) {
             return List.of();
         }
+        if (!sessionState.tryHelperAttempt(target, Type.A)) {
+            Log.DNS.trace("recursive helper dedup session={} qtype=A qname={} (already attempted)", sessionId, target);
+            return List.of();
+        }
         recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_A);
         Log.DNS.trace("recursive helper session={} qtype=A qname={}", sessionId, target);
         StepResponse ipv4Response = recursiveLookup.resolve(target, Type.A);
@@ -54,6 +58,10 @@ class NameServerTargetResolver {
         }
 
         if (!sessionState.hasRemainingSessionBudget()) {
+            return List.of();
+        }
+        if (!sessionState.tryHelperAttempt(target, Type.AAAA)) {
+            Log.DNS.trace("recursive helper dedup session={} qtype=AAAA qname={} (already attempted)", sessionId, target);
             return List.of();
         }
         recursiveStatsCollector.increment(RecursiveMetric.HELPER_RESOLVE_AAAA);

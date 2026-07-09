@@ -1,5 +1,5 @@
 server:
-  port: 1053
+  port: 8053
   webPort: 8044
   udpThreadPool: 20
   tcpThreadPool: 4
@@ -20,29 +20,12 @@ misc:
 
 log:
   rootLevel: WARN
-  dns: INFO
+  dns: TRACE
   cache: WARN
   infra: WARN
 
 resolver:
   multiplier: 3 #how many upstreams we will reach on each active remote query
-  upstreams:
-    - host: "cloudflare-dns.com"
-      port: 443
-      protocol: "doh"
-      path: "/dns-query"
-    - host: "dns.google"
-      port: 443
-      protocol: "doh"
-      path: "/dns-query"
-    - host: "dns.quad9.net"
-      port: 443
-      protocol: "doh"
-      path: "/dns-query"
-    - host: "dns.adguard.com"
-      port: 443
-      protocol: "doh"
-      path: "/dns-query"
   localMappings:
     - domain: "karpov"
       ip: "192.168.68.113"

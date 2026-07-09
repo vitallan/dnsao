@@ -17,5 +17,6 @@ public interface StatsCollector {
     List<QueryEvent> getOrderedQueryEvents(int page);
     double getQueryElapsedTime();
     long getQueryCount(QueryResolvedBy queryResolvedBy);
+    double getPercentile(int percentile);
 
 }

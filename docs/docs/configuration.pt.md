@@ -6,6 +6,10 @@ O **DNSao** requer um único arquivo de configuração:
 
 Você pode encontrar exemplos de configuração [no projeto do GitHub]({{sample_conf_url}}), mas abaixo há exemplos e referências.
 
+## Modo recursivo
+
+O modo recursivo está documentado separadamente em [Modo Recursivo](recursive.pt.md). Esta página continua focada na estrutura geral do `application.yml`.
+
 ## Configuração YML
 
 Este é o único arquivo de configuração da aplicação. Nele você define quais portas serão usadas, quais recursos estarão habilitados, quais *upstreams* serão utilizados, mapeamentos locais e quais blocklists de DNS serão aplicadas. Abaixo está um exemplo completo:

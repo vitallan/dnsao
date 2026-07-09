@@ -67,6 +67,9 @@ public class StepResponse {
     }
 
     public List<Name> getNSTargets() {
+        if (!isReferralResponse()) {
+            return List.of();
+        }
         List<Name> targets = new ArrayList<>();
         for (Record r : message.getSection(Section.AUTHORITY)) {
             if (r instanceof NSRecord ns) {
@@ -97,6 +100,9 @@ public class StepResponse {
     }
 
     public List<NameServerAddress> getReferralServers() {
+        if (!isReferralResponse()) {
+            return List.of();
+        }
         List<NSRecord> nsRecords = new ArrayList<>();
         for (Record r : message.getSection(Section.AUTHORITY)) {
             if (r instanceof NSRecord ns) {
@@ -133,7 +139,7 @@ public class StepResponse {
         if (getCnameTarget(qname) != null) {
             return false;
         }
-        return getNSTargets().isEmpty();
+        return !isReferralResponse();
     }
 
     public Message toWireMessage() {
@@ -151,6 +157,24 @@ public class StepResponse {
                 result.add(new NameServerAddress(aaaa.getAddress().getHostAddress()));
             }
         }
+    }
+
+    private boolean isReferralResponse() {
+        if (message.getRcode() != Rcode.NOERROR) {
+            return false;
+        }
+        if (message.getHeader().getFlag(Flags.AA)) {
+            return false;
+        }
+        if (!message.getSection(Section.ANSWER).isEmpty()) {
+            return false;
+        }
+        for (Record r : message.getSection(Section.AUTHORITY)) {
+            if (r instanceof NSRecord) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isInBailiwick(Name target, Name referralOwner) {

@@ -162,6 +162,21 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
     }
 
     @Override
+    public double getPercentile(int percentile) {
+        List<QueryEvent> events = getOrderedQueryEvents();
+        if (events.isEmpty()) {
+            return 0.0;
+        }
+        List<Long> times = events.stream()
+                .map(QueryEvent::getElapsedTime)
+                .sorted()
+                .toList();
+        int index = (int) Math.ceil(percentile / 100.0 * times.size()) - 1;
+        index = Math.max(0, Math.min(index, times.size() - 1));
+        return times.get(index);
+    }
+
+    @Override
     public double getQueryElapsedTime() {
         long count = getQueryCount(null);
         if (count == 0) {

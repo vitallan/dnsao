@@ -74,7 +74,7 @@ public class JsonBuilder {
         JsonArray columns = Json.array()
                 .add("ts").add("total").add("cache")
                 .add("block").add("local").add("upstream")
-                .add("refused").add("servfail");
+                .add("refused").add("servfail").add("recursion");
 
         JsonArray rows = Json.array();
         Map<Long, Bucket> countsFilledAnchoredToNow = statsCollector.getBucketsFilledAnchoredToNow();
@@ -90,7 +90,8 @@ public class JsonBuilder {
                     .add(bucket.getCounter(LOCAL))
                     .add(bucket.getCounter(UPSTREAM))
                     .add(bucket.getCounter(REFUSED))
-                    .add(bucket.getCounter(SERVFAIL));
+                    .add(bucket.getCounter(SERVFAIL))
+                    .add(bucket.getCounter(RECURSION));
             rows.add(cells);
         });
 
@@ -135,7 +136,13 @@ public class JsonBuilder {
         summary.add("upstream", statsCollector.getQueryCount(UPSTREAM));
         summary.add("refused", statsCollector.getQueryCount(REFUSED));
         summary.add("servfail", statsCollector.getQueryCount(SERVFAIL));
-        summary.add("avgTime", statsCollector.getQueryElapsedTime());
+        summary.add("recursion", statsCollector.getQueryCount(RECURSION));
+
+        JsonObject rt = Json.object();
+        rt.add("avg", statsCollector.getQueryElapsedTime());
+        rt.add("p95", statsCollector.getPercentile(95));
+        rt.add("p99", statsCollector.getPercentile(99));
+        summary.add("responseTimes", rt);
 
         root.add("summary", summary);
     }
@@ -146,6 +153,7 @@ public class JsonBuilder {
         for (Map.Entry<String, Long> entry : upstreamIndividualHits.entrySet()) {
             upstream.add(entry.getKey(), entry.getValue());
         }
+        upstream.add("Recursion", statsCollector.getQueryCount(RECURSION));
         root.add("upstream", upstream);
     }
 

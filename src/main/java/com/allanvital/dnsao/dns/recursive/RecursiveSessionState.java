@@ -3,6 +3,8 @@ package com.allanvital.dnsao.dns.recursive;
 import com.allanvital.dnsao.infra.log.Log;
 import org.xbill.DNS.Name;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,6 +21,7 @@ class RecursiveSessionState {
     private boolean sessionBudgetLogged;
     private long sessionId;
     private Name sessionQname;
+    private final Set<String> seenHelperKeys = new HashSet<>();
 
     RecursiveSessionState(int maxNsNameResolutions, long maxSessionElapsedMillis) {
         this.maxNsNameResolutions = maxNsNameResolutions;
@@ -32,6 +35,7 @@ class RecursiveSessionState {
         this.helperResolutionCount = 0;
         this.helperBudgetLogged = false;
         this.sessionBudgetLogged = false;
+        this.seenHelperKeys.clear();
         this.sessionDeadlineNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxSessionElapsedMillis);
     }
 
@@ -57,6 +61,10 @@ class RecursiveSessionState {
             Log.DNS.trace("recursive helper budget exhausted session={} qname={} maxHelperResolutions={} target={}", sessionId, sessionQname, maxNsNameResolutions, target);
         }
         return false;
+    }
+
+    boolean tryHelperAttempt(Name target, int qtype) {
+        return seenHelperKeys.add(target + ":" + qtype);
     }
 
     boolean hasRemainingSessionBudget() {

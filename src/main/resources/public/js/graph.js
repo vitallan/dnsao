@@ -13,7 +13,7 @@ function buildChart(stats, canvasId = 'queriesChart') {
   const metricCols = temporal.columns.filter(c => c !== 'ts');
 
   const palette = [
-    '#2563eb', '#10b981', '#ef4444', '#14b8a6', '#8b5cf6', '#f59e0b', '#e11d48'
+    '#2563eb', '#10b981', '#ef4444', '#14b8a6', '#8b5cf6', '#f59e0b', '#e11d48', '#ec4899'
   ];
 
   const labelAlias = {
@@ -23,6 +23,7 @@ function buildChart(stats, canvasId = 'queriesChart') {
     upstream: 'Upstream',
     refused: 'Refused',
     servfail: 'Servfail',
+    recursion: 'Recursion',
     total: 'Total'
   };
 
@@ -58,7 +59,7 @@ function buildChart(stats, canvasId = 'queriesChart') {
       maintainAspectRatio: false,
       interaction: { mode: 'nearest', intersect: false, axis: 'x' },
       plugins: {
-        legend: { position: 'top' },
+        legend: { display: false },
         title: { display: true, text: 'DNSao – Queries by interval' },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}` } }
       },
@@ -68,6 +69,23 @@ function buildChart(stats, canvasId = 'queriesChart') {
       },
       layout: { padding: { right: 8 } }
     }
+  });
+
+  renderQueriesLegend(window.__dnsaoChart);
+}
+
+function renderQueriesLegend(chart) {
+  const legendEl = document.getElementById('queriesLegend');
+  if (!legendEl) return;
+  legendEl.innerHTML = '';
+  chart.data.datasets.forEach((ds) => {
+    const item = document.createElement('div');
+    item.style.cssText = 'display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap;';
+    const dot = document.createElement('span');
+    dot.style.cssText = `display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${ds.borderColor};`;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(ds.label));
+    legendEl.appendChild(item);
   });
 }
 

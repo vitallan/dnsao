@@ -26,7 +26,7 @@
 </p>
 
 
-**DNSao** é um encaminhador de DNS multi-upstream escrito em Java — com suporte a cache, DNS-over-TLS (DoT), DNS-over-HTTPS (DoH) e um painel integrado para métricas em tempo real.
+**DNSao** é um encaminhador de DNS multi-upstream escrito em Java — com suporte a cache, DNS-over-TLS (DoT), DNS-over-HTTPS (DoH), modo recursivo disponível e um painel integrado para métricas em tempo real.
 
 > O DNSao está atualmente em desenvolvimento ativo
 
@@ -42,6 +42,7 @@ Ele lida com consultas DNS via UDP, TCP e HTTP, oferece suporte a upstreams crip
 
 - Responde consultas DNS locais via UDP, TCP e HTTP
 - Múltiplos resolvedores DNS upstream (UDP/DoT/DoH)
+- Modo recursivo disponível para resolução direta a partir dos root hints
 - Sistema de cache com reconhecimento de TTL e revalidação assíncrona
 - DNSSEC aware com políticas configuráveis
 - Histórico de queries e métricas  
@@ -85,8 +86,6 @@ mvn exec:java
 ---
 
 A branch main deve ser considerada estável.
-
-Releases novas e novas imagens docker são geradas a partir do commit/push na main.
 
 ## Configuração
 
@@ -144,4 +143,3 @@ O DNSao utiliza bibliotecas open-source, incluindo:
 ---
 
 Licenciado sob a MIT © 2025 Allan Vital
-
