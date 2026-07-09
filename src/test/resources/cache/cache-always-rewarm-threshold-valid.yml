@@ -1,0 +1,7 @@
+server:
+  port: 0
+
+cache:
+  enabled: true
+  maxCacheEntries: 8
+  alwaysRewarmTopEntries: 3

@@ -9,6 +9,7 @@ import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.xbill.DNS.Message;
+import org.xbill.DNS.Record;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +28,10 @@ public class CacheManager {
 
     private final boolean enabled;
     private final Map<String, DnsCacheEntry> cache;
+    private final KeepAwareLruDnsCache keepAwareLruDnsCache;
     private final CacheStats cacheStats;
+    private final KeepProvider keepProvider;
+    private final int alwaysRewarmTopEntries;
 
     private final FixedTimeRewarmScheduler fixedTimeRewarmScheduler;
     private final ExpiredConf expiredConf;
@@ -39,17 +43,23 @@ public class CacheManager {
         if (cacheConf == null || !cacheConf.isEnabled()) {
             enabled = false;
             cache = null;
+            keepAwareLruDnsCache = null;
             cacheStats = null;
             this.fixedTimeRewarmScheduler = null;
             this.expiredConf = null;
+            this.keepProvider = null;
+            this.alwaysRewarmTopEntries = 0;
             return;
         }
         this.expiredConf = expiredConf;
         enabled = true;
         this.fixedTimeRewarmScheduler = fixedTimeRewarmScheduler;
+        this.keepProvider = keepProvider;
+        this.alwaysRewarmTopEntries = cacheConf.getAlwaysRewarmTopEntries();
 
         int maxEntries = cacheConf.getMaxCacheEntries();
         KeepAwareLruDnsCache keepAwareLruDnsCache = new KeepAwareLruDnsCache(maxEntries, keepProvider);
+        this.keepAwareLruDnsCache = keepAwareLruDnsCache;
         this.cache = Collections.synchronizedMap(keepAwareLruDnsCache);
         this.cacheStats = keepAwareLruDnsCache;
     }
@@ -110,7 +120,30 @@ public class CacheManager {
             return;
         }
         Log.CACHE.debug("rewarming entry {}", key);
+        if (keepAwareLruDnsCache != null) {
+            synchronized (cache) {
+                keepAwareLruDnsCache.replaceValuePreservingOrder(key, entry);
+                telemetryNotify(CACHE_ADDED);
+                fixedTimeRewarmScheduler.schedule(key, entry.getExpiryTime());
+            }
+            return;
+        }
         addEntry(key, entry);
+    }
+
+    public boolean shouldAlwaysRewarm(String key, Record question) {
+        if (!enabled || question == null) {
+            return false;
+        }
+        if (keepProvider != null && keepProvider.contain(question)) {
+            return true;
+        }
+        if (keepAwareLruDnsCache == null || alwaysRewarmTopEntries <= 0) {
+            return false;
+        }
+        synchronized (cache) {
+            return keepAwareLruDnsCache.isTopNonKeepKey(key, alwaysRewarmTopEntries);
+        }
     }
 
     public void put(String key, Message response, Long ttlSecs) {
