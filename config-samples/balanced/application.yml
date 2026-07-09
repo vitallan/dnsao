@@ -10,9 +10,10 @@ server:
 
 cache:
   enabled: true
-  maxCacheEntries: 1000
+  maxCacheEntries: 2048
   rewarm: true
   maxRewarmCount: 5
+  alwaysRewarmTopEntries: 1024
 
 misc:
   timeout: 3
