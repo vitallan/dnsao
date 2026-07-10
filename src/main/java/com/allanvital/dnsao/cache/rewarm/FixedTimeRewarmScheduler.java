@@ -30,8 +30,17 @@ public class FixedTimeRewarmScheduler {
             remove(key);
             return;
         }
-        RewarmTask task = new RewarmTask(key, triggerAt);
+        RewarmTask task = new RewarmTask(key, triggerAt, entryTtl);
         Log.CACHE.debug("scheduling {} to rewarm at {}", key, TimeUtils.formatMillis(triggerAt, "HH:mm:ss"));
+        remove(key);
+        telemetryNotify(REWARM_TASK_SCHEDULED);
+        queue.put(task);
+    }
+
+    public void scheduleRetry(String key, long expectedExpiryTimeMs) {
+        long triggerAt = Clock.currentTimeInMillis() + Math.max(1, thresholdToFire);
+        RewarmTask task = new RewarmTask(key, triggerAt, expectedExpiryTimeMs);
+        Log.CACHE.debug("retry scheduling {} to rewarm at {}", key, TimeUtils.formatMillis(triggerAt, "HH:mm:ss"));
         remove(key);
         telemetryNotify(REWARM_TASK_SCHEDULED);
         queue.put(task);

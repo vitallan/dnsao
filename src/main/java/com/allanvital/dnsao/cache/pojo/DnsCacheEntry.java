@@ -19,6 +19,7 @@ public class DnsCacheEntry {
     private final long configuredTtlInSeconds;
     private int rewarmCount = 0;
     private long lastAccessSeq = 0;
+    private int transientRewarmFailureCount = 0;
 
     public DnsCacheEntry(Message response, Long ttlInSeconds) {
         this.response = response;
@@ -76,6 +77,14 @@ public class DnsCacheEntry {
 
     public void setLastAccessSeq(long lastAccessSeq) {
         this.lastAccessSeq = lastAccessSeq;
+    }
+
+    public int getTransientRewarmFailureCount() {
+        return transientRewarmFailureCount;
+    }
+
+    public void setTransientRewarmFailureCount(int transientRewarmFailureCount) {
+        this.transientRewarmFailureCount = transientRewarmFailureCount;
     }
 
     @Override

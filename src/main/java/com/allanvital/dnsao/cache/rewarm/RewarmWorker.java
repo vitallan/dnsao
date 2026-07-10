@@ -25,6 +25,7 @@ import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventMa
  */
 public class RewarmWorker implements Runnable {
 
+    private static final int MAX_TRANSIENT_REWARM_RETRIES = 1;
 
     private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
@@ -79,6 +80,11 @@ public class RewarmWorker implements Runnable {
                     Log.CACHE.debug("rewarm was scheduled but key already left cache key={}", key);
                     continue;
                 }
+                if (task.getExpectedExpiryTimeMs() != -1L && entry.getExpiryTime() != task.getExpectedExpiryTimeMs()) {
+                    Log.CACHE.debug("rewarm skip: obsolete task for key={} expectedExpiry={} currentExpiry={}",
+                            key, task.getExpectedExpiryTimeMs(), entry.getExpiryTime());
+                    continue;
+                }
 
                 Message cachedResponse = entry.getResponse();
                 Record question = cachedResponse.getQuestion();
@@ -99,9 +105,7 @@ public class RewarmWorker implements Runnable {
                 }
                 Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
                 Message query = Message.newQuery(question);
-                QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
-                DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
-                Message newResponse = queryResponse.getResponse();
+                Message newResponse = rewarmWithTransientRetry(query, key);
                 if (newResponse == null) {
                     telemetryNotify(EventType.CACHE_REWARM_FAILED);
                     Log.CACHE.debug("it was not possible to rewarm entry {}", key);
@@ -113,6 +117,16 @@ public class RewarmWorker implements Runnable {
                     telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
                     Log.CACHE.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
                             key, Rcode.string(newResponse.getRcode()));
+                    continue;
+                }
+                DnsCacheEntry latestEntry = cache.safeGet(key);
+                if (latestEntry == null) {
+                    Log.CACHE.debug("rewarm skip: key already removed before store key={}", key);
+                    continue;
+                }
+                if (task.getExpectedExpiryTimeMs() != -1L && latestEntry.getExpiryTime() != task.getExpectedExpiryTimeMs()) {
+                    Log.CACHE.debug("rewarm skip: newer cache entry replaced key={} expectedExpiry={} currentExpiry={}",
+                            key, task.getExpectedExpiryTimeMs(), latestEntry.getExpiryTime());
                     continue;
                 }
                 DnsCacheEntry updateCacheEntry = new DnsCacheEntry(newResponse, ttlFromDirectResponse, currentRewarmCount + 1);
@@ -131,6 +145,36 @@ public class RewarmWorker implements Runnable {
                 Log.CACHE.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage(), t);
             }
         }
+    }
+
+    private Message rewarmWithTransientRetry(Message query, String key) {
+        for (int attempt = 0; attempt <= MAX_TRANSIENT_REWARM_RETRIES; attempt++) {
+            try {
+                QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
+                DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
+                if (queryResponse != null && queryResponse.getResponse() != null) {
+                    Message response = queryResponse.getResponse();
+                    if (getTtlFromDirectResponse(response) != null) {
+                        return response;
+                    }
+                    if (response.getRcode() == Rcode.SERVFAIL && attempt < MAX_TRANSIENT_REWARM_RETRIES) {
+                        Log.CACHE.debug("rewarm returned SERVFAIL on key={} attempt={}, retrying", key, attempt + 1);
+                        continue;
+                    }
+                    return response;
+                }
+            } catch (Throwable t) {
+                if (attempt >= MAX_TRANSIENT_REWARM_RETRIES) {
+                    throw t;
+                }
+                Log.CACHE.debug("rewarm transient failure on key={} attempt={} message={}", key, attempt + 1, t.getMessage());
+                continue;
+            }
+            if (attempt < MAX_TRANSIENT_REWARM_RETRIES) {
+                Log.CACHE.debug("rewarm returned no response on key={} attempt={}, retrying", key, attempt + 1);
+            }
+        }
+        return null;
     }
 
     private boolean isWarmable(Message msg) {
