@@ -14,10 +14,16 @@ public class RewarmTask implements Delayed {
 
     private final String key;
     private final long triggerAtMs;
+    private final long expectedExpiryTimeMs;
 
     public RewarmTask(String key, long triggerAtMs) {
+        this(key, triggerAtMs, -1L);
+    }
+
+    public RewarmTask(String key, long triggerAtMs, long expectedExpiryTimeMs) {
         this.key = key;
         this.triggerAtMs = triggerAtMs;
+        this.expectedExpiryTimeMs = expectedExpiryTimeMs;
     }
 
     public String getKey() {
@@ -26,6 +32,10 @@ public class RewarmTask implements Delayed {
 
     public long getTriggerAtMs() {
         return triggerAtMs;
+    }
+
+    public long getExpectedExpiryTimeMs() {
+        return expectedExpiryTimeMs;
     }
 
     @Override

@@ -103,6 +103,7 @@ public class CacheManager {
         if (entry != null && !entry.isStale()) {
             Log.CACHE.info("cache hit for {}", key);
             entry.setRewarmCount(0);
+            entry.setTransientRewarmFailureCount(0);
             cache.put(key, entry);
             recordClientAccess(key, entry);
             telemetryNotify(EventType.CACHE_HIT);
@@ -207,6 +208,9 @@ public class CacheManager {
     }
 
     private void onCacheEntryRemoved(String key) {
+        if (fixedTimeRewarmScheduler != null) {
+            fixedTimeRewarmScheduler.cancel(key);
+        }
         if (alwaysRewarmTopEntriesTracker != null) {
             alwaysRewarmTopEntriesTracker.remove(key);
         }
