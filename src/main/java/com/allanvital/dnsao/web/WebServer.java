@@ -6,6 +6,7 @@ import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.web.json.JsonBuilder;
+import com.eclipsesource.json.Json;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
@@ -31,16 +32,18 @@ public class WebServer {
     private final int httpThreadPool;
     private final JsonBuilder builder;
     private final MutableState mutableState;
+    private final String authPass;
     private static final String DNS_PATH = "/dns-query";
     private static final String CONTENT_TYPE = "application/dns-message";
     private boolean running = false;
 
-    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, JsonBuilder builder, MutableState mutableState) {
+    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, JsonBuilder builder, MutableState mutableState, String authPass) {
         this.port = port;
         this.queryProcessorFactory = queryProcessorFactory;
         this.httpThreadPool = httpThreadPool;
         this.builder = builder;
         this.mutableState = mutableState;
+        this.authPass = authPass;
     }
 
     public void start() {
@@ -61,6 +64,29 @@ public class WebServer {
                 staticFiles.location  = Location.CLASSPATH;
             });
             cfg.router.ignoreTrailingSlashes = true;
+        });
+
+        app.before(ctx -> {
+            if (authPass.isEmpty()) return;
+
+            String path = ctx.path();
+            if (path.equals("/login.html")
+                    || path.startsWith("/api/auth/")
+                    || path.startsWith("/dns-query")
+                    || path.startsWith("/css/")
+                    || path.startsWith("/js/")
+                    || path.startsWith("/img/")
+                    || path.equals("/favicon.ico")
+                    || path.contains("/site.webmanifest")) return;
+
+            Boolean authenticated = ctx.sessionAttribute("authenticated");
+            if (authenticated != null && authenticated) return;
+
+            if (path.startsWith("/api/")) {
+                ctx.status(401).result("{\"error\":\"unauthorized\"}");
+            } else {
+                ctx.redirect("/login.html");
+            }
         });
 
         app.get("/query", ctx -> ctx.redirect("/query.html"));
@@ -98,6 +124,34 @@ public class WebServer {
             }
             ctx.contentType("application/json; charset=utf-8");
             ctx.result("{\"blockingEnabled\":" + mutableState.isBlockingEnabled() + "}");
+        });
+
+        app.get("/api/auth/status", ctx -> {
+            Boolean authenticated = ctx.sessionAttribute("authenticated");
+            ctx.contentType("application/json; charset=utf-8");
+            ctx.result("{\"authenticated\":" + (authenticated != null && authenticated) + "}");
+        });
+
+        app.post("/api/auth/login", ctx -> {
+            String body = ctx.body();
+            boolean valid = false;
+            if (body != null && !body.isBlank()) {
+                try {
+                    String password = Json.parse(body).asObject().getString("password", "");
+                    valid = authPass.equals(password);
+                } catch (Exception ignored) {}
+            }
+            if (valid) {
+                ctx.sessionAttribute("authenticated", true);
+                ctx.status(200).result("{\"status\":\"ok\"}");
+            } else {
+                ctx.status(401).result("{\"error\":\"invalid password\"}");
+            }
+        });
+
+        app.post("/api/auth/logout", ctx -> {
+            ctx.req().getSession().invalidate();
+            ctx.status(200).result("{\"status\":\"ok\"}");
         });
 
         mapDnsEndpoints();

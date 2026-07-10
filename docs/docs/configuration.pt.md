@@ -17,6 +17,7 @@ server:
   tcpThreadPool: 3
   statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
+  authPass: ""
 
 cache:
   enabled: true
@@ -113,6 +114,7 @@ server:
   httpThreadPool: 10
   statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
+  authPass: ""
 ```
 
 A propriedade **server** define as propriedades de alto nível da aplicação.
@@ -126,6 +128,9 @@ A propriedade **server** define as propriedades de alto nível da aplicação.
 | **webPort**       | porta onde o dashboard de métricas ficará disponível. O padrão é 8044                                               |
 | **statsDbPath**   | caminho para um arquivo SQLite de métricas e histórico de queries. Quando não definido/vazio, o **DNSao** usa `{tmpdir}/dnsao.db` (o diretório temporário do SO). O diretório pai precisa existir e ter permissão de escrita (o DNSao não cria diretórios) |
 | **useMemoryStorage** | true/false, padrão é false. Quando true, força o armazenamento das métricas em memória em vez de SQLite. Útil para ambientes efêmeros ou quando você quer evitar escrita em disco |
+| **authPass** | senha opcional para proteger o dashboard web e as APIs JSON. Quando vazia (padrão), o dashboard fica aberto para qualquer um. Quando definida, os usuários devem informar esta senha em uma página de login antes de acessar o dashboard. A senha é enviada em texto puro via HTTP — use apenas em redes confiáveis ou atrás de um proxy reverso com HTTPS. O padrão é **""** (sem autenticação) |
+
+Quando **authPass** está definida, acessar o dashboard em **http://serverIp:webPort/** redirecionará para uma página de login. Os endpoints de API (`/stats`, `/queries`, `/api/*`) também exigem autenticação e retornam **401 Unauthorized** quando não autenticados. O endpoint DNS-over-HTTPS (`/dns-query`) é sempre público, independentemente desta configuração.
 
 Para queries http, o endpoint é **http://serverIp:webPort/dns-query**, seguindo os padrões de servidor dns via HTTP. Note que a resposta será em HTTP aberto, não em HTTPS. Essa é uma decisão consciente para evitar o manuseio de certificados TLS, de forma que o usuário possa usar os próprios certificados. Caso https seja desejado, é recomendado usar um proxy reverso que possibilite a comunicação remota a ocorrer via HTTPS (como traeffic ou nginx) e fazer o proxy reverso interno para **DNSao**.
 

@@ -100,7 +100,7 @@ public class SystemGraphAssembler {
                                 UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
                                 JsonBuilder jsonBuilder,
                                 MutableState mutableState) {
-        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder, mutableState);
+        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder, mutableState, conf.getAuthPass());
     }
 
     private static RewarmCoordinator scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,

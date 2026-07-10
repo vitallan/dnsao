@@ -32,6 +32,7 @@ public class DnsServer {
     private final StatsCollector statsCollector;
     private final UpstreamThreadPoolExecutor upstreamThreadPoolExecutor;
     private final MutableState mutableState;
+    private final String authPass;
 
     public DnsServer(ServerConf conf,
                      QueryProcessorFactory factory,
@@ -39,16 +40,18 @@ public class DnsServer {
                      StatsCollector statsCollector,
                      UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
                      JsonBuilder jsonBuilder,
-                     MutableState mutableState) {
+                     MutableState mutableState,
+                     String authPass) {
         this.port = conf.getPort();
         this.statsCollector = statsCollector;
         this.upstreamThreadPoolExecutor = upstreamThreadPoolExecutor;
         this.mutableState = mutableState;
+        this.authPass = authPass;
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
         tcpServer = new TcpServer(tcpThreadPool, factory, port);
-        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), jsonBuilder, mutableState);
+        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), jsonBuilder, mutableState, authPass);
     }
 
     public int getUdpPort() {

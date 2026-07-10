@@ -17,6 +17,7 @@ server:
   tcpThreadPool: 3
   statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
+  authPass: ""
 
 cache:
   enabled: true
@@ -113,6 +114,7 @@ server:
   httpThreadPool: 10
   statsDbPath: "/etc/dnsao/stats.db"
   webPort: 8044
+  authPass: ""
 ```
 
 The **server** property defines the application’s top-level properties.
@@ -126,6 +128,9 @@ The **server** property defines the application’s top-level properties.
 | **webPort** | the port where the metrics dashboard will be available. Default is 8044 |
 | **statsDbPath** | path to a SQLite database file for metrics and query history. When unset/blank, **DNSao** defaults to `{tmpdir}/dnsao.db` (the OS temp directory). The parent directory must already exist and be writable (DNSao will not create directories) |
 | **useMemoryStorage** | true/false, default is false. When true, forces in-memory stats storage instead of SQLite. Useful for ephemeral environments or when you want to avoid disk writes |
+| **authPass** | optional password to protect the web dashboard and JSON APIs. When empty (default), the dashboard is open to anyone. When set, users must enter this password on a login page before accessing the dashboard. Password is sent over HTTP in plaintext — only use this on trusted networks or behind a reverse proxy with HTTPS. Default is **""** (no auth) |
+
+When **authPass** is set, accessing the dashboard at **http://serverIp:webPort/** will redirect to a login page. API endpoints (`/stats`, `/queries`, `/api/*`) also require authentication and return **401 Unauthorized** when not authenticated. The DNS-over-HTTPS endpoint (`/dns-query`) is always public, regardless of this setting.
 
 For HTTP queries, the endpoint will be **http://serverIp:webPort/dns-query**, following dns standards. Note that the answer will be in HTTP, not HTTPS. This is a concious decision to avoid manual handling of tls certificates to favor the users possibility to use their own certificates. If https is desired, it is recommended to use a reverse proxy that enables the remote communication to happen through https (like traeffic or nginx) and then reverse proxy internally to **DNSao**.
 

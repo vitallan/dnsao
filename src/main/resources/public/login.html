@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DNSao &bull; Login</title>
+    <link rel="stylesheet" href="/css/bulma.min.css">
+</head>
+<body class="has-background-light">
+<section class="section">
+    <div class="container" style="max-width: 400px;">
+        <div class="box mt-6 has-text-centered">
+            <figure class="image is-96x96 is-inline-block mb-4">
+                <img src="/img/favicon-96x96.png" alt="DNSao Logo">
+            </figure>
+            <h1 class="title is-4">DNSao Login</h1>
+            <form id="loginForm">
+                <div class="field">
+                    <div class="control">
+                        <input class="input" type="password" id="password" placeholder="Password" required autofocus>
+                    </div>
+                </div>
+                <p id="errorMsg" class="has-text-danger is-hidden mb-3">Invalid password</p>
+                <button class="button is-primary is-fullwidth" type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+</section>
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const err = document.getElementById('errorMsg');
+        err.classList.add('is-hidden');
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: document.getElementById('password').value })
+            });
+            if (res.ok) {
+                window.location.href = '/';
+            } else {
+                err.classList.remove('is-hidden');
+            }
+        } catch (e) {
+            err.textContent = 'Connection error';
+            err.classList.remove('is-hidden');
+        }
+    });
+</script>
+</body>
+</html>

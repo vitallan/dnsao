@@ -12,6 +12,7 @@ public class ServerConf {
     int webPort = 8044;
     String statsDbPath;
     boolean useMemoryStorage = false;
+    String authPass = "";
 
     public int getHttpThreadPool() {
         return httpThreadPool;
@@ -67,6 +68,14 @@ public class ServerConf {
 
     public void setTcpThreadPool(int tcpThreadPool) {
         this.tcpThreadPool = tcpThreadPool;
+    }
+
+    public String getAuthPass() {
+        return authPass;
+    }
+
+    public void setAuthPass(String authPass) {
+        this.authPass = authPass;
     }
 
 }
