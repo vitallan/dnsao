@@ -1,0 +1,21 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: 0
+  authPass: "secret123"
+
+misc:
+  timeout: 1
+  retries: 1
+
+cache:
+  enabled: false
+  rewarm: false
+
+resolver:
+  multiplier: 2
+  upstreams:
+    - ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"

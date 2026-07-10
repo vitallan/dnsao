@@ -98,12 +98,12 @@
                 <div class="card" data-key="blocked" id="blockedCard">
                     <header class="card-header">
                         <p class="card-header-title">Blocked</p>
+                        <div class="card-header-icon">
+                            <button id="blockingToggleBtn" class="button is-small is-danger">Disable Blocking</button>
+                        </div>
                         <span class="card-header-icon">
                           <span class="tag is-success is-light" data-key="blockedRateTag">—%</span>
                         </span>
-                        <div class="card-header-icon">
-                          <button id="blockingToggleBtn" class="button is-small is-danger">Disable Blocking</button>
-                        </div>
                     </header>
                     <div class="card-content has-text-centered" id="blockedCardContent">
                         <p class="title is-4 value">—</p>
@@ -325,11 +325,11 @@
         const btn = document.getElementById('blockingToggleBtn');
         const card = document.getElementById('blockedCard');
         if (data.blockingEnabled) {
-          btn.textContent = 'Disable Blocking';
+          btn.textContent = 'Disable';
           btn.className = 'button is-small is-danger';
           card.classList.remove('blocking-disabled');
         } else {
-          btn.textContent = 'Enable Blocking';
+          btn.textContent = 'Enable';
           btn.className = 'button is-small is-success';
           card.classList.add('blocking-disabled');
         }
