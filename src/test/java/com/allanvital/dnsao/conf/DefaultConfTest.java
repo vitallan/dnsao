@@ -36,6 +36,7 @@ public class DefaultConfTest extends TestHolder {
         assertFalse(cache.isRewarm());
         assertEquals(10000, cache.getMaxCacheEntries());
         assertEquals(3, cache.getMaxRewarmCount());
+        assertEquals(3, cache.getRewarmWorkerPoolSize());
     }
 
     @Test
