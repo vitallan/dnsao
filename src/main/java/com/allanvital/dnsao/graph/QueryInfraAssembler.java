@@ -2,6 +2,7 @@ package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.conf.inner.pojo.GroupInnerConf;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
@@ -43,7 +44,8 @@ public class QueryInfraAssembler {
                                                CacheManager cacheManager,
                                                ExecutorServiceFactory executorServiceFactory,
                                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
-                                               NotificationManager notificationManager) throws ConfException {
+                                               NotificationManager notificationManager,
+                                               MutableState mutableState) throws ConfException {
         ResolverConf resolverConf = conf.getResolver();
         MiscConf miscConf = conf.getMisc();
         ListsConf listsConf = conf.getLists();
@@ -60,7 +62,7 @@ public class QueryInfraAssembler {
         BlockDecider blockDecider = blockDecider(fileListsProvider, listsConf, conf.getGroups());
 
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
-        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, miscConf.isBlockingEnabled());
+        EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, mutableState);
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
@@ -139,9 +141,9 @@ public class QueryInfraAssembler {
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
                                           UpstreamUnitConf upstreamUnitConf,
-                                          boolean blockingEnabled) {
+                                          MutableState mutableState) {
 
-        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
+        return new EngineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, mutableState);
     }
 
     private PostHandlerFacade postHandlerFacade(PostHandlerProvider provider, ExecutorServiceFactory executorServiceFactory) {

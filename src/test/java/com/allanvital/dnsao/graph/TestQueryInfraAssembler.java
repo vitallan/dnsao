@@ -2,6 +2,7 @@ package com.allanvital.dnsao.graph;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.block.BlockDecider;
@@ -36,8 +37,9 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
                                                CacheManager cacheManager,
                                                ExecutorServiceFactory executorServiceFactory,
                                                UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
-                                               NotificationManager notificationManager) throws ConfException {
-        return super.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager);
+                                               NotificationManager notificationManager,
+                                               MutableState mutableState) throws ConfException {
+        return super.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager, mutableState);
     }
 
     @Override
@@ -59,9 +61,9 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
                                           Map<String, String> localMappings,
                                           CacheManager cacheManager,
                                           UpstreamUnitConf upstreamUnitConf,
-                                          boolean blockingEnabled) {
+                                          MutableState mutableState) {
 
-        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, blockingEnabled);
+        this.engineUnitProvider = super.engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, localMappings, cacheManager, upstreamUnitConf, mutableState);
         return this.engineUnitProvider;
     }
 

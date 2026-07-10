@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.dns.processor.engine.unit;
 import com.allanvital.dnsao.infra.log.Log;
 
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
@@ -23,16 +24,16 @@ public class BlockUnit implements EngineUnit {
 
 
     private final BlockDecider blockDecider;
-    private final boolean blockingEnabled;
+    private final MutableState mutableState;
 
-    public BlockUnit(BlockDecider blockDecider, boolean blockingEnabled) {
+    public BlockUnit(BlockDecider blockDecider, MutableState mutableState) {
         this.blockDecider = blockDecider;
-        this.blockingEnabled = blockingEnabled;
+        this.mutableState = mutableState;
     }
 
     @Override
     public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
-        if (!blockingEnabled) {
+        if (!mutableState.isBlockingEnabled()) {
             return null;
         }
         Message request = dnsQueryRequest.getRequest();

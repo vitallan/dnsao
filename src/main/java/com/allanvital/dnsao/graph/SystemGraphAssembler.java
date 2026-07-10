@@ -7,6 +7,7 @@ import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.cache.rewarm.RewarmCoordinator;
 import com.allanvital.dnsao.conf.Conf;
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.dns.DnsServer;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
@@ -41,6 +42,7 @@ public class SystemGraphAssembler {
         ResolverConf resolverConf = conf.getResolver();
         ServerConf serverConf = conf.getServer();
         MiscConf miscConf = conf.getMisc();
+        MutableState mutableState = createMutableState(miscConf.isBlockingEnabled());
         ExecutorServiceFactory executorServiceFactory = executorServiceFactory();
 
         FixedTimeRewarmScheduler fixedTimeRewarmScheduler = rewarmScheduler(cacheConf.getSecsBeforeTtlToRewarm());
@@ -56,7 +58,7 @@ public class SystemGraphAssembler {
                 resolverConf.getUpstreamQueueSize()
         );
 
-        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, upstreamThreadPoolExecutor, conf, cacheManager, notificationManager);
+        QueryProcessorDependencies queryProcessorDependencies = queryProcessorDependencies(executorServiceFactory, upstreamThreadPoolExecutor, conf, cacheManager, notificationManager, mutableState);
 
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
@@ -67,7 +69,7 @@ public class SystemGraphAssembler {
 
         JsonBuilder jsonBuilder = new JsonBuilder(statsCollector, cacheManager.getCacheStats());
 
-        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
+        return dnsServer(serverConf, factory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder, mutableState);
     }
 
     KeepKickstarter keepKickStarter(KeepProvider keepProvider, QueryProcessorFactory queryProcessorFactory) {
@@ -79,11 +81,12 @@ public class SystemGraphAssembler {
     }
 
     public QueryProcessorDependencies queryProcessorDependencies(ExecutorServiceFactory executorServiceFactory,
-                                                                 UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
-                                                                 Conf conf,
-                                                                 CacheManager cacheManager,
-                                                                 NotificationManager notificationManager) throws ConfException {
-        return queryInfraAssembler.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager);
+                                                                  UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
+                                                                  Conf conf,
+                                                                  CacheManager cacheManager,
+                                                                  NotificationManager notificationManager,
+                                                                  MutableState mutableState) throws ConfException {
+        return queryInfraAssembler.assemble(conf, cacheManager, executorServiceFactory, upstreamThreadPoolExecutor, notificationManager, mutableState);
     }
 
     public <T> void registerOverride(T module) {
@@ -95,8 +98,9 @@ public class SystemGraphAssembler {
                                 ExecutorServiceFactory executorServiceFactory,
                                 StatsCollector statsCollector,
                                 UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
-                                JsonBuilder jsonBuilder) {
-        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
+                                JsonBuilder jsonBuilder,
+                                MutableState mutableState) {
+        return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder, mutableState);
     }
 
     private static RewarmCoordinator scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,
@@ -145,6 +149,10 @@ public class SystemGraphAssembler {
     private FixedTimeRewarmScheduler rewarmScheduler(long timeBeforeTtlToTriggerRewarm) {
         return overrideRegistry.getRegisteredModule(FixedTimeRewarmScheduler.class)
                 .orElse(new FixedTimeRewarmScheduler(timeBeforeTtlToTriggerRewarm));
+    }
+
+    protected MutableState createMutableState(boolean blockingEnabled) {
+        return new MutableState(blockingEnabled);
     }
 
     QueryProcessorFactory queryProcessorFactory(QueryProcessorDependencies queryProcessorDependencies) {

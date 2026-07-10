@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.dns.processor.engine;
 
 import com.allanvital.dnsao.cache.CacheManager;
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.processor.engine.pojo.UpstreamUnitConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.*;
@@ -24,9 +25,9 @@ public class EngineUnitProvider {
                               Map<String, String> localMappings,
                               CacheManager cacheManager,
                               UpstreamUnitConf upstreamUnitConf,
-                              boolean blockingEnabled) {
+                              MutableState mutableState) {
 
-        engineUnits.add(new BlockUnit(blockDecider, blockingEnabled));
+        engineUnits.add(new BlockUnit(blockDecider, mutableState));
         engineUnits.add(new LocalMappingUnit(localMappings));
         engineUnits.add(new CacheUnit(cacheManager));
         engineUnits.add(new UpstreamUnit(upstreamThreadPoolExecutor, upstreamUnitConf));
