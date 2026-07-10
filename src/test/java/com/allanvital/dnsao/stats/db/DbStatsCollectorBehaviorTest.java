@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -73,9 +74,9 @@ class DbStatsCollectorBehaviorTest {
         dbStatsCollector.receiveNewQuery(event);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> history = dbStatsCollector.getOrderedQueryEvents();
-        assertEquals(1, history.size());
-        QueryEvent persisted = history.get(0);
+        PagedQueryResult result = dbStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc");
+        assertEquals(1, result.items().size());
+        QueryEvent persisted = result.items().get(0);
         assertEquals("example.com.", persisted.getDomain());
         assertEquals("192.168.1.1", persisted.getClient());
         assertEquals("A", persisted.getType());
@@ -90,8 +91,8 @@ class DbStatsCollectorBehaviorTest {
         dbStatsCollector.receiveNewQuery(event);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> history = dbStatsCollector.getOrderedQueryEvents();
-        assertTrue(history.isEmpty(),
+        PagedQueryResult result = dbStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc");
+        assertTrue(result.items().isEmpty(),
                 "anonymized events should not be persisted for query history");
     }
 
@@ -101,8 +102,8 @@ class DbStatsCollectorBehaviorTest {
         dbStatsCollector.receiveNewQuery(event);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> history = dbStatsCollector.getOrderedQueryEvents();
-        assertTrue(history.isEmpty(),
+        PagedQueryResult result = dbStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc");
+        assertTrue(result.items().isEmpty(),
                 "anonymized upstream event should not appear in query history");
         assertEquals(1L, dbStatsCollector.getQueryCount(QueryResolvedBy.UPSTREAM));
         assertTrue(dbStatsCollector.getUpstreamIndividualHits().containsKey("8.8.8.8"));

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,14 +87,14 @@ public class DbMovingWindowStatsCollectionTest {
         dbStatsCollector.receiveNewQuery(q3);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
+        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertFalse(orderedQueryEvents.contains(qOld));
         assertTrue(orderedQueryEvents.contains(q3));
 
         nowRef.set(t("2025-10-02T10:40:00Z"));
         dbStatsCollector.flushOnce();
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
+        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertFalse(orderedQueryEvents.contains(qOld));
         assertFalse(orderedQueryEvents.contains(q1));
         assertTrue(orderedQueryEvents.containsAll(List.of(q3, q2)));

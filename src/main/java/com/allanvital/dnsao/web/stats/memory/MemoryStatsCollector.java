@@ -122,48 +122,6 @@ public class MemoryStatsCollector implements QueryEventListener, StatsCollector 
     }
 
     @Override
-    public List<QueryEvent> getOrderedQueryEvents() {
-        maybeTrimByNow();
-        LinkedList<QueryEvent> queryEvents = new LinkedList<>();
-        NavigableMap<Long, MemoryBucket> countsRaw = getMemoryBucketsFilledToNow();
-        countsRaw.forEach((interval, memoryBucket) -> {
-            queryEvents.addAll(memoryBucket.getQueryEvents());
-        });
-        queryEvents.sort(Comparator.comparingLong(QueryEvent::getTime).reversed()); //argh
-        return queryEvents;
-    }
-
-    @Override
-    public List<QueryEvent> getOrderedQueryEvents(int page) {
-        maybeTrimByNow();
-        LinkedList<QueryEvent> queryEvents = new LinkedList<>();
-        NavigableSet<Long> descendingKeySet = buckets.descendingKeySet();
-        int starterIndex = page * pageSize;
-        int finalIndex = starterIndex + pageSize;
-        int currentIndex = 0;
-        for (Long key : descendingKeySet) {
-            MemoryBucket memoryBucket = buckets.get(key);
-            PriorityBlockingQueue<QueryEvent> bucketQueryEvents = memoryBucket.getQueryEvents();
-            int size = bucketQueryEvents.size();
-            if (size == 0) {
-                continue;
-            }
-            List<QueryEvent> list = bucketQueryEvents.stream().toList();
-            for (int i = size - 1; i >= 0; i--) {
-                QueryEvent queryEvent = list.get(i);
-                if (currentIndex >= starterIndex && currentIndex < finalIndex) {
-                    queryEvents.add(queryEvent);
-                }
-                currentIndex++;
-            }
-            if (currentIndex >= finalIndex) {
-                break;
-            }
-        }
-        return queryEvents;
-    }
-
-    @Override
     public PagedQueryResult getOrderedQueryEvents(int page, int pageSize, String filter, String sortKey, String sortDir) {
         maybeTrimByNow();
         List<QueryEvent> all = new ArrayList<>();
