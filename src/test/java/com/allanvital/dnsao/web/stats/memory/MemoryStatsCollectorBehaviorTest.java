@@ -2,10 +2,10 @@ package com.allanvital.dnsao.web.stats.memory;
 
 import com.allanvital.dnsao.infra.notification.QueryEvent;
 import com.allanvital.dnsao.infra.notification.QueryResolvedBy;
+import com.allanvital.dnsao.web.stats.PagedQueryResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.allanvital.dnsao.holder.TestHolder.t;
@@ -36,8 +36,8 @@ class MemoryStatsCollectorBehaviorTest {
         QueryEvent minimal = new QueryEvent(QueryResolvedBy.CACHE, null, t("2025-10-02T09:50:00Z"));
         memoryStatsCollector.receiveNewQuery(minimal);
 
-        List<QueryEvent> events = memoryStatsCollector.getOrderedQueryEvents();
-        assertTrue(events.isEmpty(), "anonymized events should not appear in query history");
+        PagedQueryResult result = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc");
+        assertTrue(result.items().isEmpty(), "anonymized events should not appear in query history");
     }
 
     @Test
@@ -51,9 +51,9 @@ class MemoryStatsCollectorBehaviorTest {
         memoryStatsCollector.receiveNewQuery(full);
 
         assertEquals(1, memoryStatsCollector.getQueryCount(QueryResolvedBy.UPSTREAM));
-        List<QueryEvent> events = memoryStatsCollector.getOrderedQueryEvents();
-        assertEquals(1, events.size());
-        assertEquals("example.com.", events.get(0).getDomain());
+        PagedQueryResult result = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc");
+        assertEquals(1, result.items().size());
+        assertEquals("example.com.", result.items().get(0).getDomain());
     }
 
 }

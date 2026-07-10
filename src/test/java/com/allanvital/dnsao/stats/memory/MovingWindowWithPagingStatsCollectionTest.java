@@ -13,9 +13,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.allanvital.dnsao.holder.TestHolder.t;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * @author Allan Vital (https://allanvital.com)
- */
 public class MovingWindowWithPagingStatsCollectionTest {
 
     private static QueryEvent eventWithDomain(long time, long elapsedTime) {
@@ -37,8 +34,11 @@ public class MovingWindowWithPagingStatsCollectionTest {
 
     @BeforeEach
     public void setup() {
-        // 60 min / 5 min window = 12 buckets
         this.memoryStatsCollector = new MemoryStatsCollector(5 * 60_000L, 60 * 60_000L, pageSize, nowRef::get);
+    }
+
+    private PagedQueryResult result(int p) {
+        return memoryStatsCollector.getOrderedQueryEvents(p, pageSize, "", "time", "desc");
     }
 
     @Test
@@ -53,29 +53,29 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q3);
         memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertFalse(orderedQueryEvents.contains(q1));
-        assertTrue(orderedQueryEvents.containsAll(List.of(q4, q3, q2)));
-        assertEquals(q4, orderedQueryEvents.get(0));
-        assertEquals(q3, orderedQueryEvents.get(1));
-        assertEquals(q2, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertFalse(r0.items().contains(q1));
+        assertTrue(r0.items().containsAll(List.of(q4, q3, q2)));
+        assertEquals(q4, r0.items().get(0));
+        assertEquals(q3, r0.items().get(1));
+        assertEquals(q2, r0.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(1, orderedQueryEvents.size());
-        assertTrue(orderedQueryEvents.contains(q1));
-        assertEquals(q1, orderedQueryEvents.get(0));
+        PagedQueryResult r1 = result(1);
+        assertEquals(1, r1.items().size());
+        assertTrue(r1.items().contains(q1));
+        assertEquals(q1, r1.items().get(0));
     }
 
     @Test
     public void getOrderedQueryEventsEmptyCollectorReturnsEmpty() {
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r0 = result(0);
+        assertNotNull(r0.items());
+        assertTrue(r0.items().isEmpty());
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r1 = result(1);
+        assertNotNull(r1.items());
+        assertTrue(r1.items().isEmpty());
     }
 
     @Test
@@ -86,18 +86,18 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q1);
         memoryStatsCollector.receiveNewQuery(q2);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(2, orderedQueryEvents.size());
-        assertEquals(q2, orderedQueryEvents.get(0));
-        assertEquals(q1, orderedQueryEvents.get(1));
+        PagedQueryResult r0 = result(0);
+        assertEquals(2, r0.items().size());
+        assertEquals(q2, r0.items().get(0));
+        assertEquals(q1, r0.items().get(1));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r1 = result(1);
+        assertNotNull(r1.items());
+        assertTrue(r1.items().isEmpty());
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(10);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r10 = result(10);
+        assertNotNull(r10.items());
+        assertTrue(r10.items().isEmpty());
     }
 
     @Test
@@ -116,26 +116,25 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q5);
         memoryStatsCollector.receiveNewQuery(q6);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q6, orderedQueryEvents.get(0));
-        assertEquals(q5, orderedQueryEvents.get(1));
-        assertEquals(q4, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertEquals(q6, r0.items().get(0));
+        assertEquals(q5, r0.items().get(1));
+        assertEquals(q4, r0.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q3, orderedQueryEvents.get(0));
-        assertEquals(q2, orderedQueryEvents.get(1));
-        assertEquals(q1, orderedQueryEvents.get(2));
+        PagedQueryResult r1 = result(1);
+        assertEquals(3, r1.items().size());
+        assertEquals(q3, r1.items().get(0));
+        assertEquals(q2, r1.items().get(1));
+        assertEquals(q1, r1.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(2);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r2 = result(2);
+        assertNotNull(r2.items());
+        assertTrue(r2.items().isEmpty());
     }
 
     @Test
     public void getOrderedQueryEventsOrdersCorrectlyWithinSameBucket() {
-        // All events fall in the same 5-min bucket (09:30..09:34)
         QueryEvent q1 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
         QueryEvent q2 = eventWithDomain(t("2025-10-02T09:34:00Z"), 100);
         QueryEvent q3 = eventWithDomain(t("2025-10-02T09:33:00Z"), 100);
@@ -146,20 +145,19 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q3);
         memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q2, orderedQueryEvents.get(0));
-        assertEquals(q3, orderedQueryEvents.get(1));
-        assertEquals(q1, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertEquals(q2, r0.items().get(0));
+        assertEquals(q3, r0.items().get(1));
+        assertEquals(q1, r0.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(1, orderedQueryEvents.size());
-        assertEquals(q4, orderedQueryEvents.get(0));
+        PagedQueryResult r1 = result(1);
+        assertEquals(1, r1.items().size());
+        assertEquals(q4, r1.items().get(0));
     }
 
     @Test
     public void getOrderedQueryEventsOrdersCorrectlyAcrossBucketBoundaries() {
-        // Spans several 5-min buckets: 09:31/09:32, 09:36/09:37, 09:41, 09:46, 09:51
         QueryEvent q1 = eventWithDomain(t("2025-10-02T09:31:00Z"), 100);
         QueryEvent q2 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
         QueryEvent q3 = eventWithDomain(t("2025-10-02T09:36:00Z"), 100);
@@ -176,51 +174,48 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q6);
         memoryStatsCollector.receiveNewQuery(q7);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q7, orderedQueryEvents.get(0));
-        assertEquals(q6, orderedQueryEvents.get(1));
-        assertEquals(q5, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertEquals(q7, r0.items().get(0));
+        assertEquals(q6, r0.items().get(1));
+        assertEquals(q5, r0.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q4, orderedQueryEvents.get(0));
-        assertEquals(q3, orderedQueryEvents.get(1));
-        assertEquals(q2, orderedQueryEvents.get(2));
+        PagedQueryResult r1 = result(1);
+        assertEquals(3, r1.items().size());
+        assertEquals(q4, r1.items().get(0));
+        assertEquals(q3, r1.items().get(1));
+        assertEquals(q2, r1.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(2);
-        assertEquals(1, orderedQueryEvents.size());
-        assertEquals(q1, orderedQueryEvents.get(0));
+        PagedQueryResult r2 = result(2);
+        assertEquals(1, r2.items().size());
+        assertEquals(q1, r2.items().get(0));
     }
 
     @Test
     public void getOrderedQueryEventsSkipsEmptyBucketsAndStillPaginatesCorrectly() {
-        // Intentionally leave gaps between buckets (no events in some 5-min windows)
         QueryEvent q1 = eventWithDomain(t("2025-10-02T09:15:00Z"), 100);
         QueryEvent q2 = eventWithDomain(t("2025-10-02T09:32:00Z"), 100);
         QueryEvent q3 = eventWithDomain(t("2025-10-02T09:55:00Z"), 100);
-        QueryEvent q4 = eventWithDomain(t("2025-10-02T10:05:00Z"), 100); // still within 60-min window at 10:10
+        QueryEvent q4 = eventWithDomain(t("2025-10-02T10:05:00Z"), 100);
 
         memoryStatsCollector.receiveNewQuery(q1);
         memoryStatsCollector.receiveNewQuery(q2);
         memoryStatsCollector.receiveNewQuery(q3);
         memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q4, orderedQueryEvents.get(0));
-        assertEquals(q3, orderedQueryEvents.get(1));
-        assertEquals(q2, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertEquals(q4, r0.items().get(0));
+        assertEquals(q3, r0.items().get(1));
+        assertEquals(q2, r0.items().get(2));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(1, orderedQueryEvents.size());
-        assertEquals(q1, orderedQueryEvents.get(0));
+        PagedQueryResult r1 = result(1);
+        assertEquals(1, r1.items().size());
+        assertEquals(q1, r1.items().get(0));
     }
 
     @Test
     public void getOrderedQueryEventsTrimsEventsOutsideWindowWhenNowAdvances() {
-        // Window is 60 minutes. nowRef starts at 10:10.
-        // qOld at 09:00 should be outside (70 minutes old) and should not appear after trim.
         QueryEvent qOld = eventWithDomain(t("2025-10-02T09:00:00Z"), 100);
         QueryEvent q1 = eventWithDomain(t("2025-10-02T09:31:00Z"), 100);
         QueryEvent q2 = eventWithDomain(t("2025-10-02T09:51:00Z"), 100);
@@ -231,22 +226,18 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q2);
         memoryStatsCollector.receiveNewQuery(q3);
 
-        // Trigger trim via getOrderedQueryEvents()
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
+        PagedQueryResult r0 = result(0);
+        assertFalse(r0.items().contains(qOld));
+        assertTrue(r0.items().contains(q3));
 
-        assertFalse(orderedQueryEvents.contains(qOld));
-        assertTrue(orderedQueryEvents.contains(q3));
-
-        // Now move "now" forward to make q1 fall outside too:
-        // from 10:10 -> 10:40 means anything older than 09:40 is outside.
         nowRef.set(t("2025-10-02T10:40:00Z"));
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0);
-        assertFalse(orderedQueryEvents.contains(qOld));
-        assertFalse(orderedQueryEvents.contains(q1));
-        assertTrue(orderedQueryEvents.containsAll(List.of(q3, q2)));
-        assertEquals(q3, orderedQueryEvents.get(0));
-        assertEquals(q2, orderedQueryEvents.get(1));
+        PagedQueryResult r1 = result(0);
+        assertFalse(r1.items().contains(qOld));
+        assertFalse(r1.items().contains(q1));
+        assertTrue(r1.items().containsAll(List.of(q3, q2)));
+        assertEquals(q3, r1.items().get(0));
+        assertEquals(q2, r1.items().get(1));
     }
 
     @Test
@@ -261,11 +252,11 @@ public class MovingWindowWithPagingStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q3);
         memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> first = memoryStatsCollector.getOrderedQueryEvents(0);
-        List<QueryEvent> second = memoryStatsCollector.getOrderedQueryEvents(0);
+        PagedQueryResult first = result(0);
+        PagedQueryResult second = result(0);
 
-        assertEquals(first, second);
-        assertEquals(List.of(q4, q3, q2), first);
+        assertEquals(first.items(), second.items());
+        assertEquals(List.of(q4, q3, q2), first.items());
     }
 
     @Test

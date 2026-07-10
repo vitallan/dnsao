@@ -40,7 +40,6 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
     @BeforeEach
     public void setup() {
         String dbPath = tempDir.resolve("stats.sqlite").toString();
-        // 60 min / 5 min window = 12 buckets
         this.dbStatsCollector = new DbStatsCollector(dbPath, 5 * 60_000L, 60 * 60_000L, pageSize, nowRef::get, 60_000L, 10_000);
     }
 
@@ -49,6 +48,10 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
         if (dbStatsCollector != null) {
             dbStatsCollector.close();
         }
+    }
+
+    private PagedQueryResult result(int p) {
+        return dbStatsCollector.getOrderedQueryEvents(p, pageSize, "", "time", "desc");
     }
 
     @Test
@@ -64,29 +67,29 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
         dbStatsCollector.receiveNewQuery(q4);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertFalse(orderedQueryEvents.contains(q1));
-        assertTrue(orderedQueryEvents.containsAll(List.of(q4, q3, q2)));
-        assertEquals(q4, orderedQueryEvents.get(0));
-        assertEquals(q3, orderedQueryEvents.get(1));
-        assertEquals(q2, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertFalse(r0.items().contains(q1));
+        assertTrue(r0.items().containsAll(List.of(q4, q3, q2)));
+        assertEquals(q4, r0.items().get(0));
+        assertEquals(q3, r0.items().get(1));
+        assertEquals(q2, r0.items().get(2));
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(1, orderedQueryEvents.size());
-        assertTrue(orderedQueryEvents.contains(q1));
-        assertEquals(q1, orderedQueryEvents.get(0));
+        PagedQueryResult r1 = result(1);
+        assertEquals(1, r1.items().size());
+        assertTrue(r1.items().contains(q1));
+        assertEquals(q1, r1.items().get(0));
     }
 
     @Test
     public void getOrderedQueryEventsEmptyCollectorReturnsEmpty() {
-        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r0 = result(0);
+        assertNotNull(r0.items());
+        assertTrue(r0.items().isEmpty());
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(1);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r1 = result(1);
+        assertNotNull(r1.items());
+        assertTrue(r1.items().isEmpty());
     }
 
     @Test
@@ -98,18 +101,18 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
         dbStatsCollector.receiveNewQuery(q2);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(2, orderedQueryEvents.size());
-        assertEquals(q2, orderedQueryEvents.get(0));
-        assertEquals(q1, orderedQueryEvents.get(1));
+        PagedQueryResult r0 = result(0);
+        assertEquals(2, r0.items().size());
+        assertEquals(q2, r0.items().get(0));
+        assertEquals(q1, r0.items().get(1));
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(1);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r1 = result(1);
+        assertNotNull(r1.items());
+        assertTrue(r1.items().isEmpty());
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(10);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r10 = result(10);
+        assertNotNull(r10.items());
+        assertTrue(r10.items().isEmpty());
     }
 
     @Test
@@ -129,21 +132,21 @@ public class DbMovingWindowWithPagingStatsCollectionTest {
         dbStatsCollector.receiveNewQuery(q6);
         dbStatsCollector.flushOnce();
 
-        List<QueryEvent> orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(0);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q6, orderedQueryEvents.get(0));
-        assertEquals(q5, orderedQueryEvents.get(1));
-        assertEquals(q4, orderedQueryEvents.get(2));
+        PagedQueryResult r0 = result(0);
+        assertEquals(3, r0.items().size());
+        assertEquals(q6, r0.items().get(0));
+        assertEquals(q5, r0.items().get(1));
+        assertEquals(q4, r0.items().get(2));
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(1);
-        assertEquals(3, orderedQueryEvents.size());
-        assertEquals(q3, orderedQueryEvents.get(0));
-        assertEquals(q2, orderedQueryEvents.get(1));
-        assertEquals(q1, orderedQueryEvents.get(2));
+        PagedQueryResult r1 = result(1);
+        assertEquals(3, r1.items().size());
+        assertEquals(q3, r1.items().get(0));
+        assertEquals(q2, r1.items().get(1));
+        assertEquals(q1, r1.items().get(2));
 
-        orderedQueryEvents = dbStatsCollector.getOrderedQueryEvents(2);
-        assertNotNull(orderedQueryEvents);
-        assertTrue(orderedQueryEvents.isEmpty());
+        PagedQueryResult r2 = result(2);
+        assertNotNull(r2.items());
+        assertTrue(r2.items().isEmpty());
     }
 
     @Test

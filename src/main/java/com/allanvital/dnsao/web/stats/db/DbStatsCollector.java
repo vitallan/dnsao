@@ -238,66 +238,6 @@ public class DbStatsCollector implements StatsCollector, QueryEventListener, Aut
     }
 
     @Override
-    public List<QueryEvent> getOrderedQueryEvents() {
-        long now = nowSupplier.getAsLong();
-        long nowBucket = truncateToWindow(now, bucketIntervalMs);
-        long latestAllowedBucket = Math.max(nowBucket, maxBucketStartPresent());
-        long earliestAllowed = latestAllowedBucket - (long) (maxBuckets - 1) * bucketIntervalMs;
-        long latestAllowed = Math.max(now, latestAllowedBucket + bucketIntervalMs - 1);
-
-        String sql = "SELECT time_ms, resolved_by, client, type, domain, answer, source, elapsed_ms " +
-                "FROM query_event WHERE time_ms >= ? AND time_ms <= ? ORDER BY time_ms DESC, id DESC";
-
-        List<QueryEvent> out = new ArrayList<>();
-        try (PreparedStatement ps = readConn.prepareStatement(sql)) {
-            ps.setLong(1, earliestAllowed);
-            ps.setLong(2, latestAllowed);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out.add(readQueryEventRow(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return out;
-    }
-
-    @Override
-    public List<QueryEvent> getOrderedQueryEvents(int page) {
-        if (page < 0) {
-            return List.of();
-        }
-
-        long now = nowSupplier.getAsLong();
-        long nowBucket = truncateToWindow(now, bucketIntervalMs);
-        long latestAllowedBucket = Math.max(nowBucket, maxBucketStartPresent());
-        long earliestAllowed = latestAllowedBucket - (long) (maxBuckets - 1) * bucketIntervalMs;
-        long latestAllowed = Math.max(now, latestAllowedBucket + bucketIntervalMs - 1);
-
-        String sql = "SELECT time_ms, resolved_by, client, type, domain, answer, source, elapsed_ms " +
-                "FROM query_event WHERE time_ms >= ? AND time_ms <= ? " +
-                "ORDER BY time_ms DESC, id DESC LIMIT ? OFFSET ?";
-
-        int offset = page * pageSize;
-        List<QueryEvent> out = new ArrayList<>();
-        try (PreparedStatement ps = readConn.prepareStatement(sql)) {
-            ps.setLong(1, earliestAllowed);
-            ps.setLong(2, latestAllowed);
-            ps.setInt(3, pageSize);
-            ps.setInt(4, offset);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    out.add(readQueryEventRow(rs));
-                }
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return out;
-    }
-
-    @Override
     public PagedQueryResult getOrderedQueryEvents(int page, int pageSize, String filter, String sortKey, String sortDir) {
         if (page < 0) {
             return new PagedQueryResult(List.of(), 0);

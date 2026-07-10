@@ -156,7 +156,7 @@ public class MovingWindowStatsCollectionTest {
         memoryStatsCollector.receiveNewQuery(q3);
         memoryStatsCollector.receiveNewQuery(q4);
 
-        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
+        List<QueryEvent> orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertTrue(orderedQueryEvents.containsAll(List.of(q1, q2, q3, q4)));
         assertEquals(q4, orderedQueryEvents.get(0));
         assertEquals(q3, orderedQueryEvents.get(1));
@@ -165,7 +165,7 @@ public class MovingWindowStatsCollectionTest {
 
         nowRef.set(t("2025-10-02T10:30:00Z")); // walk the "now" to half an hour later
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
         assertTrue(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
@@ -175,7 +175,7 @@ public class MovingWindowStatsCollectionTest {
 
         nowRef.set(t("2025-10-02T10:40:00Z")); // walk the "now" to half an hour later
 
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertFalse(orderedQueryEvents.contains(q1), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q2), orderedQueryEvents.toString());
         assertFalse(orderedQueryEvents.contains(q3), orderedQueryEvents.toString());
@@ -183,7 +183,7 @@ public class MovingWindowStatsCollectionTest {
         assertEquals(q4, orderedQueryEvents.get(0));
 
         nowRef.set(t("2025-10-02T12:10:00Z")); // walk the "now" to two hours later
-        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents();
+        orderedQueryEvents = memoryStatsCollector.getOrderedQueryEvents(0, 25, "", "time", "desc").items();
         assertFalse(orderedQueryEvents.contains(q1));
         assertFalse(orderedQueryEvents.contains(q2));
         assertFalse(orderedQueryEvents.contains(q3));
