@@ -61,7 +61,7 @@ public class SystemGraphAssembler {
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
         KeepKickstarter kickstarter = keepKickStarter(keepProvider, factory);
-        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, keepProvider);
+        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory);
         scheduleScavenger(executorServiceFactory, cacheConf, cacheManager);
         kickstarter.kickStartKeep();
 
@@ -103,11 +103,10 @@ public class SystemGraphAssembler {
                                                      CacheConf cacheConf,
                                                      FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
                                                      CacheManager cacheManager,
-                                                     QueryProcessorFactory queryProcessorFactory,
-                                                     KeepProvider keepProvider) {
+                                                     QueryProcessorFactory queryProcessorFactory) {
         if (cacheConf.isRewarm()) {
             ExecutorService rewarmExecutorService = executorServiceFactory.buildExecutor("rewarm", 1);
-            RewarmWorker rewarmWorker = new RewarmWorker(fixedTimeRewarmScheduler, cacheManager, queryProcessorFactory, keepProvider, cacheConf.getMaxRewarmCount());
+            RewarmWorker rewarmWorker = new RewarmWorker(fixedTimeRewarmScheduler, cacheManager, queryProcessorFactory, cacheConf.getMaxRewarmCount());
             rewarmExecutorService.submit(rewarmWorker);
             return rewarmWorker;
         }
