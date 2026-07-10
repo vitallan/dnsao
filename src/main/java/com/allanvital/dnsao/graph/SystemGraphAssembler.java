@@ -5,7 +5,7 @@ import com.allanvital.dnsao.cache.CacheScavenger;
 import com.allanvital.dnsao.cache.keep.KeepKickstarter;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
-import com.allanvital.dnsao.cache.rewarm.RewarmWorker;
+import com.allanvital.dnsao.cache.rewarm.RewarmCoordinator;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.inner.*;
 import com.allanvital.dnsao.dns.DnsServer;
@@ -99,16 +99,24 @@ public class SystemGraphAssembler {
         return new DnsServer(conf, queryProcessorFactory, executorServiceFactory, statsCollector, upstreamThreadPoolExecutor, jsonBuilder);
     }
 
-    private static RewarmWorker scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,
-                                                     CacheConf cacheConf,
-                                                     FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
-                                                     CacheManager cacheManager,
-                                                     QueryProcessorFactory queryProcessorFactory) {
+    private static RewarmCoordinator scheduleRewarmWorker(ExecutorServiceFactory executorServiceFactory,
+                                                          CacheConf cacheConf,
+                                                          FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
+                                                          CacheManager cacheManager,
+                                                          QueryProcessorFactory queryProcessorFactory) {
         if (cacheConf.isRewarm()) {
-            ExecutorService rewarmExecutorService = executorServiceFactory.buildExecutor("rewarm", 1);
-            RewarmWorker rewarmWorker = new RewarmWorker(fixedTimeRewarmScheduler, cacheManager, queryProcessorFactory, cacheConf.getMaxRewarmCount());
-            rewarmExecutorService.submit(rewarmWorker);
-            return rewarmWorker;
+            ExecutorService coordinatorExecutorService = executorServiceFactory.buildExecutor("rewarm-coordinator", 1);
+            ExecutorService rewarmExecutorService = executorServiceFactory.buildExecutor("rewarm-exec", cacheConf.getRewarmWorkerPoolSize());
+            RewarmCoordinator rewarmCoordinator = new RewarmCoordinator(
+                    fixedTimeRewarmScheduler,
+                    cacheManager,
+                    queryProcessorFactory,
+                    cacheConf.getMaxRewarmCount(),
+                    rewarmExecutorService,
+                    cacheConf.getRewarmWorkerPoolSize()
+            );
+            coordinatorExecutorService.submit(rewarmCoordinator);
+            return rewarmCoordinator;
         }
         return null;
     }

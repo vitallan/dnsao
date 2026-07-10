@@ -23,6 +23,8 @@ cache:
   maxCacheEntries: 1000
   rewarm: true
   maxRewarmCount: 5
+  alwaysRewarmTopEntries: 0
+  rewarmWorkerPoolSize: 3
   keep:
     - "url1.com"
     - "url2.com"
@@ -140,6 +142,7 @@ cache:
   rewarm: true
   maxRewarmCount: 5
   alwaysRewarmTopEntries: 0
+  rewarmWorkerPoolSize: 3
   keep:
     - "url1.com"
     - "url2.com"
@@ -154,6 +157,7 @@ The **cache** property defines the application’s cache behavior. The cache is 
 | **rewarm** | enable the "cache rewarm" mechanism: when a cache entry is near the end of its TTL, a refresh attempt is made automatically. Default is **true**                                                                                                                                                                                    |
 | **maxRewarmCount** | how many times **DNSao** will rewarm the cache entry before removing it from memory. If a query arrives for a domain in the “warm” cache, such entry is promoted to “hot” cache and its rewarm counter resets. This ensures that frequently accessed domains stay available, improving DNS resolution performance. Default is **5** |
 | **alwaysRewarmTopEntries** | the number of most-frequently-accessed cache entries that will always be rewarmed, bypassing **maxRewarmCount**. Unlike **keep**, these are not preloaded — they earn their spot through actual client queries. The top N non-keep entries by access recency are promoted automatically. Default is **0** (disabled). Clamped to **maxCacheEntries** |
+| **rewarmWorkerPoolSize** | the number of threads in the rewarm worker pool. A larger pool allows more cache entries to be rewarmed in parallel, reducing the chance of stale entries under heavy query load. Default is **3**. Minimum is **1** |
 | **keep** | a list of URLs to both precache and keep always warm. These urls will always trigger the rewarm mechanism and will not be enforced by the **maxRewarmCount** limit. **DNSao** will attempt to always keep those cached |
 
 ### misc 

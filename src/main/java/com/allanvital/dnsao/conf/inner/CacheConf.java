@@ -13,6 +13,7 @@ public class CacheConf {
     private boolean rewarm = false;
     private int maxRewarmCount = 3;
     private int secsBeforeTtlToRewarm = 20;
+    private int rewarmWorkerPoolSize = 3;
     private int alwaysRewarmTopEntries = 0;
     private List<String> keep = new LinkedList<>();
 
@@ -79,5 +80,13 @@ public class CacheConf {
 
     public void setSecsBeforeTtlToRewarm(int secsBeforeTtlToRewarm) {
         this.secsBeforeTtlToRewarm = secsBeforeTtlToRewarm;
+    }
+
+    public int getRewarmWorkerPoolSize() {
+        return Math.max(1, rewarmWorkerPoolSize);
+    }
+
+    public void setRewarmWorkerPoolSize(int rewarmWorkerPoolSize) {
+        this.rewarmWorkerPoolSize = Math.max(1, rewarmWorkerPoolSize);
     }
 }

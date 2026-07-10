@@ -1,20 +1,17 @@
 package com.allanvital.dnsao.cache.rewarm;
-import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
-import com.allanvital.dnsao.infra.clock.Clock;
+import com.allanvital.dnsao.infra.log.Log;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
-import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.Semaphore;
 
 import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
@@ -26,74 +23,36 @@ public class RewarmWorker implements Runnable {
 
     private static final int MAX_TRANSIENT_REWARM_RETRIES = 1;
 
-    private final FixedTimeRewarmScheduler scheduler;
     private final CacheManager cache;
     private final QueryProcessorFactory queryProcessorFactory;
-    private final int maxRewarmCount;
+    private final RewarmContext context;
+    private final Semaphore workerPermits;
     private final RewarmRetryPolicy retryPolicy;
-    private final AtomicBoolean running = new AtomicBoolean(true);
-    private long lastBeat = Clock.currentTimeInMillis();
 
-    public RewarmWorker(FixedTimeRewarmScheduler scheduler,
-                        CacheManager cache,
+    public RewarmWorker(CacheManager cache,
                         QueryProcessorFactory queryProcessorFactory,
-                        int maxRewarmCount) {
-
-        this.scheduler = scheduler;
+                        RewarmContext context,
+                        Semaphore workerPermits) {
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
-        this.maxRewarmCount = maxRewarmCount;
+        this.context = context;
+        this.workerPermits = workerPermits;
         this.retryPolicy = new RewarmRetryPolicy(MAX_TRANSIENT_REWARM_RETRIES);
-        Log.CACHE.debug("starting RewarmWorker");
-    }
-
-    public void shutdown() {
-        running.set(false);
-    }
-
-    public boolean isRunning() {
-        return running.get();
-    }
-
-    private void heartbeat() {
-        long now = Clock.currentTimeInMillis();
-        if (now - lastBeat >= 30_000) {
-            int qsize = scheduler.queue().size();
-            Log.CACHE.debug("heartbeat: queueSize={}", qsize);
-            lastBeat = now;
-        }
     }
 
     @Override
     public void run() {
-        while (running.get()) {
-            heartbeat();
-            try {
-                RewarmTask task = scheduler.queue().poll(50, TimeUnit.MILLISECONDS);
-                if (task == null) {
-                    continue;
-                }
-                processTask(task);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                running.set(false);
-                Log.CACHE.debug("stopping rewarm worker");
-                break;
-            } catch (Throwable t) {
-                Log.CACHE.debug("Error on rewarm worker loop: {}", t.getMessage(), t);
-            }
+        try {
+            processTask();
+        } catch (Throwable t) {
+            Log.CACHE.debug("Error on rewarm execution key={}: {}", context.key(), t.getMessage(), t);
+        } finally {
+            workerPermits.release();
         }
     }
 
-    private void processTask(RewarmTask task) {
-        String key = task.getKey();
-        RewarmContext context = loadContext(task);
-        RewarmSkipReason skipReason = validateBeforeAttempt(context);
-        if (skipReason != null) {
-            recordSkip(key, skipReason, context);
-            return;
-        }
-
+    private void processTask() {
+        String key = context.key();
         Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, context.currentRewarmCount());
         RewarmAttemptResult attemptResult = attemptRewarmWithRetry(context);
         if (!attemptResult.success()) {
@@ -117,42 +76,6 @@ public class RewarmWorker implements Runnable {
 
         storeRewarmedEntry(context, attemptResult.response(), ttlFromDirectResponse);
         recordSuccess(context, ttlFromDirectResponse);
-    }
-
-    private boolean isWarmable(Message msg) {
-        return getTtlFromDirectResponse(msg) != null;
-    }
-
-    private RewarmContext loadContext(RewarmTask task) {
-        String key = task.getKey();
-        DnsCacheEntry entry = cache.safeGet(key);
-        if (entry == null) {
-            return new RewarmContext(key, task, null, null, 0, false);
-        }
-        Message cachedResponse = entry.getResponse();
-        Record question = cachedResponse != null ? cachedResponse.getQuestion() : null;
-        boolean shouldAlwaysRewarm = cache.shouldAlwaysRewarm(key, question);
-        return new RewarmContext(key, task, entry, question, entry.getRewarmCount(), shouldAlwaysRewarm);
-    }
-
-    private RewarmSkipReason validateBeforeAttempt(RewarmContext context) {
-        if (context == null || context.entry() == null) {
-            return RewarmSkipReason.MISSING_ENTRY;
-        }
-        if (isTaskObsolete(context.task(), context.entry())) {
-            return RewarmSkipReason.OBSOLETE_TASK;
-        }
-        if (context.question() == null) {
-            return RewarmSkipReason.MISSING_QUESTION;
-        }
-        if (!isWarmable(context.entry().getResponse())) {
-            return RewarmSkipReason.NOT_WARMABLE_CACHED_RESPONSE;
-        }
-        if (context.currentRewarmCount() >= maxRewarmCount && !context.shouldAlwaysRewarm()) {
-            telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
-            return RewarmSkipReason.MAX_REWARM_REACHED;
-        }
-        return null;
     }
 
     private RewarmAttemptResult attemptRewarmWithRetry(RewarmContext context) {

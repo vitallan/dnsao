@@ -46,6 +46,15 @@ public class FixedTimeRewarmScheduler {
         queue.put(task);
     }
 
+    public void scheduleSoon(String key, long expectedExpiryTimeMs, long delayMs) {
+        long triggerAt = Clock.currentTimeInMillis() + Math.max(1, delayMs);
+        RewarmTask task = new RewarmTask(key, triggerAt, expectedExpiryTimeMs);
+        Log.CACHE.debug("soon scheduling {} to rewarm at {}", key, TimeUtils.formatMillis(triggerAt, "HH:mm:ss"));
+        remove(key);
+        telemetryNotify(REWARM_TASK_SCHEDULED);
+        queue.put(task);
+    }
+
     public void cancel(String key) {
         remove(key);
         Log.CACHE.debug("canceling scheduling of {}", key);
