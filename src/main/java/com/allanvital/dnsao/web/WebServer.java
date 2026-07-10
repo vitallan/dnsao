@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.web;
 import com.allanvital.dnsao.infra.log.Log;
 
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
@@ -29,15 +30,17 @@ public class WebServer {
     private QueuedThreadPool threadPool;
     private final int httpThreadPool;
     private final JsonBuilder builder;
+    private final MutableState mutableState;
     private static final String DNS_PATH = "/dns-query";
     private static final String CONTENT_TYPE = "application/dns-message";
     private boolean running = false;
 
-    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, JsonBuilder builder) {
+    public WebServer(int port, QueryProcessorFactory queryProcessorFactory, int httpThreadPool, JsonBuilder builder, MutableState mutableState) {
         this.port = port;
         this.queryProcessorFactory = queryProcessorFactory;
         this.httpThreadPool = httpThreadPool;
         this.builder = builder;
+        this.mutableState = mutableState;
     }
 
     public void start() {
@@ -81,7 +84,22 @@ public class WebServer {
                     builder.buildQueriesArray(page, pageSize, filter, sortKey, sortDir).toString()
             );
         });
-        
+
+        app.get("/api/state", ctx -> {
+            ctx.contentType("application/json; charset=utf-8");
+            ctx.result("{\"blockingEnabled\":" + mutableState.isBlockingEnabled() + "}");
+        });
+
+        app.post("/api/state/blocking", ctx -> {
+            String body = ctx.body();
+            if (body != null && body.contains("\"blockingEnabled\"")) {
+                boolean enabled = body.contains("\"blockingEnabled\":true");
+                mutableState.setBlockingEnabled(enabled);
+            }
+            ctx.contentType("application/json; charset=utf-8");
+            ctx.result("{\"blockingEnabled\":" + mutableState.isBlockingEnabled() + "}");
+        });
+
         mapDnsEndpoints();
 
         this.app.start(port);

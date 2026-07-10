@@ -95,14 +95,17 @@
             </div>
 
             <div class="column is-6-tablet is-3-desktop">
-                <div class="card" data-key="blocked">
+                <div class="card" data-key="blocked" id="blockedCard">
                     <header class="card-header">
                         <p class="card-header-title">Blocked</p>
                         <span class="card-header-icon">
                           <span class="tag is-success is-light" data-key="blockedRateTag">—%</span>
                         </span>
+                        <div class="card-header-icon">
+                          <button id="blockingToggleBtn" class="button is-small is-danger">Disable Blocking</button>
+                        </div>
                     </header>
-                    <div class="card-content has-text-centered">
+                    <div class="card-content has-text-centered" id="blockedCardContent">
                         <p class="title is-4 value">—</p>
                     </div>
                 </div>
@@ -267,6 +270,7 @@
         status.textContent = 'Online';
 
         document.getElementById('errorBox').classList.add('is-hidden');
+        await updateBlockingUI();
       } catch (e) {
         console.error(e);
         const errorBox = document.getElementById('errorBox');
@@ -313,6 +317,42 @@
         if (servFailTag) servFailTag.textContent = servFailRate + '%';
       } catch {}
     }
+
+    async function updateBlockingUI() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        const btn = document.getElementById('blockingToggleBtn');
+        const card = document.getElementById('blockedCard');
+        if (data.blockingEnabled) {
+          btn.textContent = 'Disable Blocking';
+          btn.className = 'button is-small is-danger';
+          card.classList.remove('blocking-disabled');
+        } else {
+          btn.textContent = 'Enable Blocking';
+          btn.className = 'button is-small is-success';
+          card.classList.add('blocking-disabled');
+        }
+      } catch (e) {
+        console.error('Failed to fetch blocking state', e);
+      }
+    }
+
+    document.getElementById('blockingToggleBtn').addEventListener('click', async () => {
+      try {
+        const current = document.getElementById('blockingToggleBtn').textContent === 'Disable Blocking';
+        const res = await fetch('/api/state/blocking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blockingEnabled: !current })
+        });
+        if (res.ok) {
+          await updateBlockingUI();
+        }
+      } catch (e) {
+        console.error('Failed to toggle blocking', e);
+      }
+    });
 
     function fillUpstreamLegend(upstream) {
       const wrap = document.getElementById('upstreamLegend');

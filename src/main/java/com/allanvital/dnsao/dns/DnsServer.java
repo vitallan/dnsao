@@ -1,6 +1,7 @@
 package com.allanvital.dnsao.dns;
 import com.allanvital.dnsao.infra.log.Log;
 
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.ServerConf;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
 import com.allanvital.dnsao.dns.server.ProtocolServer;
@@ -30,21 +31,24 @@ public class DnsServer {
     private final WebServer webServer;
     private final StatsCollector statsCollector;
     private final UpstreamThreadPoolExecutor upstreamThreadPoolExecutor;
+    private final MutableState mutableState;
 
     public DnsServer(ServerConf conf,
                      QueryProcessorFactory factory,
                      ExecutorServiceFactory executorServiceFactory,
                      StatsCollector statsCollector,
                      UpstreamThreadPoolExecutor upstreamThreadPoolExecutor,
-                     JsonBuilder jsonBuilder) {
+                     JsonBuilder jsonBuilder,
+                     MutableState mutableState) {
         this.port = conf.getPort();
         this.statsCollector = statsCollector;
         this.upstreamThreadPoolExecutor = upstreamThreadPoolExecutor;
+        this.mutableState = mutableState;
         this.udpThreadPool = executorServiceFactory.buildExecutor("udp", conf.getUdpThreadPool());
         this.tcpThreadPool = executorServiceFactory.buildExecutor("tcp", conf.getTcpThreadPool());
         udpServer = new UdpServer(udpThreadPool, factory, port);
         tcpServer = new TcpServer(tcpThreadPool, factory, port);
-        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), jsonBuilder);
+        webServer = new WebServer(conf.getWebPort(), factory, conf.getHttpThreadPool(), jsonBuilder, mutableState);
     }
 
     public int getUdpPort() {

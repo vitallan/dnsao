@@ -3,6 +3,7 @@ package com.allanvital.dnsao.graph;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
+import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
@@ -17,6 +18,7 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
     private CacheManager cacheManager;
     private QueryProcessorFactory queryProcessorFactory;
     private TestQueryInfraAssembler queryInfraAssembler;
+    private MutableState mutableState;
 
     public TestSystemGraphAssembler() {
         super();
@@ -29,6 +31,12 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
                               KeepProvider keepProvider) {
         this.cacheManager = super.cacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf, keepProvider);
         return this.cacheManager;
+    }
+
+    @Override
+    protected MutableState createMutableState(boolean blockingEnabled) {
+        this.mutableState = super.createMutableState(blockingEnabled);
+        return this.mutableState;
     }
 
     @Override
@@ -53,6 +61,10 @@ public class TestSystemGraphAssembler extends SystemGraphAssembler {
 
     public QueryProcessorFactory getQueryProcessorFactory() {
         return queryProcessorFactory;
+    }
+
+    public MutableState getMutableState() {
+        return mutableState;
     }
 
 }
