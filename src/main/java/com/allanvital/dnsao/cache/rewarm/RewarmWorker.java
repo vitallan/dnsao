@@ -2,7 +2,6 @@ package com.allanvital.dnsao.cache.rewarm;
 import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.cache.CacheManager;
-import com.allanvital.dnsao.cache.keep.KeepProvider;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.processor.QueryProcessor;
@@ -31,20 +30,21 @@ public class RewarmWorker implements Runnable {
     private final CacheManager cache;
     private final QueryProcessorFactory queryProcessorFactory;
     private final int maxRewarmCount;
+    private final RewarmRetryPolicy retryPolicy;
     private final AtomicBoolean running = new AtomicBoolean(true);
     private long lastBeat = Clock.currentTimeInMillis();
 
     public RewarmWorker(FixedTimeRewarmScheduler scheduler,
                         CacheManager cache,
                         QueryProcessorFactory queryProcessorFactory,
-                        KeepProvider keepProvider,
                         int maxRewarmCount) {
 
         this.scheduler = scheduler;
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
         this.maxRewarmCount = maxRewarmCount;
-        Log.CACHE.debug("starting RewarWorker");
+        this.retryPolicy = new RewarmRetryPolicy(MAX_TRANSIENT_REWARM_RETRIES);
+        Log.CACHE.debug("starting RewarmWorker");
     }
 
     public void shutdown() {
@@ -66,7 +66,6 @@ public class RewarmWorker implements Runnable {
 
     @Override
     public void run() {
-        String key = "";
         while (running.get()) {
             heartbeat();
             try {
@@ -74,111 +73,167 @@ public class RewarmWorker implements Runnable {
                 if (task == null) {
                     continue;
                 }
-                key = task.getKey();
-                DnsCacheEntry entry = cache.safeGet(key);
-                if (entry == null) {
-                    Log.CACHE.debug("rewarm was scheduled but key already left cache key={}", key);
-                    continue;
-                }
-                if (task.getExpectedExpiryTimeMs() != -1L && entry.getExpiryTime() != task.getExpectedExpiryTimeMs()) {
-                    Log.CACHE.debug("rewarm skip: obsolete task for key={} expectedExpiry={} currentExpiry={}",
-                            key, task.getExpectedExpiryTimeMs(), entry.getExpiryTime());
-                    continue;
-                }
-
-                Message cachedResponse = entry.getResponse();
-                Record question = cachedResponse.getQuestion();
-                if (question == null) {
-                    Log.CACHE.debug("rewarm skip: missing QUESTION section for key={}", key);
-                    continue;
-                }
-                if (!isWarmable(cachedResponse)) {
-                    Log.CACHE.debug("rewarm skip: not warmable (rcode/answers) key={}", key);
-                    continue;
-                }
-                int currentRewarmCount = entry.getRewarmCount();
-                boolean shouldAlwaysRewarm = cache.shouldAlwaysRewarm(key, question);
-                if (currentRewarmCount >= maxRewarmCount && !shouldAlwaysRewarm) { //better to remove scheduled afterward to ensure cache is correctly clean
-                    Log.CACHE.debug("max rewarm count for key={}", key);
-                    telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
-                    continue;
-                }
-                Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, currentRewarmCount);
-                Message query = Message.newQuery(question);
-                Message newResponse = rewarmWithTransientRetry(query, key);
-                if (newResponse == null) {
-                    telemetryNotify(EventType.CACHE_REWARM_FAILED);
-                    Log.CACHE.debug("it was not possible to rewarm entry {}", key);
-                    continue;
-                }
-                Long ttlFromDirectResponse = getTtlFromDirectResponse(newResponse);
-
-                if (ttlFromDirectResponse == null) {
-                    telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
-                    Log.CACHE.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
-                            key, Rcode.string(newResponse.getRcode()));
-                    continue;
-                }
-                DnsCacheEntry latestEntry = cache.safeGet(key);
-                if (latestEntry == null) {
-                    Log.CACHE.debug("rewarm skip: key already removed before store key={}", key);
-                    continue;
-                }
-                if (task.getExpectedExpiryTimeMs() != -1L && latestEntry.getExpiryTime() != task.getExpectedExpiryTimeMs()) {
-                    Log.CACHE.debug("rewarm skip: newer cache entry replaced key={} expectedExpiry={} currentExpiry={}",
-                            key, task.getExpectedExpiryTimeMs(), latestEntry.getExpiryTime());
-                    continue;
-                }
-                DnsCacheEntry updateCacheEntry = new DnsCacheEntry(newResponse, ttlFromDirectResponse, currentRewarmCount + 1);
-                cache.rewarm(key, updateCacheEntry);
-                telemetryNotify(EventType.CACHE_REWARM);
-                Log.CACHE.debug("rewarm stored (warm cache) key={} ttl={}s qname={} type={}",
-                        key, ttlFromDirectResponse,
-                        question.getName().toString(),
-                        Type.string(question.getType()));
+                processTask(task);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 running.set(false);
                 Log.CACHE.debug("stopping rewarm worker");
                 break;
             } catch (Throwable t) {
-                Log.CACHE.debug("Error on key '{}' rewarmWorker: {}", key, t.getMessage(), t);
+                Log.CACHE.debug("Error on rewarm worker loop: {}", t.getMessage(), t);
             }
         }
     }
 
-    private Message rewarmWithTransientRetry(Message query, String key) {
-        for (int attempt = 0; attempt <= MAX_TRANSIENT_REWARM_RETRIES; attempt++) {
-            try {
-                QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
-                DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
-                if (queryResponse != null && queryResponse.getResponse() != null) {
-                    Message response = queryResponse.getResponse();
-                    if (getTtlFromDirectResponse(response) != null) {
-                        return response;
-                    }
-                    if (response.getRcode() == Rcode.SERVFAIL && attempt < MAX_TRANSIENT_REWARM_RETRIES) {
-                        Log.CACHE.debug("rewarm returned SERVFAIL on key={} attempt={}, retrying", key, attempt + 1);
-                        continue;
-                    }
-                    return response;
-                }
-            } catch (Throwable t) {
-                if (attempt >= MAX_TRANSIENT_REWARM_RETRIES) {
-                    throw t;
-                }
-                Log.CACHE.debug("rewarm transient failure on key={} attempt={} message={}", key, attempt + 1, t.getMessage());
-                continue;
-            }
-            if (attempt < MAX_TRANSIENT_REWARM_RETRIES) {
-                Log.CACHE.debug("rewarm returned no response on key={} attempt={}, retrying", key, attempt + 1);
-            }
+    private void processTask(RewarmTask task) {
+        String key = task.getKey();
+        RewarmContext context = loadContext(task);
+        RewarmSkipReason skipReason = validateBeforeAttempt(context);
+        if (skipReason != null) {
+            recordSkip(key, skipReason, context);
+            return;
         }
-        return null;
+
+        Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, context.currentRewarmCount());
+        RewarmAttemptResult attemptResult = attemptRewarmWithRetry(context);
+        if (!attemptResult.success()) {
+            recordFailure(key, attemptResult);
+            return;
+        }
+
+        Long ttlFromDirectResponse = getTtlFromDirectResponse(attemptResult.response());
+        if (ttlFromDirectResponse == null) {
+            telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
+            Log.CACHE.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
+                    key, Rcode.string(attemptResult.response().getRcode()));
+            return;
+        }
+
+        RewarmSkipReason storeSkipReason = validateBeforeStore(context);
+        if (storeSkipReason != null) {
+            recordSkip(key, storeSkipReason, context);
+            return;
+        }
+
+        storeRewarmedEntry(context, attemptResult.response(), ttlFromDirectResponse);
+        recordSuccess(context, ttlFromDirectResponse);
     }
 
     private boolean isWarmable(Message msg) {
         return getTtlFromDirectResponse(msg) != null;
+    }
+
+    private RewarmContext loadContext(RewarmTask task) {
+        String key = task.getKey();
+        DnsCacheEntry entry = cache.safeGet(key);
+        if (entry == null) {
+            return new RewarmContext(key, task, null, null, 0, false);
+        }
+        Message cachedResponse = entry.getResponse();
+        Record question = cachedResponse != null ? cachedResponse.getQuestion() : null;
+        boolean shouldAlwaysRewarm = cache.shouldAlwaysRewarm(key, question);
+        return new RewarmContext(key, task, entry, question, entry.getRewarmCount(), shouldAlwaysRewarm);
+    }
+
+    private RewarmSkipReason validateBeforeAttempt(RewarmContext context) {
+        if (context == null || context.entry() == null) {
+            return RewarmSkipReason.MISSING_ENTRY;
+        }
+        if (isTaskObsolete(context.task(), context.entry())) {
+            return RewarmSkipReason.OBSOLETE_TASK;
+        }
+        if (context.question() == null) {
+            return RewarmSkipReason.MISSING_QUESTION;
+        }
+        if (!isWarmable(context.entry().getResponse())) {
+            return RewarmSkipReason.NOT_WARMABLE_CACHED_RESPONSE;
+        }
+        if (context.currentRewarmCount() >= maxRewarmCount && !context.shouldAlwaysRewarm()) {
+            telemetryNotify(EventType.CACHE_REWARM_EXPIRED);
+            return RewarmSkipReason.MAX_REWARM_REACHED;
+        }
+        return null;
+    }
+
+    private RewarmAttemptResult attemptRewarmWithRetry(RewarmContext context) {
+        Message query = Message.newQuery(context.question());
+        int attempts = 0;
+        while (true) {
+            RewarmAttemptResult result = attemptRewarmOnce(query, context.key());
+            if (result.success()) {
+                return result;
+            }
+            if (!retryPolicy.shouldRetry(attempts, result)) {
+                return result;
+            }
+            attempts++;
+        }
+    }
+
+    private RewarmAttemptResult attemptRewarmOnce(Message query, String key) {
+        try {
+            QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
+            DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
+            if (queryResponse == null || queryResponse.getResponse() == null) {
+                Log.CACHE.debug("rewarm returned no response on key={}, retrying", key);
+                return RewarmAttemptResult.retryableFailure("no_response");
+            }
+            Message response = queryResponse.getResponse();
+            if (getTtlFromDirectResponse(response) != null) {
+                return RewarmAttemptResult.success(response);
+            }
+            if (response.getRcode() == Rcode.SERVFAIL) {
+                Log.CACHE.debug("rewarm returned SERVFAIL on key={}, retrying", key);
+                return RewarmAttemptResult.retryableFailure("servfail");
+            }
+            return RewarmAttemptResult.terminalFailure("not_warmable_response");
+        } catch (Throwable t) {
+            Log.CACHE.debug("rewarm transient failure on key={} message={}", key, t.getMessage());
+            return RewarmAttemptResult.retryableFailure("exception");
+        }
+    }
+
+    private RewarmSkipReason validateBeforeStore(RewarmContext context) {
+        DnsCacheEntry latestEntry = cache.safeGet(context.key());
+        if (latestEntry == null) {
+            return RewarmSkipReason.REMOVED_BEFORE_STORE;
+        }
+        if (isTaskObsolete(context.task(), latestEntry)) {
+            return RewarmSkipReason.REPLACED_BEFORE_STORE;
+        }
+        return null;
+    }
+
+    private void storeRewarmedEntry(RewarmContext context, Message response, long ttlFromDirectResponse) {
+        DnsCacheEntry updateCacheEntry = new DnsCacheEntry(response, ttlFromDirectResponse, context.currentRewarmCount() + 1);
+        cache.rewarm(context.key(), updateCacheEntry);
+    }
+
+    private boolean isTaskObsolete(RewarmTask task, DnsCacheEntry entry) {
+        return task.getExpectedExpiryTimeMs() != -1L && entry.getExpiryTime() != task.getExpectedExpiryTimeMs();
+    }
+
+    private void recordSkip(String key, RewarmSkipReason reason, RewarmContext context) {
+        long expectedExpiry = context != null && context.task() != null ? context.task().getExpectedExpiryTimeMs() : -1L;
+        long currentExpiry = context != null && context.entry() != null ? context.entry().getExpiryTime() : -1L;
+        if (reason == RewarmSkipReason.REPLACED_BEFORE_STORE) {
+            DnsCacheEntry latestEntry = cache.safeGet(key);
+            currentExpiry = latestEntry != null ? latestEntry.getExpiryTime() : -1L;
+        }
+        Log.CACHE.debug(RewarmSkipReason.MESSAGE, key, reason.reason(), expectedExpiry, currentExpiry);
+    }
+
+    private void recordFailure(String key, RewarmAttemptResult result) {
+        telemetryNotify(EventType.CACHE_REWARM_FAILED);
+        Log.CACHE.debug("it was not possible to rewarm entry {} reason={}", key, result.failureReason());
+    }
+
+    private void recordSuccess(RewarmContext context, long ttlFromDirectResponse) {
+        telemetryNotify(EventType.CACHE_REWARM);
+        Log.CACHE.debug("rewarm stored (warm cache) key={} ttl={}s qname={} type={}",
+                context.key(), ttlFromDirectResponse,
+                context.question().getName().toString(),
+                Type.string(context.question().getType()));
     }
 
 }
