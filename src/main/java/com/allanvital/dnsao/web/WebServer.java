@@ -66,28 +66,28 @@ public class WebServer {
             cfg.router.ignoreTrailingSlashes = true;
         });
 
-        app.before(ctx -> {
-            if (authPass.isEmpty()) return;
+        if (authPass != null && !authPass.isEmpty()) {
+            app.before(ctx -> {
+                String path = ctx.path();
+                if (path.equals("/login.html")
+                        || path.startsWith("/api/auth/")
+                        || path.startsWith("/dns-query")
+                        || path.startsWith("/css/")
+                        || path.startsWith("/js/")
+                        || path.startsWith("/img/")
+                        || path.equals("/favicon.ico")
+                        || path.contains("/site.webmanifest")) return;
 
-            String path = ctx.path();
-            if (path.equals("/login.html")
-                    || path.startsWith("/api/auth/")
-                    || path.startsWith("/dns-query")
-                    || path.startsWith("/css/")
-                    || path.startsWith("/js/")
-                    || path.startsWith("/img/")
-                    || path.equals("/favicon.ico")
-                    || path.contains("/site.webmanifest")) return;
+                Boolean authenticated = ctx.sessionAttribute("authenticated");
+                if (authenticated != null && authenticated) return;
 
-            Boolean authenticated = ctx.sessionAttribute("authenticated");
-            if (authenticated != null && authenticated) return;
-
-            if (path.startsWith("/api/")) {
-                ctx.status(401).result("{\"error\":\"unauthorized\"}");
-            } else {
-                ctx.redirect("/login.html");
-            }
-        });
+                if (path.startsWith("/api/")) {
+                    ctx.status(401).result("{\"error\":\"unauthorized\"}");
+                } else {
+                    ctx.redirect("/login.html");
+                }
+            });
+        }
 
         app.get("/query", ctx -> ctx.redirect("/query.html"));
 
