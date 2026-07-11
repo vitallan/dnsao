@@ -340,7 +340,7 @@
 
     document.getElementById('blockingToggleBtn').addEventListener('click', async () => {
       try {
-        const current = document.getElementById('blockingToggleBtn').textContent === 'Disable Blocking';
+        const current = document.getElementById('blockingToggleBtn').textContent === 'Disable';
         const res = await fetch('/api/state/blocking', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

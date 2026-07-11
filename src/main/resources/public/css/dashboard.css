@@ -1,3 +1,4 @@
 #summary .column { display: flex; }
 #summary .card { flex: 1; }
 #blockedCard.blocking-disabled { opacity: 0.45; }
+#blockedCard.blocking-disabled #blockingToggleBtn { opacity: 1; }

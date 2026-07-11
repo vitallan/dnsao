@@ -1,6 +1,5 @@
 server:
   port: 1053
-  authPass: arroz
   webPort: 8044
   udpThreadPool: 20
   tcpThreadPool: 4
