@@ -47,7 +47,7 @@ jobs:
           echo "tag=v$REL"     >> "$GITHUB_OUTPUT"
 
       - name: Build & Test
-        run: mvn -B -q clean install
+        run: mvn -B -q -Drevision="${{ steps.ver.outputs.release }}" clean install
 
       - name: Create git tag vX.Y.Z (lightweight)
         uses: actions/github-script@v7
@@ -87,7 +87,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.ver.outputs.tag }}
-          file: target/dnsao-${{ steps.readrev.outputs.REVISION }}.jar
+          file: target/dnsao-${{ steps.ver.outputs.release }}.jar
           asset_name: dnsao.jar
           overwrite: true
 

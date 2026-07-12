@@ -1,9 +1,11 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
 
+ARG DNSAO_VERSION
+
 COPY pom.xml .
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -DskipTests -B -U package
+RUN --mount=type=cache,target=/root/.m2 if [ -n "$DNSAO_VERSION" ]; then mvn -DskipTests -B -U -Drevision="$DNSAO_VERSION" package; else mvn -DskipTests -B -U package; fi
 
 RUN set -eux; \
     mkdir -p /out; \
