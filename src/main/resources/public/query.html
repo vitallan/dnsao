@@ -345,7 +345,8 @@
 
 <footer class="footer py-4">
     <div class="content has-text-centered is-size-7 has-text-grey">
-        <span>© DNSao</span> · <span id="buildInfo">v0.1.0</span>
+        <span>© DNSao</span> · <span id="buildInfo"></span>
+        · <a href="https://allanvital.com" target="_blank" rel="noopener">by Allan Vital</a>
     </div>
 </footer>
 </body>
@@ -358,6 +359,18 @@
         burger.classList.toggle('is-active');
         menu.classList.toggle('is-active');
       });
+
+      fetchVersion();
     });
+
+    async function fetchVersion() {
+      try {
+        const res = await fetch('/api/version');
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('buildInfo').textContent = 'v' + data.version;
+        }
+      } catch {}
+    }
 </script>
 </html>

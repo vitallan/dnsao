@@ -12,8 +12,10 @@ import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
+import java.io.InputStream;
 import java.net.UnknownHostException;
 import java.util.Objects;
+import java.util.Properties;
 
 import static com.allanvital.dnsao.web.stats.memory.MemoryStatsCollector.DEFAULT_PAGE_SIZE;
 import static java.net.InetAddress.getByName;
@@ -71,6 +73,7 @@ public class WebServer {
                 String path = ctx.path();
                 if (path.equals("/login.html")
                         || path.startsWith("/api/auth/")
+                        || path.equals("/api/version")
                         || path.startsWith("/dns-query")
                         || path.startsWith("/css/")
                         || path.startsWith("/js/")
@@ -155,6 +158,7 @@ public class WebServer {
         });
 
         mapDnsEndpoints();
+        mapBuildInfoEndpoint();
 
         this.app.start(port);
         this.port = this.app.port();
@@ -227,6 +231,27 @@ public class WebServer {
             processQueryAndSetResult(ctx, requestBytes);
 
         });
+    }
+
+    private void mapBuildInfoEndpoint() {
+        app.get("/api/version", ctx -> {
+            ctx.contentType("application/json; charset=utf-8");
+            String version = readBuildVersion();
+            ctx.result("{\"version\":\"" + version + "\"}");
+        });
+    }
+
+    private static String readBuildVersion() {
+        try (InputStream is = WebServer.class.getResourceAsStream("/version.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                return props.getProperty("version", "unknown");
+            }
+        } catch (Exception e) {
+            Log.INFRA.warn("could not read version.properties", e);
+        }
+        return "unknown";
     }
 
     private void processQueryAndSetResult(Context ctx, byte[] request) throws UnknownHostException {
