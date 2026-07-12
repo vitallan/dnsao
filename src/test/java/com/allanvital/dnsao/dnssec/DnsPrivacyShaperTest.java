@@ -54,34 +54,28 @@ public class DnsPrivacyShaperTest {
     }
 
     @Test
-    void shouldPreserveExistingEdnsOptionsInOPT() throws Exception {
+    void shouldDropInboundEdnsOptionsAndKeepSingleCanonicalOpt() throws Exception {
         Message msg = buildARequest(domain, false);
         EDNSOption preExisting = new GenericEDNSOption(NSID, new byte[]{1,2,3});
         List<EDNSOption> preOptions = new LinkedList<>();
         preOptions.add(preExisting);
         OPTRecord preOpt = new OPTRecord(DEFAULT_UDP_PAYLOAD, 0, 0, 0, preOptions);
-
-        EDNSOption nsid = preOpt.getOptions().get(0);
-        assertEquals(NSID, nsid.getCode());
-        assertEquals(7, nsid.toWire().length);
-
         msg.addRecord(preOpt, Section.ADDITIONAL);
+        msg.addRecord(new OPTRecord(DEFAULT_UDP_PAYLOAD, 0, 0, ExtendedFlags.DO), Section.ADDITIONAL);
         DnsPrivacyShaper shaper = new DnsPrivacyShaper(SIMPLE);
         Message out = shaper.prepare(msg);
 
         OPTRecord opt = out.getOPT();
         Assertions.assertNotNull(opt, "OPT must be present after prepare()");
 
+        long optCount = out.getSection(Section.ADDITIONAL).stream().filter(OPTRecord.class::isInstance).count();
+        assertEquals(1, optCount);
+
         List<EDNSOption> options = opt.getOptions();
-        assertEquals(2, options.size());
-
-        nsid = options.get(0);
-        assertEquals(NSID, nsid.getCode());
-        assertEquals(7, nsid.toWire().length); // 4 edns overhead + 3 bytes
-
-        EDNSOption padding = options.get(1);
+        assertEquals(1, options.size());
+        EDNSOption padding = options.get(0);
         assertEquals(PADDING, padding.getCode());
-        assertEquals(81, padding.toWire().length); // 88 - nsid.toWire().length
+        assertEquals(88, padding.toWire().length);
     }
 
     private void testWithMessage(DNSSecMode mode, Message msg, int expectedPad) throws Exception {
