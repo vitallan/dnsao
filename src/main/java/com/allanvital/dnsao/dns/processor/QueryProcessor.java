@@ -37,7 +37,12 @@ public class QueryProcessor {
             request = preHandler.prepare(clientAddress, clientQuery, isInternalQuery);
         } catch (PreHandlerException e) {
             Log.DNS.error(e.getMessage());
-            return null;
+            if (e.getPreparedResponse() == null) {
+                return null;
+            }
+            DnsQuery dnsQuery = new DnsQuery(clientAddress.getHostAddress());
+            dnsQuery.setResponse(e.getPreparedResponse());
+            return dnsQuery;
         }
         DnsQueryResponse response = engine.process(request);
         postHandler.handlePost(request, response);

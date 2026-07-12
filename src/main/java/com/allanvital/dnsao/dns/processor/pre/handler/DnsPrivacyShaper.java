@@ -8,8 +8,10 @@ import com.allanvital.dnsao.exc.PreHandlerException;
 import org.xbill.DNS.EDNSOption;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.OPTRecord;
+import org.xbill.DNS.Record;
 import org.xbill.DNS.Section;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -30,13 +32,8 @@ public class DnsPrivacyShaper implements PreHandler {
 
     @Override
     public Message prepare(Message message) throws PreHandlerException {
+        removeAllOptRecords(message);
         List<EDNSOption> options = new LinkedList<>();
-        OPTRecord oldOpt = message.getOPT();
-        if (oldOpt != null) {
-            options.addAll(oldOpt.getOptions());
-            message.removeRecord(oldOpt, Section.ADDITIONAL);
-        }
-
         int payloadSize = basicInfoProvider.getUdpPayloadSize();
         int xrcode = basicInfoProvider.getXrCode();
         int version = basicInfoProvider.getVersion();
@@ -47,6 +44,15 @@ public class DnsPrivacyShaper implements PreHandler {
 
         message.addRecord(opt, Section.ADDITIONAL);
         return message;
+    }
+
+    private void removeAllOptRecords(Message message) {
+        List<Record> additional = new ArrayList<>(message.getSection(Section.ADDITIONAL));
+        for (Record record : additional) {
+            if (record instanceof OPTRecord) {
+                message.removeRecord(record, Section.ADDITIONAL);
+            }
+        }
     }
 
 }
