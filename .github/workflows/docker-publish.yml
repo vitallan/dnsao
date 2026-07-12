@@ -52,6 +52,17 @@ jobs:
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
+      - name: Compute release version from tag
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          if [[ ! "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Unexpected tag '$TAG'"; exit 1
+          fi
+          echo "release=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -61,6 +72,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DNSAO_VERSION=${{ steps.ver.outputs.release }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
