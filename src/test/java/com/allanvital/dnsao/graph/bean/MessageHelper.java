@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.graph.bean;
 
+import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import org.junit.jupiter.api.Assertions;
 import org.xbill.DNS.*;
 import org.xbill.DNS.Record;
@@ -114,6 +115,10 @@ public class MessageHelper {
         h.setRcode(Rcode.REFUSED);
         h.unsetFlag(Flags.AD);
         return response;
+    }
+
+    public static String extractIpFromDnsQueryResponse(DnsQueryResponse response) {
+        return extractIpFromResponseMessage(response.getResponse());
     }
 
     public static String extractIpFromResponseMessage(Message response) {
