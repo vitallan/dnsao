@@ -6,12 +6,15 @@ import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author Allan Vital (https://allanvital.com)
  */
 public class MinimizedQuestionProvider {
 
-    public Message buildRootQuestion(Message originalQuery) {
+    public List<Message> buildAuthorityDiscoveryQuestions(Message originalQuery) {
         Record originalQuestion = originalQuery.getQuestion();
         String qname = originalQuestion.getName().toString();
         String withoutDot = qname.endsWith(".") ? qname.substring(0, qname.length() - 1) : qname;
@@ -19,13 +22,12 @@ public class MinimizedQuestionProvider {
         if (labels.length < 2) {
             throw new IllegalArgumentException("expected at least 2 labels for minimized root question: " + qname);
         }
-        String topLevelDomain = labels[labels.length - 1] + ".";
-        return buildQuestion(Type.NS, topLevelDomain, originalQuestion.getDClass());
-    }
-
-    public Message buildAuthorityDiscoveryQuestion(Message originalQuery) {
-        Record originalQuestion = originalQuery.getQuestion();
-        return buildQuestion(Type.NS, originalQuestion.getName().toString(), originalQuestion.getDClass());
+        List<Message> questions = new ArrayList<>();
+        for (int i = labels.length - 1; i >= 0; i--) {
+            String suffix = joinSuffix(labels, i);
+            questions.add(buildQuestion(Type.NS, suffix, originalQuestion.getDClass()));
+        }
+        return questions;
     }
 
     private Message buildQuestion(int type, String qname, int dclass) {
@@ -35,5 +37,17 @@ public class MinimizedQuestionProvider {
         } catch (Exception e) {
             throw new IllegalStateException("failed to build minimized query for " + qname, e);
         }
+    }
+
+    private String joinSuffix(String[] labels, int startIndex) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = startIndex; i < labels.length; i++) {
+            if (builder.length() > 0) {
+                builder.append('.');
+            }
+            builder.append(labels[i]);
+        }
+        builder.append('.');
+        return builder.toString();
     }
 }

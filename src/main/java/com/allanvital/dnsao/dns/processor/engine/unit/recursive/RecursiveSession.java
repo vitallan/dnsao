@@ -43,30 +43,27 @@ public class RecursiveSession {
             return servfailResult(originalQuery, "missing_query_or_root_hints");
         }
 
-        AuthorityEndpoint rootAuthority = rootHints.get(0);
-        Message rootQuestion = minimizedQuestionProvider.buildRootQuestion(originalQuery);
-        ReferralResult rootReferral = executeAndInterpret(rootAuthority, rootQuestion);
-        if (rootReferral == null || rootReferral.getType() != ReferralResult.Type.REFERRAL) {
-            return servfailResult(originalQuery, "invalid_root_referral");
+        List<Message> authorityDiscoveryQuestions = minimizedQuestionProvider.buildAuthorityDiscoveryQuestions(originalQuery);
+        AuthorityEndpoint currentAuthority = rootHints.get(0);
+        AuthorityEndpoint finalAuthority = null;
+
+        for (Message authorityDiscoveryQuestion : authorityDiscoveryQuestions) {
+            ReferralResult referralResult = executeAndInterpret(currentAuthority, authorityDiscoveryQuestion);
+            if (referralResult == null || referralResult.getType() != ReferralResult.Type.REFERRAL) {
+                return servfailResult(originalQuery, "invalid_referral_for_" + authorityDiscoveryQuestion.getQuestion().getName());
+            }
+            finalAuthority = getFirstAuthority(referralResult.getDelegationPoint());
+            if (finalAuthority == null) {
+                return servfailResult(originalQuery, "missing_authority_for_" + authorityDiscoveryQuestion.getQuestion().getName());
+            }
+            currentAuthority = finalAuthority;
         }
 
-        AuthorityEndpoint topLevelAuthority = getFirstAuthority(rootReferral.getDelegationPoint());
-        if (topLevelAuthority == null) {
-            return servfailResult(originalQuery, "missing_top_level_authority");
+        if (finalAuthority == null) {
+            return servfailResult(originalQuery, "missing_final_authority");
         }
 
-        Message authorityDiscoveryQuestion = minimizedQuestionProvider.buildAuthorityDiscoveryQuestion(originalQuery);
-        ReferralResult zoneReferral = executeAndInterpret(topLevelAuthority, authorityDiscoveryQuestion);
-        if (zoneReferral == null || zoneReferral.getType() != ReferralResult.Type.REFERRAL) {
-            return servfailResult(originalQuery, "invalid_zone_referral");
-        }
-
-        AuthorityEndpoint zoneAuthority = getFirstAuthority(zoneReferral.getDelegationPoint());
-        if (zoneAuthority == null) {
-            return servfailResult(originalQuery, "missing_zone_authority");
-        }
-
-        ReferralResult finalAnswer = executeAndInterpret(zoneAuthority, originalQuery);
+        ReferralResult finalAnswer = executeAndInterpret(finalAuthority, originalQuery);
         if (finalAnswer != null && finalAnswer.getType() == ReferralResult.Type.FINAL_ANSWER && finalAnswer.getFinalAnswer() != null) {
             return RecursiveResult.answer(finalAnswer.getFinalAnswer());
         }
