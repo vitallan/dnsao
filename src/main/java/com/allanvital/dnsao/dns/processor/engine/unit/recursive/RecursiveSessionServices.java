@@ -18,15 +18,18 @@ public class RecursiveSessionServices {
     private final ReferralInterpreter referralInterpreter;
     private final MinimizedQuestionProvider minimizedQuestionProvider;
     private final RecursiveSessionFactory recursiveSessionFactory;
+    private final int maxRetries;
 
     public RecursiveSessionServices(AuthorityQueryClient authorityQueryClient,
                                     ReferralInterpreter referralInterpreter,
                                     MinimizedQuestionProvider minimizedQuestionProvider,
-                                    RecursiveSessionFactory recursiveSessionFactory) {
+                                    RecursiveSessionFactory recursiveSessionFactory,
+                                    int maxRetries) {
         this.authorityQueryClient = authorityQueryClient;
         this.referralInterpreter = referralInterpreter;
         this.minimizedQuestionProvider = minimizedQuestionProvider;
         this.recursiveSessionFactory = recursiveSessionFactory;
+        this.maxRetries = maxRetries;
     }
 
     public List<Message> buildAuthorityDiscoveryQuestions(Message originalQuery) {
@@ -37,25 +40,33 @@ public class RecursiveSessionServices {
         if (recursiveSessionContext == null || recursiveSessionContext.getRecursiveExecutionBudget() == null) {
             return null;
         }
-        if (isDeadlineExceeded(recursiveSessionContext)) {
-            return null;
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            if (isDeadlineExceeded(recursiveSessionContext)) {
+                return null;
+            }
+            if (!recursiveSessionContext.getRecursiveExecutionBudget().tryConsumeStep()) {
+                return null;
+            }
+            long beforeQuery = Clock.currentTimeInMillis();
+            AuthorityQueryResult queryResult = authorityQueryClient.query(authorityEndpoint, query);
+            long afterQuery = Clock.currentTimeInMillis();
+            if ((afterQuery - beforeQuery) > recursiveSessionContext.getPerAuthorityTimeoutMillis()) {
+                return null;
+            }
+            if (isDeadlineExceeded(recursiveSessionContext)) {
+                return null;
+            }
+            if (queryResult == null) {
+                return null;
+            }
+            if (queryResult.getOutcome() == AuthorityQueryOutcome.SUCCESS && queryResult.getResponse() != null) {
+                return referralInterpreter.interpret(queryResult.getResponse());
+            }
+            if (!shouldRetry(queryResult)) {
+                return null;
+            }
         }
-        if (!recursiveSessionContext.getRecursiveExecutionBudget().tryConsumeStep()) {
-            return null;
-        }
-        long beforeQuery = Clock.currentTimeInMillis();
-        AuthorityQueryResult queryResult = authorityQueryClient.query(authorityEndpoint, query);
-        long afterQuery = Clock.currentTimeInMillis();
-        if ((afterQuery - beforeQuery) > recursiveSessionContext.getPerAuthorityTimeoutMillis()) {
-            return null;
-        }
-        if (isDeadlineExceeded(recursiveSessionContext)) {
-            return null;
-        }
-        if (queryResult == null || queryResult.getOutcome() != AuthorityQueryOutcome.SUCCESS || queryResult.getResponse() == null) {
-            return null;
-        }
-        return referralInterpreter.interpret(queryResult.getResponse());
+        return null;
     }
 
     public AuthorityEndpoint resolveNameserverAddress(String nameserverName, RecursiveSessionContext recursiveSessionContext) {
@@ -76,5 +87,10 @@ public class RecursiveSessionServices {
 
     private boolean isDeadlineExceeded(RecursiveSessionContext recursiveSessionContext) {
         return Clock.currentTimeInMillis() > recursiveSessionContext.getDeadlineTimeMillis();
+    }
+
+    private boolean shouldRetry(AuthorityQueryResult queryResult) {
+        return queryResult.getOutcome() == AuthorityQueryOutcome.TIMEOUT
+                || queryResult.getOutcome() == AuthorityQueryOutcome.ERROR;
     }
 }
