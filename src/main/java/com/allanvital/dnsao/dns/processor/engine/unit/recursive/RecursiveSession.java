@@ -33,26 +33,26 @@ public class RecursiveSession {
         }
 
         List<Message> authorityDiscoveryQuestions = recursiveSessionServices.buildAuthorityDiscoveryQuestions(originalQuery);
-        AuthorityEndpoint currentAuthority = recursiveSessionContext.getRootHints().get(0);
-        AuthorityEndpoint finalAuthority = null;
+        List<AuthorityEndpoint> currentAuthorities = recursiveSessionContext.getRootHints();
+        List<AuthorityEndpoint> finalAuthorities = null;
 
         for (Message authorityDiscoveryQuestion : authorityDiscoveryQuestions) {
-            ReferralResult referralResult = recursiveSessionServices.queryAuthority(recursiveSessionContext, currentAuthority, authorityDiscoveryQuestion);
+            ReferralResult referralResult = queryAuthoritiesForReferral(currentAuthorities, authorityDiscoveryQuestion);
             if (referralResult == null || referralResult.getType() != ReferralResult.Type.REFERRAL) {
                 return servfailResult(originalQuery, "invalid_referral_for_" + authorityDiscoveryQuestion.getQuestion().getName());
             }
-            finalAuthority = resolveAuthority(referralResult.getDelegationPoint());
-            if (finalAuthority == null) {
+            finalAuthorities = resolveAuthorities(referralResult.getDelegationPoint());
+            if (finalAuthorities == null || finalAuthorities.isEmpty()) {
                 return servfailResult(originalQuery, "missing_authority_for_" + authorityDiscoveryQuestion.getQuestion().getName());
             }
-            currentAuthority = finalAuthority;
+            currentAuthorities = finalAuthorities;
         }
 
-        if (finalAuthority == null) {
+        if (finalAuthorities == null || finalAuthorities.isEmpty()) {
             return servfailResult(originalQuery, "missing_final_authority");
         }
 
-        ReferralResult finalAnswer = recursiveSessionServices.queryAuthority(recursiveSessionContext, finalAuthority, originalQuery);
+        ReferralResult finalAnswer = queryAuthoritiesForFinalAnswer(finalAuthorities, originalQuery);
         if (finalAnswer != null && finalAnswer.getType() == ReferralResult.Type.FINAL_ANSWER && finalAnswer.getFinalAnswer() != null) {
             return RecursiveResult.answer(finalAnswer.getFinalAnswer());
         }
@@ -60,23 +60,46 @@ public class RecursiveSession {
         return servfailResult(originalQuery, "invalid_final_answer");
     }
 
-    private AuthorityEndpoint getFirstAuthority(DelegationPoint delegationPoint) {
-        if (delegationPoint == null || delegationPoint.authorityEndpoints() == null || delegationPoint.authorityEndpoints().isEmpty()) {
+    private ReferralResult queryAuthoritiesForReferral(List<AuthorityEndpoint> authorityEndpoints, Message query) {
+        if (authorityEndpoints == null || authorityEndpoints.isEmpty()) {
             return null;
         }
-        return delegationPoint.authorityEndpoints().get(0);
+        for (AuthorityEndpoint authorityEndpoint : authorityEndpoints) {
+            ReferralResult referralResult = recursiveSessionServices.queryAuthority(recursiveSessionContext, authorityEndpoint, query);
+            if (referralResult != null && referralResult.getType() == ReferralResult.Type.REFERRAL) {
+                return referralResult;
+            }
+        }
+        return null;
     }
 
-    private AuthorityEndpoint resolveAuthority(DelegationPoint delegationPoint) {
-        AuthorityEndpoint authorityFromGlue = getFirstAuthority(delegationPoint);
-        if (authorityFromGlue != null) {
+    private ReferralResult queryAuthoritiesForFinalAnswer(List<AuthorityEndpoint> authorityEndpoints, Message query) {
+        if (authorityEndpoints == null || authorityEndpoints.isEmpty()) {
+            return null;
+        }
+        for (AuthorityEndpoint authorityEndpoint : authorityEndpoints) {
+            ReferralResult referralResult = recursiveSessionServices.queryAuthority(recursiveSessionContext, authorityEndpoint, query);
+            if (referralResult != null && referralResult.getType() == ReferralResult.Type.FINAL_ANSWER) {
+                return referralResult;
+            }
+        }
+        return null;
+    }
+
+    private List<AuthorityEndpoint> resolveAuthorities(DelegationPoint delegationPoint) {
+        List<AuthorityEndpoint> authorityFromGlue = delegationPoint != null ? delegationPoint.authorityEndpoints() : null;
+        if (authorityFromGlue != null && !authorityFromGlue.isEmpty()) {
             return authorityFromGlue;
         }
         if (delegationPoint == null || delegationPoint.nameserverNames() == null || delegationPoint.nameserverNames().isEmpty()) {
             return null;
         }
         String nameserverName = delegationPoint.nameserverNames().get(0);
-        return recursiveSessionServices.resolveNameserverAddress(nameserverName, recursiveSessionContext);
+        AuthorityEndpoint authorityEndpoint = recursiveSessionServices.resolveNameserverAddress(nameserverName, recursiveSessionContext);
+        if (authorityEndpoint == null) {
+            return null;
+        }
+        return List.of(authorityEndpoint);
     }
 
     private RecursiveResult servfailResult(Message query, String note) {
