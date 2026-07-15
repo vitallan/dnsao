@@ -17,6 +17,10 @@ public class PositiveAnswer {
         this.ttl = ttl;
     }
 
+    public static PositiveAnswer a(String ownerName, String value, long ttl) {
+        return new PositiveAnswer(org.xbill.DNS.Type.A, ownerName, value, ttl);
+    }
+
     public int getType() {
         return type;
     }

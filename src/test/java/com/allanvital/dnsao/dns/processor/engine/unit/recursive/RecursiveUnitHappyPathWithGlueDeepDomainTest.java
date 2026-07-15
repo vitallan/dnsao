@@ -54,19 +54,10 @@ public class RecursiveUnitHappyPathWithGlueDeepDomainTest extends AbstractRecurs
         comBrServer = endpoint(COM_BR_NS_URL, COM_BR_NS_IP, 53);
         pudimServer = endpoint(PUDIM_NS_URL, PUDIM_NS_IP, 53);
 
-        ReferralAnswer referralToBr = new ReferralAnswer(BR_DOT);
-        referralToBr.addNameserver(BR_NS_URL);
-        referralToBr.addGlueA(BR_NS_URL, BR_NS_IP);
-
-        ReferralAnswer referralToComBr = new ReferralAnswer(COM_BR_DOT);
-        referralToComBr.addNameserver(COM_BR_NS_URL);
-        referralToComBr.addGlueA(COM_BR_NS_URL, COM_BR_NS_IP);
-
-        ReferralAnswer referralToPudim = new ReferralAnswer(DOMAIN_DOT);
-        referralToPudim.addNameserver(PUDIM_NS_URL);
-        referralToPudim.addGlueA(PUDIM_NS_URL, PUDIM_NS_IP);
-
-        PositiveAnswer finalAnswer = new PositiveAnswer(Type.A, DOMAIN_DOT, FINAL_IP, 300);
+        ReferralAnswer referralToBr = ReferralAnswer.withGlue(BR_DOT, BR_NS_URL, BR_NS_IP);
+        ReferralAnswer referralToComBr = ReferralAnswer.withGlue(COM_BR_DOT, COM_BR_NS_URL, COM_BR_NS_IP);
+        ReferralAnswer referralToPudim = ReferralAnswer.withGlue(DOMAIN_DOT, PUDIM_NS_URL, PUDIM_NS_IP);
+        PositiveAnswer finalAnswer = PositiveAnswer.a(DOMAIN_DOT, FINAL_IP, 300);
 
         scenario = new RecursiveAuthorityScenario();
         scenario.whenAsked(rootServer).forQuestion(Type.NS, BR_DOT).returnReferral(referralToBr);

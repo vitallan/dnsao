@@ -37,7 +37,7 @@ public class RecursiveSession {
         AuthorityEndpoint finalAuthority = null;
 
         for (Message authorityDiscoveryQuestion : authorityDiscoveryQuestions) {
-            ReferralResult referralResult = recursiveSessionServices.queryAuthority(currentAuthority, authorityDiscoveryQuestion);
+            ReferralResult referralResult = recursiveSessionServices.queryAuthority(recursiveSessionContext, currentAuthority, authorityDiscoveryQuestion);
             if (referralResult == null || referralResult.getType() != ReferralResult.Type.REFERRAL) {
                 return servfailResult(originalQuery, "invalid_referral_for_" + authorityDiscoveryQuestion.getQuestion().getName());
             }
@@ -52,7 +52,7 @@ public class RecursiveSession {
             return servfailResult(originalQuery, "missing_final_authority");
         }
 
-        ReferralResult finalAnswer = recursiveSessionServices.queryAuthority(finalAuthority, originalQuery);
+        ReferralResult finalAnswer = recursiveSessionServices.queryAuthority(recursiveSessionContext, finalAuthority, originalQuery);
         if (finalAnswer != null && finalAnswer.getType() == ReferralResult.Type.FINAL_ANSWER && finalAnswer.getFinalAnswer() != null) {
             return RecursiveResult.answer(finalAnswer.getFinalAnswer());
         }
@@ -76,7 +76,7 @@ public class RecursiveSession {
             return null;
         }
         String nameserverName = delegationPoint.nameserverNames().get(0);
-        return recursiveSessionServices.resolveNameserverAddress(nameserverName, recursiveSessionContext.getRootHints());
+        return recursiveSessionServices.resolveNameserverAddress(nameserverName, recursiveSessionContext);
     }
 
     private RecursiveResult servfailResult(Message query, String note) {

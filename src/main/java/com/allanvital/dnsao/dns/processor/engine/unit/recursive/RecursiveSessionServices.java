@@ -1,10 +1,8 @@
 package com.allanvital.dnsao.dns.processor.engine.unit.recursive;
 
+import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.*;
 import com.allanvital.dnsao.dns.remote.DnsUtils;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityEndpoint;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityQueryOutcome;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityQueryResult;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.RecursiveResult;
+import com.allanvital.dnsao.infra.clock.Clock;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Type;
 
@@ -35,16 +33,33 @@ public class RecursiveSessionServices {
         return minimizedQuestionProvider.buildAuthorityDiscoveryQuestions(originalQuery);
     }
 
-    public com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.ReferralResult queryAuthority(AuthorityEndpoint authorityEndpoint, Message query) {
+    public ReferralResult queryAuthority(RecursiveSessionContext recursiveSessionContext, AuthorityEndpoint authorityEndpoint, Message query) {
+        if (recursiveSessionContext == null || recursiveSessionContext.getRecursiveExecutionBudget() == null) {
+            return null;
+        }
+        if (isDeadlineExceeded(recursiveSessionContext)) {
+            return null;
+        }
+        if (!recursiveSessionContext.getRecursiveExecutionBudget().tryConsumeStep()) {
+            return null;
+        }
+        long beforeQuery = Clock.currentTimeInMillis();
         AuthorityQueryResult queryResult = authorityQueryClient.query(authorityEndpoint, query);
+        long afterQuery = Clock.currentTimeInMillis();
+        if ((afterQuery - beforeQuery) > recursiveSessionContext.getPerAuthorityTimeoutMillis()) {
+            return null;
+        }
+        if (isDeadlineExceeded(recursiveSessionContext)) {
+            return null;
+        }
         if (queryResult == null || queryResult.getOutcome() != AuthorityQueryOutcome.SUCCESS || queryResult.getResponse() == null) {
             return null;
         }
         return referralInterpreter.interpret(queryResult.getResponse());
     }
 
-    public AuthorityEndpoint resolveNameserverAddress(String nameserverName, List<AuthorityEndpoint> rootHints) {
-        RecursiveResult recursiveResult = recursiveSessionFactory.resolveSubquery(Type.A, nameserverName, rootHints);
+    public AuthorityEndpoint resolveNameserverAddress(String nameserverName, RecursiveSessionContext recursiveSessionContext) {
+        RecursiveResult recursiveResult = recursiveSessionFactory.resolveSubquery(Type.A, nameserverName, recursiveSessionContext);
         if (recursiveResult == null || recursiveResult.getFinalMessage() == null) {
             return null;
         }
@@ -57,5 +72,9 @@ public class RecursiveSessionServices {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private boolean isDeadlineExceeded(RecursiveSessionContext recursiveSessionContext) {
+        return Clock.currentTimeInMillis() > recursiveSessionContext.getDeadlineTimeMillis();
     }
 }
