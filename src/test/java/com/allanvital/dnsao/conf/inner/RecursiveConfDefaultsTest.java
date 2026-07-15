@@ -15,6 +15,8 @@ public class RecursiveConfDefaultsTest {
 
         assertEquals(32, recursiveConf.getMaxSteps());
         assertEquals(8, recursiveConf.getMaxSubqueryDepth());
+        assertEquals(1, recursiveConf.getMaxRetries());
+        assertEquals(8, recursiveConf.getMaxCnameRedirects());
         assertEquals(3, recursiveConf.getTimeoutSeconds());
         assertEquals(1000, recursiveConf.getPerAuthorityTimeoutMillis());
     }

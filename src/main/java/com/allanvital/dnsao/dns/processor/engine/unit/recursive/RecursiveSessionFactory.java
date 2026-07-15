@@ -52,7 +52,8 @@ public class RecursiveSessionFactory {
                 authorityQueryClient,
                 referralInterpreter,
                 minimizedQuestionProvider,
-                this
+                this,
+                recursiveConf.getMaxRetries()
         );
         return new RecursiveSession(recursiveSessionContext, recursiveSessionServices);
     }
@@ -79,7 +80,8 @@ public class RecursiveSessionFactory {
                 authorityQueryClient,
                 referralInterpreter,
                 minimizedQuestionProvider,
-                this
+                this,
+                recursiveConf.getMaxRetries()
         );
         return new RecursiveSession(recursiveSessionContext, recursiveSessionServices).resolve();
     }
