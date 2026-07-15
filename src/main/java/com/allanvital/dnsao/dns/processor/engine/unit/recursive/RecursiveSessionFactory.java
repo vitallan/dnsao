@@ -31,7 +31,14 @@ public class RecursiveSessionFactory {
     }
 
     public RecursiveSession buildRecursiveSession(DnsQueryRequest dnsQueryRequest, List<AuthorityEndpoint> rootHints) {
-        return new RecursiveSession(dnsQueryRequest, rootHints, authorityQueryClient, referralInterpreter, minimizedQuestionProvider, this);
+        RecursiveSessionContext recursiveSessionContext = new RecursiveSessionContext(dnsQueryRequest, rootHints);
+        RecursiveSessionServices recursiveSessionServices = new RecursiveSessionServices(
+                authorityQueryClient,
+                referralInterpreter,
+                minimizedQuestionProvider,
+                this
+        );
+        return new RecursiveSession(recursiveSessionContext, recursiveSessionServices);
     }
 
     public RecursiveResult resolveSubquery(int type, String qname, List<AuthorityEndpoint> rootHints) {

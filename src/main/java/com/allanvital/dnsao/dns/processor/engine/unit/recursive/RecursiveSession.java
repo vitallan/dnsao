@@ -1,10 +1,7 @@
 package com.allanvital.dnsao.dns.processor.engine.unit.recursive;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
-import com.allanvital.dnsao.dns.remote.DnsUtils;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityEndpoint;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityQueryOutcome;
-import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityQueryResult;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.DelegationPoint;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.ReferralResult;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.RecursiveResult;
@@ -12,7 +9,6 @@ import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Section;
-import org.xbill.DNS.Type;
 
 import java.util.List;
 
@@ -21,39 +17,27 @@ import java.util.List;
  */
 public class RecursiveSession {
 
-    protected final DnsQueryRequest dnsQueryRequest;
-    protected final List<AuthorityEndpoint> rootHints;
-    protected final AuthorityQueryClient authorityQueryClient;
-    protected final ReferralInterpreter referralInterpreter;
-    protected final MinimizedQuestionProvider minimizedQuestionProvider;
-    protected final RecursiveSessionFactory recursiveSessionFactory;
+    protected final RecursiveSessionContext recursiveSessionContext;
+    protected final RecursiveSessionServices recursiveSessionServices;
 
-    public RecursiveSession(DnsQueryRequest dnsQueryRequest,
-                            List<AuthorityEndpoint> rootHints,
-                            AuthorityQueryClient authorityQueryClient,
-                            ReferralInterpreter referralInterpreter,
-                            MinimizedQuestionProvider minimizedQuestionProvider,
-                            RecursiveSessionFactory recursiveSessionFactory) {
-        this.dnsQueryRequest = dnsQueryRequest;
-        this.rootHints = List.copyOf(rootHints);
-        this.authorityQueryClient = authorityQueryClient;
-        this.referralInterpreter = referralInterpreter;
-        this.minimizedQuestionProvider = minimizedQuestionProvider;
-        this.recursiveSessionFactory = recursiveSessionFactory;
+    public RecursiveSession(RecursiveSessionContext recursiveSessionContext,
+                            RecursiveSessionServices recursiveSessionServices) {
+        this.recursiveSessionContext = recursiveSessionContext;
+        this.recursiveSessionServices = recursiveSessionServices;
     }
 
     public RecursiveResult resolve() {
-        Message originalQuery = dnsQueryRequest.getRequest();
-        if (originalQuery == null || originalQuery.getQuestion() == null || rootHints.isEmpty()) {
+        Message originalQuery = recursiveSessionContext.getDnsQueryRequest().getRequest();
+        if (originalQuery == null || originalQuery.getQuestion() == null || recursiveSessionContext.getRootHints().isEmpty()) {
             return servfailResult(originalQuery, "missing_query_or_root_hints");
         }
 
-        List<Message> authorityDiscoveryQuestions = minimizedQuestionProvider.buildAuthorityDiscoveryQuestions(originalQuery);
-        AuthorityEndpoint currentAuthority = rootHints.get(0);
+        List<Message> authorityDiscoveryQuestions = recursiveSessionServices.buildAuthorityDiscoveryQuestions(originalQuery);
+        AuthorityEndpoint currentAuthority = recursiveSessionContext.getRootHints().get(0);
         AuthorityEndpoint finalAuthority = null;
 
         for (Message authorityDiscoveryQuestion : authorityDiscoveryQuestions) {
-            ReferralResult referralResult = executeAndInterpret(currentAuthority, authorityDiscoveryQuestion);
+            ReferralResult referralResult = recursiveSessionServices.queryAuthority(currentAuthority, authorityDiscoveryQuestion);
             if (referralResult == null || referralResult.getType() != ReferralResult.Type.REFERRAL) {
                 return servfailResult(originalQuery, "invalid_referral_for_" + authorityDiscoveryQuestion.getQuestion().getName());
             }
@@ -68,20 +52,12 @@ public class RecursiveSession {
             return servfailResult(originalQuery, "missing_final_authority");
         }
 
-        ReferralResult finalAnswer = executeAndInterpret(finalAuthority, originalQuery);
+        ReferralResult finalAnswer = recursiveSessionServices.queryAuthority(finalAuthority, originalQuery);
         if (finalAnswer != null && finalAnswer.getType() == ReferralResult.Type.FINAL_ANSWER && finalAnswer.getFinalAnswer() != null) {
             return RecursiveResult.answer(finalAnswer.getFinalAnswer());
         }
 
         return servfailResult(originalQuery, "invalid_final_answer");
-    }
-
-    private ReferralResult executeAndInterpret(AuthorityEndpoint authorityEndpoint, Message query) {
-        AuthorityQueryResult queryResult = authorityQueryClient.query(authorityEndpoint, query);
-        if (queryResult == null || queryResult.getOutcome() != AuthorityQueryOutcome.SUCCESS || queryResult.getResponse() == null) {
-            return null;
-        }
-        return referralInterpreter.interpret(queryResult.getResponse());
     }
 
     private AuthorityEndpoint getFirstAuthority(DelegationPoint delegationPoint) {
@@ -100,19 +76,7 @@ public class RecursiveSession {
             return null;
         }
         String nameserverName = delegationPoint.nameserverNames().get(0);
-        RecursiveResult recursiveResult = recursiveSessionFactory.resolveSubquery(Type.A, nameserverName, rootHints);
-        if (recursiveResult == null || recursiveResult.getFinalMessage() == null) {
-            return null;
-        }
-        String ip = DnsUtils.extractIpFromResponseMessage(recursiveResult.getFinalMessage());
-        if (ip == null || ip.isBlank()) {
-            return null;
-        }
-        try {
-            return new AuthorityEndpoint(nameserverName, java.net.InetAddress.getByName(ip), 53);
-        } catch (Exception e) {
-            return null;
-        }
+        return recursiveSessionServices.resolveNameserverAddress(nameserverName, recursiveSessionContext.getRootHints());
     }
 
     private RecursiveResult servfailResult(Message query, String note) {
