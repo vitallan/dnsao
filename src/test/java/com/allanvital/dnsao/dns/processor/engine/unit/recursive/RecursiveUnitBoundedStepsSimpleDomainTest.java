@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.dns.processor.engine.unit.recursive;
 
+import com.allanvital.dnsao.conf.inner.RecursiveConf;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
@@ -14,61 +15,64 @@ import org.xbill.DNS.Type;
 
 import java.util.List;
 
-import static com.allanvital.dnsao.graph.bean.MessageHelper.extractIpFromDnsQueryResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.xbill.DNS.Rcode.NOERROR;
+import static org.xbill.DNS.Rcode.SERVFAIL;
 
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public class RecursiveUnitHappyPathWithGlueTest extends AbstractRecursiveUnitTestSupport {
+public class RecursiveUnitBoundedStepsSimpleDomainTest extends AbstractRecursiveUnitTestSupport {
 
     private DnsQueryRequest request;
-    private AuthorityEndpoint rootServer;
-    private AuthorityEndpoint comServer;
-    private AuthorityEndpoint exampleServer;
-    private RecursiveAuthorityScenario scenario;
     private RecursiveUnit recursiveUnit;
-    private static final String COM = "com";
-    private static final String COM_DOT = COM + ".";
-    private static final String DOMAIN = "example." + COM;
+    private RecursiveConf recursiveConf;
+    private static final String COM_DOT = "com.";
+    private static final String DOMAIN = "example.com";
     private static final String DOMAIN_DOT = DOMAIN + ".";
-    private static final String NAMESERVER_IP = "192.0.2.53";
     private static final String FINAL_IP = "93.184.216.34";
-    private static final String COM_SERVER_URL = "a.gtld-servers.net.";
-    private static final String NS_SERVER_URL = "ns1.example.com.";
 
     @BeforeEach
     public void setup() throws Exception {
         resetRecursiveInfra();
         request = buildRequest(DOMAIN);
-        rootServer = endpoint("a.root-servers.net.", "198.41.0.4", 53);
-        comServer = endpoint(COM_SERVER_URL, "192.5.6.30", 53);
-        exampleServer = endpoint(NS_SERVER_URL, NAMESERVER_IP, 53);
+        recursiveConf = new RecursiveConf();
 
-        ReferralAnswer referralToCom = ReferralAnswer.withGlue(COM_DOT, COM_SERVER_URL, "192.5.6.30");
-        ReferralAnswer referralToExample = ReferralAnswer.withGlue(DOMAIN_DOT, NS_SERVER_URL, NAMESERVER_IP);
+        AuthorityEndpoint rootServer = endpoint("a.root-servers.net.", "198.41.0.4", 53);
+        AuthorityEndpoint comServer = endpoint("a.gtld-servers.net.", "192.5.6.30", 53);
+        AuthorityEndpoint exampleServer = endpoint("ns1.example.com.", "192.0.2.53", 53);
+
+        ReferralAnswer referralToCom = ReferralAnswer.withGlue(COM_DOT, "a.gtld-servers.net.", "192.5.6.30");
+        ReferralAnswer referralToExample = ReferralAnswer.withGlue(DOMAIN_DOT, "ns1.example.com.", "192.0.2.53");
         PositiveAnswer finalAnswer = PositiveAnswer.a(DOMAIN_DOT, FINAL_IP, 300);
 
-        scenario = new RecursiveAuthorityScenario();
+        RecursiveAuthorityScenario scenario = new RecursiveAuthorityScenario();
         scenario.whenAsked(rootServer).forQuestion(Type.NS, COM_DOT).returnReferral(referralToCom);
         scenario.whenAsked(comServer).forQuestion(Type.NS, DOMAIN_DOT).returnReferral(referralToExample);
         scenario.whenAsked(exampleServer).forQuestion(Type.A, DOMAIN_DOT).returnAnswer(finalAnswer);
 
-        recursiveUnit = buildRecursiveUnit(new FixedRootHintsProvider(List.of(rootServer)), scenario);
+        recursiveUnit = buildRecursiveUnit(new FixedRootHintsProvider(List.of(rootServer)), scenario, recursiveConf);
     }
 
     @Test
-    public void processShouldResolveExampleComHappyPathWithGlue() {
+    public void processShouldServfailWhenMaxStepsIsTooLowForExampleCom() {
+        recursiveConf.setMaxSteps(2);
+
+        DnsQueryResponse response = recursiveUnit.process(request);
+
+        assertNotNull(response);
+        assertCodeResponse(SERVFAIL, response);
+    }
+
+    @Test
+    public void processShouldSucceedWhenMaxStepsMatchesExampleComPath() {
+        recursiveConf.setMaxSteps(3);
+
         DnsQueryResponse response = recursiveUnit.process(request);
 
         assertNotNull(response);
         assertCodeResponse(NOERROR, response);
-        scenario.assertCallCount(3);
-        scenario.assertAuthorityCalledAt(0, rootServer, Type.NS, COM_DOT);
-        scenario.assertAuthorityCalledAt(1, comServer, Type.NS, DOMAIN_DOT);
-        scenario.assertAuthorityCalledAt(2, exampleServer, Type.A, DOMAIN_DOT);
-        assertEquals(FINAL_IP, extractIpFromDnsQueryResponse(response));
+        assertEquals(FINAL_IP, com.allanvital.dnsao.graph.bean.MessageHelper.extractIpFromDnsQueryResponse(response));
     }
 }

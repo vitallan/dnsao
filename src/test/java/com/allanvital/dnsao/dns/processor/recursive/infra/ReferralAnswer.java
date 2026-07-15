@@ -22,6 +22,19 @@ public class ReferralAnswer {
         this.ttl = ttl;
     }
 
+    public static ReferralAnswer withGlue(String delegatedZone, String nameserver, String glueIp) {
+        ReferralAnswer referralAnswer = new ReferralAnswer(delegatedZone);
+        referralAnswer.addNameserver(nameserver);
+        referralAnswer.addGlueA(nameserver, glueIp);
+        return referralAnswer;
+    }
+
+    public static ReferralAnswer withoutGlue(String delegatedZone, String nameserver) {
+        ReferralAnswer referralAnswer = new ReferralAnswer(delegatedZone);
+        referralAnswer.addNameserver(nameserver);
+        return referralAnswer;
+    }
+
     public void addNameserver(String nameserver) {
         nameservers.add(normalize(nameserver));
     }

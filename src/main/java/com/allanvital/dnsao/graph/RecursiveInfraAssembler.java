@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.graph;
 
+import com.allanvital.dnsao.conf.inner.RecursiveConf;
 import com.allanvital.dnsao.dns.processor.engine.unit.RecursiveUnit;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.*;
 
@@ -36,6 +37,11 @@ public class RecursiveInfraAssembler {
 
     protected RecursiveSessionFactory recursiveSessionFactory() {
         return overrideRegistry.getRegisteredModule(RecursiveSessionFactory.class)
-                .orElse(new RecursiveSessionFactory(authorityQueryClient(), referralInterpreter()));
+                .orElse(new RecursiveSessionFactory(authorityQueryClient(), referralInterpreter(), new MinimizedQuestionProvider(), new RecursiveInternalRequestFactory(), recursiveConf()));
+    }
+
+    protected RecursiveConf recursiveConf() {
+        return overrideRegistry.getRegisteredModule(RecursiveConf.class)
+                .orElse(new RecursiveConf());
     }
 }

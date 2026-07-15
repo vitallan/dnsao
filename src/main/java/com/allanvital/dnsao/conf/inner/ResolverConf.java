@@ -13,6 +13,7 @@ public class ResolverConf {
     private int multiplier = 1;
     private int tlsPoolSize = 3;
     private List<LocalMapping> localMappings = new LinkedList<>();
+    private RecursiveConf recursive = new RecursiveConf();
 
     // Shared upstream execution pool (used only in forward mode)
     private Integer upstreamThreadPoolSize;
@@ -67,6 +68,17 @@ public class ResolverConf {
 
     public void setUpstreamQueueSize(Integer upstreamQueueSize) {
         this.upstreamQueueSize = upstreamQueueSize;
+    }
+
+    public RecursiveConf getRecursive() {
+        if (recursive == null) {
+            recursive = new RecursiveConf();
+        }
+        return recursive;
+    }
+
+    public void setRecursive(RecursiveConf recursive) {
+        this.recursive = recursive;
     }
 
     private static List<Upstream> buildDefault() {
