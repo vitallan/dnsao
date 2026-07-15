@@ -55,10 +55,6 @@ public class ReferralInterpreter {
             }
             authorityEndpoints.add(new AuthorityEndpoint(ownerName, aRecord.getAddress(), 53));
         }
-        if (authorityEndpoints.isEmpty()) {
-            return ReferralResult.unusable();
-        }
-
-        return ReferralResult.referral(new DelegationPoint(delegatedZone, authorityEndpoints));
+        return ReferralResult.referral(new DelegationPoint(delegatedZone, nameservers, authorityEndpoints));
     }
 }

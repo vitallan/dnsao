@@ -5,5 +5,5 @@ import java.util.List;
 /**
  * @author Allan Vital (https://allanvital.com)
  */
-public record DelegationPoint(String zoneName, List<AuthorityEndpoint> authorityEndpoints) {
+public record DelegationPoint(String zoneName, List<String> nameserverNames, List<AuthorityEndpoint> authorityEndpoints) {
 }
