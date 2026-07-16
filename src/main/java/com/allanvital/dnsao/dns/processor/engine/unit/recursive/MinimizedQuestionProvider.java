@@ -30,6 +30,11 @@ public class MinimizedQuestionProvider {
         return questions;
     }
 
+    public Message buildTargetQuestion(Message originalQuery, String qname) {
+        Record originalQuestion = originalQuery.getQuestion();
+        return buildQuestion(originalQuestion.getType(), qname, originalQuestion.getDClass());
+    }
+
     private Message buildQuestion(int type, String qname, int dclass) {
         try {
             Name name = Name.fromString(qname);
