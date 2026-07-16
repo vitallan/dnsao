@@ -19,21 +19,28 @@ public class RecursiveSessionServices {
     private final MinimizedQuestionProvider minimizedQuestionProvider;
     private final RecursiveSessionFactory recursiveSessionFactory;
     private final int maxRetries;
+    private final int maxCnameRedirects;
 
     public RecursiveSessionServices(AuthorityQueryClient authorityQueryClient,
                                     ReferralInterpreter referralInterpreter,
                                     MinimizedQuestionProvider minimizedQuestionProvider,
                                     RecursiveSessionFactory recursiveSessionFactory,
-                                    int maxRetries) {
+                                    int maxRetries,
+                                    int maxCnameRedirects) {
         this.authorityQueryClient = authorityQueryClient;
         this.referralInterpreter = referralInterpreter;
         this.minimizedQuestionProvider = minimizedQuestionProvider;
         this.recursiveSessionFactory = recursiveSessionFactory;
         this.maxRetries = maxRetries;
+        this.maxCnameRedirects = maxCnameRedirects;
     }
 
     public List<Message> buildAuthorityDiscoveryQuestions(Message originalQuery) {
         return minimizedQuestionProvider.buildAuthorityDiscoveryQuestions(originalQuery);
+    }
+
+    public Message buildTargetQuestion(Message originalQuery, String qname) {
+        return minimizedQuestionProvider.buildTargetQuestion(originalQuery, qname);
     }
 
     public ReferralResult queryAuthority(RecursiveSessionContext recursiveSessionContext, AuthorityEndpoint authorityEndpoint, Message query) {
@@ -87,6 +94,10 @@ public class RecursiveSessionServices {
 
     private boolean isDeadlineExceeded(RecursiveSessionContext recursiveSessionContext) {
         return Clock.currentTimeInMillis() > recursiveSessionContext.getDeadlineTimeMillis();
+    }
+
+    public int getMaxCnameRedirects() {
+        return maxCnameRedirects;
     }
 
     private boolean shouldRetry(AuthorityQueryResult queryResult) {

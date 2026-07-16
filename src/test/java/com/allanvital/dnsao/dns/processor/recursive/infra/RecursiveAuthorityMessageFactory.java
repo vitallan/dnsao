@@ -40,6 +40,25 @@ public class RecursiveAuthorityMessageFactory {
         if (positiveAnswer.getType() == Type.A) {
             return MessageHelper.buildAResponse(query, positiveAnswer.getValue(), positiveAnswer.getTtl());
         }
+        if (positiveAnswer.getType() == Type.CNAME) {
+            return buildCnameResponse(query, positiveAnswer);
+        }
         throw new IllegalArgumentException("unsupported positive answer type for scenario: " + Type.string(positiveAnswer.getType()));
+    }
+
+    private Message buildCnameResponse(Message query, PositiveAnswer positiveAnswer) {
+        try {
+            Message response = new Message(query.getHeader().getID());
+            response.getHeader().setFlag(Flags.QR);
+            response.addRecord(query.getQuestion(), Section.QUESTION);
+            org.xbill.DNS.Record question = query.getQuestion();
+            Name ownerName = Name.fromString(positiveAnswer.getOwnerName());
+            Name targetName = Name.fromString(positiveAnswer.getValue());
+            CNAMERecord cnameRecord = new CNAMERecord(ownerName, question.getDClass(), positiveAnswer.getTtl(), targetName);
+            response.addRecord(cnameRecord, Section.ANSWER);
+            return response;
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to build cname response", e);
+        }
     }
 }

@@ -53,7 +53,8 @@ public class RecursiveSessionFactory {
                 referralInterpreter,
                 minimizedQuestionProvider,
                 this,
-                recursiveConf.getMaxRetries()
+                recursiveConf.getMaxRetries(),
+                recursiveConf.getMaxCnameRedirects()
         );
         return new RecursiveSession(recursiveSessionContext, recursiveSessionServices);
     }
@@ -81,7 +82,8 @@ public class RecursiveSessionFactory {
                 referralInterpreter,
                 minimizedQuestionProvider,
                 this,
-                recursiveConf.getMaxRetries()
+                recursiveConf.getMaxRetries(),
+                recursiveConf.getMaxCnameRedirects()
         );
         return new RecursiveSession(recursiveSessionContext, recursiveSessionServices).resolve();
     }

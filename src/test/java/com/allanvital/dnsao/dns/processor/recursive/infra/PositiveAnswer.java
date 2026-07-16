@@ -21,6 +21,10 @@ public class PositiveAnswer {
         return new PositiveAnswer(org.xbill.DNS.Type.A, ownerName, value, ttl);
     }
 
+    public static PositiveAnswer cname(String ownerName, String target, long ttl) {
+        return new PositiveAnswer(org.xbill.DNS.Type.CNAME, ownerName, target, ttl);
+    }
+
     public int getType() {
         return type;
     }

@@ -171,6 +171,7 @@ public class CacheManager {
     }
 
     private void remove(String key) {
+        Log.CACHE.info("removing {} from cache", key);
         cache.remove(key);
         onCacheEntryRemoved(key);
         telemetryNotify(CACHE_REMOVED);

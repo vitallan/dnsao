@@ -1,15 +1,14 @@
 package com.allanvital.dnsao.dns.processor.engine.unit.recursive;
 
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
+import com.allanvital.dnsao.dns.remote.DnsUtils;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.AuthorityEndpoint;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.DelegationPoint;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.ReferralResult;
 import com.allanvital.dnsao.dns.processor.engine.unit.recursive.pojo.RecursiveResult;
-import org.xbill.DNS.Flags;
-import org.xbill.DNS.Message;
-import org.xbill.DNS.Rcode;
-import org.xbill.DNS.Section;
+import org.xbill.DNS.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,32 +31,65 @@ public class RecursiveSession {
             return servfailResult(originalQuery, "missing_query_or_root_hints");
         }
 
-        List<Message> authorityDiscoveryQuestions = recursiveSessionServices.buildAuthorityDiscoveryQuestions(originalQuery);
+        Message currentQuery = originalQuery;
+        List<org.xbill.DNS.Record> cnameChain = new ArrayList<>();
+        int cnameRedirects = 0;
+
+        while (true) {
+            ResolutionAttempt resolutionAttempt = resolveCurrentQuery(currentQuery);
+            if (resolutionAttempt == null || resolutionAttempt.response() == null) {
+                return servfailResult(originalQuery, "invalid_final_answer");
+            }
+
+            Message response = resolutionAttempt.response();
+            if (hasDirectAnswer(response, currentQuery.getQuestion().getType())) {
+                return RecursiveResult.answer(buildClientResponse(originalQuery, cnameChain, response));
+            }
+
+            CNAMERecord cnameRecord = extractFirstCname(response);
+            if (cnameRecord == null) {
+                return servfailResult(originalQuery, "invalid_final_answer");
+            }
+            if (cnameRedirects >= recursiveSessionServices.getMaxCnameRedirects()) {
+                return servfailResult(originalQuery, "cname_redirect_limit_exceeded");
+            }
+
+            cnameChain.add(cnameRecord);
+            currentQuery = recursiveSessionServices.buildTargetQuestion(originalQuery, cnameRecord.getTarget().toString());
+            cnameRedirects++;
+        }
+    }
+
+    private ResolutionAttempt resolveCurrentQuery(Message currentQuery) {
+        List<Message> authorityDiscoveryQuestions = recursiveSessionServices.buildAuthorityDiscoveryQuestions(currentQuery);
         List<AuthorityEndpoint> currentAuthorities = recursiveSessionContext.getRootHints();
         List<AuthorityEndpoint> finalAuthorities = null;
 
         for (Message authorityDiscoveryQuestion : authorityDiscoveryQuestions) {
             ReferralResult referralResult = queryAuthoritiesForReferral(currentAuthorities, authorityDiscoveryQuestion);
             if (referralResult == null || referralResult.getType() != ReferralResult.Type.REFERRAL) {
-                return servfailResult(originalQuery, "invalid_referral_for_" + authorityDiscoveryQuestion.getQuestion().getName());
+                if (isSameQuestionName(authorityDiscoveryQuestion, currentQuery)) {
+                    finalAuthorities = currentAuthorities;
+                    break;
+                }
+                return null;
             }
             finalAuthorities = resolveAuthorities(referralResult.getDelegationPoint());
             if (finalAuthorities == null || finalAuthorities.isEmpty()) {
-                return servfailResult(originalQuery, "missing_authority_for_" + authorityDiscoveryQuestion.getQuestion().getName());
+                return null;
             }
             currentAuthorities = finalAuthorities;
         }
 
         if (finalAuthorities == null || finalAuthorities.isEmpty()) {
-            return servfailResult(originalQuery, "missing_final_authority");
+            return null;
         }
 
-        ReferralResult finalAnswer = queryAuthoritiesForFinalAnswer(finalAuthorities, originalQuery);
+        ReferralResult finalAnswer = queryAuthoritiesForFinalAnswer(finalAuthorities, currentQuery);
         if (finalAnswer != null && finalAnswer.getType() == ReferralResult.Type.FINAL_ANSWER && finalAnswer.getFinalAnswer() != null) {
-            return RecursiveResult.answer(finalAnswer.getFinalAnswer());
+            return new ResolutionAttempt(finalAnswer.getFinalAnswer());
         }
-
-        return servfailResult(originalQuery, "invalid_final_answer");
+        return null;
     }
 
     private ReferralResult queryAuthoritiesForReferral(List<AuthorityEndpoint> authorityEndpoints, Message query) {
@@ -102,6 +134,42 @@ public class RecursiveSession {
         return List.of(authorityEndpoint);
     }
 
+    private boolean hasDirectAnswer(Message response, int type) {
+        List<org.xbill.DNS.Record> answers = response.getSection(Section.ANSWER);
+        for (org.xbill.DNS.Record answer : answers) {
+            if (answer.getType() == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private CNAMERecord extractFirstCname(Message response) {
+        List<org.xbill.DNS.Record> answers = response.getSection(Section.ANSWER);
+        for (org.xbill.DNS.Record answer : answers) {
+            if (answer instanceof CNAMERecord cnameRecord) {
+                return cnameRecord;
+            }
+        }
+        return null;
+    }
+
+    private Message buildClientResponse(Message originalQuery, List<org.xbill.DNS.Record> cnameChain, Message terminalResponse) {
+        Message response = DnsUtils.baseResponse(originalQuery, originalQuery.getQuestion());
+        response.getHeader().setRcode(terminalResponse.getRcode());
+        for (org.xbill.DNS.Record cnameRecord : cnameChain) {
+            response.addRecord(cnameRecord, Section.ANSWER);
+        }
+        for (org.xbill.DNS.Record answer : terminalResponse.getSection(Section.ANSWER)) {
+            response.addRecord(answer, Section.ANSWER);
+        }
+        return response;
+    }
+
+    private boolean isSameQuestionName(Message authorityDiscoveryQuestion, Message currentQuery) {
+        return authorityDiscoveryQuestion.getQuestion().getName().equals(currentQuery.getQuestion().getName());
+    }
+
     private RecursiveResult servfailResult(Message query, String note) {
         return RecursiveResult.servfail(buildServfail(query), note);
     }
@@ -118,5 +186,8 @@ public class RecursiveSession {
         fail.addRecord(query.getQuestion(), Section.QUESTION);
         fail.getHeader().setRcode(Rcode.SERVFAIL);
         return fail;
+    }
+
+    private record ResolutionAttempt(Message response) {
     }
 }
