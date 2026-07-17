@@ -3,7 +3,6 @@ package com.allanvital.dnsao.component;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
-import com.allanvital.dnsao.exc.ConfException;
 import com.allanvital.dnsao.graph.bean.MessageHelper;
 import com.allanvital.dnsao.holder.TestHolder;
 import org.junit.jupiter.api.AfterEach;
@@ -14,8 +13,7 @@ import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Section;
 import org.xbill.DNS.Type;
 
-import java.util.concurrent.TimeUnit;
-
+import static com.allanvital.dnsao.infra.notification.telemetry.EventType.CACHE_REWARM;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,8 +38,8 @@ public class ProtectedEntriesRetentionTest extends TestHolder {
 
         assertTrue(cacheManager.shouldAlwaysRewarm(key, nonWarmableResponse.getQuestion()));
 
-        testTimeProvider.walkNow(1500, TimeUnit.MILLISECONDS);
-        waitForBackgroundProcessing();
+        testTimeProvider.walkNow(1500L);
+        eventListener.assertCount(CACHE_REWARM, 1, false);
 
         DnsCacheEntry entry = cacheManager.safeGet(key);
         assertNotNull(entry, "explicit keep entry should still be retained in cache");
@@ -50,26 +48,22 @@ public class ProtectedEntriesRetentionTest extends TestHolder {
     @Test
     public void topProtectedEntryShouldRemainInCacheEvenWhenRewarmResultIsNonWarmable() throws Exception {
         registerOverride(new FixedTimeRewarmScheduler(100));
-        loadConf("cache/1udp-cache-rewarm-threshold-top1.yml");
-        conf.getMisc().setQueryLog(false);
-        startFakeServer();
-        prepareSimpleMockResponse(HOT_DOMAIN, "10.10.10.11", 1);
-        prepareSimpleMockResponse(COLD_DOMAIN, "10.10.10.12", 1);
-        safeStartWithPresetConf(true);
+        safeStart("cache/1udp-cache-rewarm-threshold-top1.yml");
 
         CacheManager cacheManager = assembler.getCacheManager();
-        executeRequestOnOwnServer(HOT_DOMAIN);
-        executeRequestOnOwnServer(COLD_DOMAIN);
-        executeRequestOnOwnServer(HOT_DOMAIN);
-
         String key = key(Type.A, HOT_DOMAIN);
         Message nonWarmableResponse = buildNoErrorEmptyResponse(HOT_DOMAIN, Type.A);
         cacheManager.put(key, nonWarmableResponse, 1L);
+        cacheManager.put(key(Type.A, COLD_DOMAIN), buildNoErrorEmptyResponse(COLD_DOMAIN, Type.A), 300L);
+        cacheManager.get(key);
+        cacheManager.get(key(Type.A, COLD_DOMAIN));
+        cacheManager.get(key);
+        eventListener.reset();
 
         assertTrue(cacheManager.shouldAlwaysRewarm(key, nonWarmableResponse.getQuestion()));
 
-        testTimeProvider.walkNow(1500, TimeUnit.MILLISECONDS);
-        waitForBackgroundProcessing();
+        testTimeProvider.walkNow(1500L);
+        eventListener.assertCount(CACHE_REWARM, 1, false);
 
         DnsCacheEntry entry = cacheManager.safeGet(key);
         assertNotNull(entry, "top protected entry should still be retained in cache");
@@ -101,10 +95,6 @@ public class ProtectedEntriesRetentionTest extends TestHolder {
             return domain;
         }
         return domain + ".";
-    }
-
-    private void waitForBackgroundProcessing() throws InterruptedException {
-        Thread.sleep(1800L);
     }
 
     @AfterEach
