@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.graph;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.CacheScavenger;
 import com.allanvital.dnsao.cache.keep.KeepKickstarter;
@@ -63,7 +64,7 @@ public class SystemGraphAssembler {
         QueryProcessorFactory factory = queryProcessorFactory(queryProcessorDependencies);
 
         KeepKickstarter kickstarter = keepKickStarter(keepProvider, factory);
-        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory);
+        scheduleRewarmWorker(executorServiceFactory, cacheConf, fixedTimeRewarmScheduler, cacheManager, factory, cacheEntryFactory());
         scheduleScavenger(executorServiceFactory, cacheConf, cacheManager);
         kickstarter.kickStartKeep();
 
@@ -107,7 +108,8 @@ public class SystemGraphAssembler {
                                                           CacheConf cacheConf,
                                                           FixedTimeRewarmScheduler fixedTimeRewarmScheduler,
                                                           CacheManager cacheManager,
-                                                          QueryProcessorFactory queryProcessorFactory) {
+                                                          QueryProcessorFactory queryProcessorFactory,
+                                                          CacheEntryFactory cacheEntryFactory) {
         if (cacheConf.isRewarm()) {
             ExecutorService coordinatorExecutorService = executorServiceFactory.buildExecutor("rewarm-coordinator", 1);
             ExecutorService rewarmExecutorService = executorServiceFactory.buildExecutor("rewarm-exec", cacheConf.getRewarmWorkerPoolSize());
@@ -117,7 +119,8 @@ public class SystemGraphAssembler {
                     queryProcessorFactory,
                     cacheConf.getMaxRewarmCount(),
                     rewarmExecutorService,
-                    cacheConf.getRewarmWorkerPoolSize()
+                    cacheConf.getRewarmWorkerPoolSize(),
+                    cacheEntryFactory
             );
             coordinatorExecutorService.submit(rewarmCoordinator);
             return rewarmCoordinator;
@@ -144,6 +147,11 @@ public class SystemGraphAssembler {
                               KeepProvider keepProvider) {
         return overrideRegistry.getRegisteredModule(CacheManager.class)
                 .orElse(new CacheManager(cacheConf, fixedTimeRewarmScheduler, expiredConf, keepProvider));
+    }
+
+    CacheEntryFactory cacheEntryFactory() {
+        return overrideRegistry.getRegisteredModule(CacheEntryFactory.class)
+                .orElse(new CacheEntryFactory());
     }
 
     private FixedTimeRewarmScheduler rewarmScheduler(long timeBeforeTtlToTriggerRewarm) {

@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.dns.processor.post;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.processor.post.handler.*;
 import com.allanvital.dnsao.dns.remote.ResolverProvider;
@@ -17,12 +18,13 @@ public class PostHandlerProvider {
     private final List<PostHandler> handlers = new LinkedList<>();
 
     public PostHandlerProvider(CacheManager cacheManager,
+                               CacheEntryFactory cacheEntryFactory,
                                NotificationManager notificationManager,
                                ResolverProvider resolverProvider,
                                Set<String> urlsToNotify,
                                boolean queryLogEnabled) {
 
-        handlers.add(new CachePostHandler(cacheManager));
+        handlers.add(new CachePostHandler(cacheManager, cacheEntryFactory));
         handlers.add(new LogPostHandler(queryLogEnabled));
         handlers.add(new WinnerUpstreamHandler(resolverProvider));
         handlers.add(new NotificationPostHandler(notificationManager));

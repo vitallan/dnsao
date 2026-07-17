@@ -1,14 +1,14 @@
 package com.allanvital.dnsao.dns.processor.post.handler;
 import com.allanvital.dnsao.infra.log.Log;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
+import com.allanvital.dnsao.cache.CacheEntryCandidate;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
-import org.xbill.DNS.*;
-import org.xbill.DNS.Record;
+import org.xbill.DNS.Message;
 
 import static com.allanvital.dnsao.dns.processor.engine.unit.AbstractCacheUnit.key;
-import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.infra.notification.QueryResolvedBy.UPSTREAM;
 
 /**
@@ -18,9 +18,11 @@ public class CachePostHandler implements PostHandler {
 
 
     private final CacheManager cacheManager;
+    private final CacheEntryFactory cacheEntryFactory;
 
-    public CachePostHandler(CacheManager cacheManager) {
+    public CachePostHandler(CacheManager cacheManager, CacheEntryFactory cacheEntryFactory) {
         this.cacheManager = cacheManager;
+        this.cacheEntryFactory = cacheEntryFactory;
     }
 
     @Override
@@ -35,39 +37,10 @@ public class CachePostHandler implements PostHandler {
         if (cacheManager == null) {
             return;
         }
-        int rcode = response.getRcode();
-        Long ttlFromDirectResponse = getTtlFromDirectResponse(response);
-        if (ttlFromDirectResponse != null) {
-            cacheManager.put(key(request), response, ttlFromDirectResponse);
-            return;
+        CacheEntryCandidate result = cacheEntryFactory.build(response);
+        if (result.isCacheable()) {
+            cacheManager.put(key(request), response, result.getDnsCacheEntry().getConfiguredTtlInSeconds());
         }
-        if (rcode == Rcode.NXDOMAIN) {
-            SOARecord soa = findSOA(response);
-            long negTtl = (soa != null) ? negativeTtlFrom(soa) : 300;
-            cacheManager.put(key(request), response, negTtl);
-        } else if (rcode == Rcode.NOERROR && response.getSection(Section.ANSWER).isEmpty()) {
-            SOARecord soa = findSOA(response);
-            if (soa != null) {
-                long negTtl = negativeTtlFrom(soa);
-                cacheManager.put(key(request), response, negTtl);
-            }
-        }
-    }
-
-    public static SOARecord findSOA(Message msg) {
-        for (Record r : msg.getSection(Section.AUTHORITY)) {
-            if (r.getType() == Type.SOA) {
-                return (SOARecord) r;
-            }
-        }
-        return null;
-    }
-
-    public static long negativeTtlFrom(SOARecord soa) {
-        long ttl = Math.min(soa.getMinimum(), soa.getTTL());
-        ttl = Math.max(ttl, 60);
-        ttl = Math.min(ttl, 300);
-        return ttl;
     }
 
 }
