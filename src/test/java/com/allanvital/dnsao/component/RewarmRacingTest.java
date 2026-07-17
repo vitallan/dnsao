@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.component;
 
+import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.holder.TestHolder;
 import com.allanvital.dnsao.dns.remote.resolver.UpstreamResolver;
 import com.allanvital.dnsao.exc.ConfException;
@@ -25,6 +26,7 @@ public class RewarmRacingTest extends TestHolder {
 
     @BeforeEach
     public void setup() throws ConfException {
+        registerOverride(new FixedTimeRewarmScheduler(500));
         List<UpstreamResolver> resolvers = List.of(new QuickResolver(), new SlowResolver());
         TestResolverProvider testResolverProvider = new TestResolverProvider(resolvers);
         registerOverride(testResolverProvider);

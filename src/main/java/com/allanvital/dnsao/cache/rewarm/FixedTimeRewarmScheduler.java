@@ -5,6 +5,7 @@ import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.utils.TimeUtils;
 
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.TimeUnit;
 
 import static com.allanvital.dnsao.infra.notification.telemetry.EventType.REWARM_TASK_SCHEDULED;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
@@ -20,6 +21,10 @@ public class FixedTimeRewarmScheduler {
 
     public FixedTimeRewarmScheduler(long thresholdToFire) {
         this.thresholdToFire = thresholdToFire;
+    }
+
+    public static FixedTimeRewarmScheduler fromSeconds(long thresholdToFireInSeconds) {
+        return new FixedTimeRewarmScheduler(TimeUnit.SECONDS.toMillis(thresholdToFireInSeconds));
     }
 
     public void schedule(String key, long entryTtl) {

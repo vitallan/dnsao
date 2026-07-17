@@ -148,7 +148,7 @@ public class SystemGraphAssembler {
 
     private FixedTimeRewarmScheduler rewarmScheduler(long timeBeforeTtlToTriggerRewarm) {
         return overrideRegistry.getRegisteredModule(FixedTimeRewarmScheduler.class)
-                .orElse(new FixedTimeRewarmScheduler(timeBeforeTtlToTriggerRewarm));
+                .orElse(FixedTimeRewarmScheduler.fromSeconds(timeBeforeTtlToTriggerRewarm));
     }
 
     protected MutableState createMutableState(boolean blockingEnabled) {
