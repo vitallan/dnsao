@@ -119,7 +119,7 @@ public class RewarmCoordinator implements Runnable {
         if (context.question() == null) {
             return RewarmSkipReason.MISSING_QUESTION;
         }
-        if (!isWarmable(context.entry().getResponse())) {
+        if (!isWarmable(context.entry().getResponse()) && !context.shouldAlwaysRewarm()) {
             return RewarmSkipReason.NOT_WARMABLE_CACHED_RESPONSE;
         }
         if (context.currentRewarmCount() >= maxRewarmCount && !context.shouldAlwaysRewarm()) {
