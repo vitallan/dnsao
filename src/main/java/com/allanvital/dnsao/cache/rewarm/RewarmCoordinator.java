@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.cache.rewarm;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.dns.processor.QueryProcessorFactory;
@@ -14,7 +15,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 public class RewarmCoordinator implements Runnable {
@@ -29,6 +29,7 @@ public class RewarmCoordinator implements Runnable {
     private final ExecutorService executionPool;
     private final Semaphore workerPermits;
     private final AtomicBoolean running = new AtomicBoolean(true);
+    private final CacheEntryFactory cacheEntryFactory;
     private long lastBeat = Clock.currentTimeInMillis();
 
     public RewarmCoordinator(FixedTimeRewarmScheduler scheduler,
@@ -36,13 +37,15 @@ public class RewarmCoordinator implements Runnable {
                              QueryProcessorFactory queryProcessorFactory,
                              int maxRewarmCount,
                              ExecutorService executionPool,
-                             int workerPoolSize) {
+                             int workerPoolSize,
+                             CacheEntryFactory cacheEntryFactory) {
         this.scheduler = scheduler;
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
         this.maxRewarmCount = maxRewarmCount;
         this.executionPool = executionPool;
         this.workerPermits = new Semaphore(Math.max(1, workerPoolSize));
+        this.cacheEntryFactory = cacheEntryFactory;
         Log.CACHE.debug("starting RewarmCoordinator with workerPoolSize={}", Math.max(1, workerPoolSize));
     }
 
@@ -86,7 +89,7 @@ public class RewarmCoordinator implements Runnable {
             return;
         }
 
-        executionPool.submit(new RewarmWorker(cache, queryProcessorFactory, context, workerPermits));
+        executionPool.submit(new RewarmWorker(cache, queryProcessorFactory, context, workerPermits, cacheEntryFactory));
     }
 
     private void heartbeat() {
@@ -130,7 +133,7 @@ public class RewarmCoordinator implements Runnable {
     }
 
     private boolean isWarmable(Message msg) {
-        return getTtlFromDirectResponse(msg) != null;
+        return cacheEntryFactory.build(msg).isCacheable();
     }
 
     private boolean isTaskObsolete(RewarmTask task, DnsCacheEntry entry) {

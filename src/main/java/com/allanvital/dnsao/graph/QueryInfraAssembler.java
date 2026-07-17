@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.graph;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.MutableState;
@@ -64,7 +65,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, mutableState);
 
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, cacheEntryFactory(), notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -150,8 +151,13 @@ public class QueryInfraAssembler {
         return new PostHandlerFacade(provider, executorServiceFactory);
     }
 
-    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, NotificationManager notificationManager, Set<String> urlsToNotify, ResolverProvider resolverProvider, boolean queryLogEnabled) {
-        return new PostHandlerProvider(cacheManager, notificationManager, resolverProvider, urlsToNotify, queryLogEnabled);
+    private CacheEntryFactory cacheEntryFactory() {
+        return overrideRegistry.getRegisteredModule(CacheEntryFactory.class)
+                .orElse(new CacheEntryFactory());
+    }
+
+    private PostHandlerProvider postHandlerProvider(CacheManager cacheManager, CacheEntryFactory cacheEntryFactory, NotificationManager notificationManager, Set<String> urlsToNotify, ResolverProvider resolverProvider, boolean queryLogEnabled) {
+        return new PostHandlerProvider(cacheManager, cacheEntryFactory, notificationManager, resolverProvider, urlsToNotify, queryLogEnabled);
     }
 
 }

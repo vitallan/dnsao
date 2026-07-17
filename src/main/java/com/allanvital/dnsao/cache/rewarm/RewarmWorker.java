@@ -1,5 +1,7 @@
 package com.allanvital.dnsao.cache.rewarm;
 
+import com.allanvital.dnsao.cache.CacheEntryCandidate;
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
@@ -13,7 +15,6 @@ import org.xbill.DNS.Type;
 
 import java.util.concurrent.Semaphore;
 
-import static com.allanvital.dnsao.dns.remote.DnsUtils.getTtlFromDirectResponse;
 import static com.allanvital.dnsao.infra.notification.telemetry.TelemetryEventManager.telemetryNotify;
 
 /**
@@ -28,16 +29,19 @@ public class RewarmWorker implements Runnable {
     private final RewarmContext context;
     private final Semaphore workerPermits;
     private final RewarmRetryPolicy retryPolicy;
+    private final CacheEntryFactory cacheEntryFactory;
 
     public RewarmWorker(CacheManager cache,
                         QueryProcessorFactory queryProcessorFactory,
                         RewarmContext context,
-                        Semaphore workerPermits) {
+                        Semaphore workerPermits,
+                        CacheEntryFactory cacheEntryFactory) {
         this.cache = cache;
         this.queryProcessorFactory = queryProcessorFactory;
         this.context = context;
         this.workerPermits = workerPermits;
         this.retryPolicy = new RewarmRetryPolicy(MAX_TRANSIENT_REWARM_RETRIES);
+        this.cacheEntryFactory = cacheEntryFactory;
     }
 
     @Override
@@ -56,12 +60,18 @@ public class RewarmWorker implements Runnable {
         Log.CACHE.debug("starting rewarm of key={} on currentRewarmCount={}", key, context.currentRewarmCount());
         RewarmAttemptResult attemptResult = attemptRewarmWithRetry(context);
         if (!attemptResult.success()) {
+            if (preserveProtectedEntry(context)) {
+                return;
+            }
             recordFailure(key, attemptResult);
             return;
         }
 
-        Long ttlFromDirectResponse = getTtlFromDirectResponse(attemptResult.response());
-        if (ttlFromDirectResponse == null) {
+        CacheEntryCandidate factoryResult = cacheEntryFactory.build(attemptResult.response());
+        if (!factoryResult.isCacheable()) {
+            if (preserveProtectedEntry(context)) {
+                return;
+            }
             telemetryNotify(EventType.CACHE_REWARM_NO_TTL);
             Log.CACHE.debug("rewarm skip (upstream result not warmable) key={} rcode={}",
                     key, Rcode.string(attemptResult.response().getRcode()));
@@ -74,8 +84,22 @@ public class RewarmWorker implements Runnable {
             return;
         }
 
-        storeRewarmedEntry(context, attemptResult.response(), ttlFromDirectResponse);
-        recordSuccess(context, ttlFromDirectResponse);
+        storeRewarmedEntry(context, factoryResult.getDnsCacheEntry());
+        recordSuccess(context, factoryResult.getDnsCacheEntry().getConfiguredTtlInSeconds());
+    }
+
+    private boolean preserveProtectedEntry(RewarmContext context) {
+        if (!context.shouldAlwaysRewarm() || context.entry() == null) {
+            return false;
+        }
+        RewarmSkipReason storeSkipReason = validateBeforeStore(context);
+        if (storeSkipReason != null) {
+            recordSkip(context.key(), storeSkipReason, context);
+            return true;
+        }
+        storeRewarmedEntry(context, context.entry());
+        recordSuccess(context, context.entry().getConfiguredTtlInSeconds());
+        return true;
     }
 
     private RewarmAttemptResult attemptRewarmWithRetry(RewarmContext context) {
@@ -102,14 +126,15 @@ public class RewarmWorker implements Runnable {
                 return RewarmAttemptResult.retryableFailure("no_response");
             }
             Message response = queryResponse.getResponse();
-            if (getTtlFromDirectResponse(response) != null) {
+            CacheEntryCandidate cacheEntryCandidate = cacheEntryFactory.build(response);
+            if (cacheEntryCandidate.isCacheable()) {
                 return RewarmAttemptResult.success(response);
             }
             if (response.getRcode() == Rcode.SERVFAIL) {
                 Log.CACHE.debug("rewarm returned SERVFAIL on key={}, retrying", key);
                 return RewarmAttemptResult.retryableFailure("servfail");
             }
-            return RewarmAttemptResult.terminalFailure("not_warmable_response");
+            return RewarmAttemptResult.success(response);
         } catch (Throwable t) {
             Log.CACHE.debug("rewarm transient failure on key={} message={}", key, t.getMessage());
             return RewarmAttemptResult.retryableFailure("exception");
@@ -127,8 +152,8 @@ public class RewarmWorker implements Runnable {
         return null;
     }
 
-    private void storeRewarmedEntry(RewarmContext context, Message response, long ttlFromDirectResponse) {
-        DnsCacheEntry updateCacheEntry = new DnsCacheEntry(response, ttlFromDirectResponse, context.currentRewarmCount() + 1);
+    private void storeRewarmedEntry(RewarmContext context, DnsCacheEntry dnsCacheEntry) {
+        DnsCacheEntry updateCacheEntry = new DnsCacheEntry(dnsCacheEntry.getResponse(), dnsCacheEntry.getConfiguredTtlInSeconds(), context.currentRewarmCount() + 1);
         cache.rewarm(context.key(), updateCacheEntry);
     }
 

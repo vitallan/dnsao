@@ -51,6 +51,10 @@ public class DnsCacheEntry {
         return expiryTime;
     }
 
+    public long getConfiguredTtlInSeconds() {
+        return configuredTtlInSeconds;
+    }
+
     public boolean isStale() {
         return getCurrentTimeInMillis() > expiryTime;
     }

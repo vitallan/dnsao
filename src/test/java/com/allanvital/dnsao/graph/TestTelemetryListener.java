@@ -68,7 +68,7 @@ public class TestTelemetryListener implements EventListener {
                 break;
             }
         }
-        Assertions.assertEquals(countToWaitTo, count, "the event count for " + type + " never reached " + countToWaitTo + ". count was " + count );
+        Assertions.assertEquals(countToWaitTo, count, "the event count for " + type + " never reached " + countToWaitTo + ". count was " + count + ". all counts: " + eventCounts);
     }
 
 }
