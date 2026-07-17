@@ -87,7 +87,7 @@ public class CacheManager {
                 telemetryNotify(EventType.STALE_CACHE_HIT);
                 return entry;
             }
-            if (shouldRemove(entry)) {
+            if (shouldRemove(key, entry)) {
                 Log.CACHE.info("cache entry {} was found, but expired. Removing", key);
                 remove(key);
             }
@@ -112,7 +112,7 @@ public class CacheManager {
 
         if (entry != null && entry.isStale()) {
             Log.CACHE.info("cache entry {} was found, but stale ", key);
-            if (shouldRemove(entry)) {
+            if (shouldRemove(key, entry)) {
                 remove(key);
             }
             return null;
@@ -164,7 +164,7 @@ public class CacheManager {
         }
         for (String key : keys) {
             DnsCacheEntry entry = cache.get(key);
-            if (entry != null && shouldRemove(entry)) {
+            if (entry != null && shouldRemove(key, entry)) {
                 remove(key);
             }
         }
@@ -177,7 +177,11 @@ public class CacheManager {
         telemetryNotify(CACHE_REMOVED);
     }
 
-    private boolean shouldRemove(DnsCacheEntry entry) {
+    private boolean shouldRemove(String key, DnsCacheEntry entry) {
+        Record question = entry != null && entry.getResponse() != null ? entry.getResponse().getQuestion() : null;
+        if (shouldAlwaysRewarm(key, question)) {
+            return false;
+        }
         if (!entry.isStale()) {
             return false;
         }
