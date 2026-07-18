@@ -1,0 +1,35 @@
+server:
+  port: 0
+  udpThreadPool: 1
+  tcpThreadPool: 1
+  webPort: -1
+
+misc:
+  timeout: 1
+  retries: 1
+
+cache:
+  enabled: false
+  rewarm: false
+
+resolver:
+  multiplier: 1
+  upstreams:
+    - name: main-upstream
+      ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
+    - name: kids-upstream
+      ip: "127.0.0.1"
+      port: 0
+      protocol: "udp"
+
+groups:
+  main:
+    upstreams:
+      - main-upstream
+  kids:
+    members:
+      - "127.0.0.10"
+    upstreams:
+      - kids-upstream

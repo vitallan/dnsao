@@ -4,6 +4,7 @@ import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.conf.Conf;
 import com.allanvital.dnsao.conf.MutableState;
 import com.allanvital.dnsao.conf.inner.Upstream;
+import com.allanvital.dnsao.conf.inner.pojo.GroupInnerConf;
 import com.allanvital.dnsao.dns.UpstreamResolverBuilder;
 import com.allanvital.dnsao.dns.block.BlockDecider;
 import com.allanvital.dnsao.dns.processor.QueryProcessorDependencies;
@@ -43,8 +44,8 @@ public class TestQueryInfraAssembler extends QueryInfraAssembler {
     }
 
     @Override
-    ResolverProvider resolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier) {
-        this.resolverProvider = super.resolverProvider(resolverBuilder, multiplier);
+    ResolverProvider resolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier, Map<String, GroupInnerConf> groups) {
+        this.resolverProvider = super.resolverProvider(resolverBuilder, multiplier, groups);
         return resolverProvider;
     }
 

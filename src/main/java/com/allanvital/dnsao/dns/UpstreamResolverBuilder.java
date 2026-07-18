@@ -14,6 +14,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateParsingException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 
 /**
@@ -22,15 +24,16 @@ import java.util.List;
 public class UpstreamResolverBuilder {
 
     private List<UpstreamResolver> resolvers  = new LinkedList<>();
+    private Map<String, UpstreamResolver> namedResolvers = new HashMap<>();
 
     public UpstreamResolverBuilder(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
         for (Upstream upstream : upstreams) {
             String lowerCaseProtocol = upstream.getProtocol().toLowerCase();
             try {
                 switch (lowerCaseProtocol) {
-                    case "udp" -> this.resolvers.add(new UdpUpstreamResolver(upstream.getIp(), upstream.getPort()));
-                    case "dot" -> this.resolvers.add(new DOTUpstreamResolver(connectionPoolFactory.build(upstream), upstream));
-                    case "doh" -> this.resolvers.add(new DOHUpstreamResolver(upstream));
+                    case "udp" -> addResolver(upstream, new UdpUpstreamResolver(upstream.getIp(), upstream.getPort()));
+                    case "dot" -> addResolver(upstream, new DOTUpstreamResolver(connectionPoolFactory.build(upstream), upstream));
+                    case "doh" -> addResolver(upstream, new DOHUpstreamResolver(upstream));
                     default -> Log.INFRA.warn("no Resolver possible for protocol {}", upstream.getProtocol());
                 }
             } catch (CertificateParsingException | IOException | NoSuchAlgorithmException e) {
@@ -40,12 +43,27 @@ public class UpstreamResolverBuilder {
         }
     }
 
+    private void addResolver(Upstream upstream, UpstreamResolver resolver) {
+        this.resolvers.add(resolver);
+        if (upstream.getName() != null && !upstream.getName().isBlank()) {
+            this.namedResolvers.put(upstream.getName(), resolver);
+        }
+    }
+
     public List<UpstreamResolver> getAllResolvers() {
         return resolvers;
     }
 
+    public Map<String, UpstreamResolver> getNamedResolvers() {
+        return namedResolvers;
+    }
+
     public void setResolvers(List<UpstreamResolver> resolvers) {
         this.resolvers = resolvers;
+    }
+
+    public void setNamedResolvers(Map<String, UpstreamResolver> namedResolvers) {
+        this.namedResolvers = namedResolvers;
     }
 
 }

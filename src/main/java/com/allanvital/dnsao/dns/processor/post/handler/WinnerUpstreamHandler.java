@@ -25,7 +25,7 @@ public class WinnerUpstreamHandler implements PostHandler{
         if (resolver == null || request.isLocalQuery()) {
             return;
         }
-        resolverProvider.notifyLastWinner(resolver);
+        resolverProvider.notifyLastWinner(resolver, request.getUpstreamRoutingPolicy());
         telemetryNotify(UPSTREAM_PRIORITIZED);
     }
 

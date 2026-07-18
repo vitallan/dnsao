@@ -120,7 +120,9 @@ public class RewarmWorker implements Runnable {
     private RewarmAttemptResult attemptRewarmOnce(Message query, String key) {
         try {
             QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
-            DnsQuery queryResponse = queryProcessor.processInternalQuery(query);
+            DnsQuery queryResponse = context.upstreamRoutingPolicy() == null
+                    ? queryProcessor.processInternalQuery(query)
+                    : queryProcessor.processInternalQuery(query, context.upstreamRoutingPolicy());
             if (queryResponse == null || queryResponse.getResponse() == null) {
                 Log.CACHE.debug("rewarm returned no response on key={}, retrying", key);
                 return RewarmAttemptResult.retryableFailure("no_response");
@@ -153,7 +155,7 @@ public class RewarmWorker implements Runnable {
     }
 
     private void storeRewarmedEntry(RewarmContext context, DnsCacheEntry dnsCacheEntry) {
-        DnsCacheEntry updateCacheEntry = new DnsCacheEntry(dnsCacheEntry.getResponse(), dnsCacheEntry.getConfiguredTtlInSeconds(), context.currentRewarmCount() + 1);
+        DnsCacheEntry updateCacheEntry = new DnsCacheEntry(dnsCacheEntry.getResponse(), dnsCacheEntry.getConfiguredTtlInSeconds(), context.currentRewarmCount() + 1, context.upstreamRoutingPolicy());
         cache.rewarm(context.key(), updateCacheEntry);
     }
 

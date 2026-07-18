@@ -40,7 +40,7 @@ public class UpstreamUnit implements EngineUnit {
 
     @Override
     public DnsQueryResponse innerProcess(DnsQueryRequest dnsQueryRequest) {
-        List<UpstreamResolver> upstreamsToBeUsed = resolverProvider.getResolversToUse();
+        List<UpstreamResolver> upstreamsToBeUsed = resolverProvider.getResolversToUse(dnsQueryRequest.getUpstreamRoutingPolicy());
         try {
             DnsQueryResult queryResult = queryOrchestrator.query(upstreamExecutor, dnsQueryRequest, upstreamsToBeUsed);
             if (queryResult == null) {

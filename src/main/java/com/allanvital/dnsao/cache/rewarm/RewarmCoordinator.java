@@ -104,12 +104,12 @@ public class RewarmCoordinator implements Runnable {
         String key = task.getKey();
         DnsCacheEntry entry = cache.safeGet(key);
         if (entry == null) {
-            return new RewarmContext(key, task, null, null, 0, false);
+            return new RewarmContext(key, task, null, null, null, 0, false);
         }
         Message cachedResponse = entry.getResponse();
         Record question = cachedResponse != null ? cachedResponse.getQuestion() : null;
         boolean shouldAlwaysRewarm = cache.shouldAlwaysRewarm(key, question);
-        return new RewarmContext(key, task, entry, question, entry.getRewarmCount(), shouldAlwaysRewarm);
+        return new RewarmContext(key, task, entry, question, entry.getUpstreamRoutingPolicy(), entry.getRewarmCount(), shouldAlwaysRewarm);
     }
 
     private RewarmSkipReason validateBeforeDispatch(RewarmContext context) {

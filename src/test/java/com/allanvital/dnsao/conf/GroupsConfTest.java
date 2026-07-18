@@ -1,8 +1,10 @@
 package com.allanvital.dnsao.conf;
 
+import com.allanvital.dnsao.conf.inner.Upstream;
 import com.allanvital.dnsao.conf.inner.pojo.GroupInnerConf;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,6 +54,23 @@ public class GroupsConfTest extends ConfValidation {
         assertTrue(group2.getAllows().contains("allow1"));
 
         assertEquals(0, group2.getBlocks().size());
+    }
+
+    @Test
+    public void parseNamedUpstreamsAndGroupUpstreams() {
+        Conf conf = getConf("groups-with-upstreams.yml");
+
+        List<Upstream> upstreams = conf.getResolver().getUpstreams();
+        assertEquals(2, upstreams.size());
+        assertEquals("quad9", upstreams.get(0).getName());
+        assertEquals("cloudflare", upstreams.get(1).getName());
+
+        GroupInnerConf main = conf.getGroups().get("main");
+        GroupInnerConf kids = conf.getGroups().get("kids");
+        assertNotNull(main);
+        assertNotNull(kids);
+        assertEquals(List.of("quad9"), main.getUpstreams());
+        assertEquals(List.of("cloudflare"), kids.getUpstreams());
     }
 
 }

@@ -4,6 +4,7 @@ import com.allanvital.dnsao.infra.log.Log;
 import com.allanvital.dnsao.dns.pojo.DnsQuery;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy;
 import com.allanvital.dnsao.dns.processor.engine.QueryEngine;
 import com.allanvital.dnsao.dns.processor.post.PostHandlerFacade;
 import com.allanvital.dnsao.dns.processor.pre.PreHandlerFacade;
@@ -32,9 +33,16 @@ public class QueryProcessor {
     }
 
     public DnsQuery processQuery(InetAddress clientAddress, Message clientQuery, boolean isInternalQuery) {
+        return processQuery(clientAddress, clientQuery, isInternalQuery, null);
+    }
+
+    public DnsQuery processQuery(InetAddress clientAddress, Message clientQuery, boolean isInternalQuery, UpstreamRoutingPolicy upstreamRoutingPolicy) {
         DnsQueryRequest request = null;
         try {
             request = preHandler.prepare(clientAddress, clientQuery, isInternalQuery);
+            if (upstreamRoutingPolicy != null) {
+                request.setUpstreamRoutingPolicy(upstreamRoutingPolicy);
+            }
         } catch (PreHandlerException e) {
             Log.DNS.error(e.getMessage());
             if (e.getPreparedResponse() == null) {
@@ -51,6 +59,10 @@ public class QueryProcessor {
 
     public DnsQuery processInternalQuery(Message message) {
         return processQuery(InetAddress.getLoopbackAddress(), message, true);
+    }
+
+    public DnsQuery processInternalQuery(Message message, UpstreamRoutingPolicy upstreamRoutingPolicy) {
+        return processQuery(InetAddress.getLoopbackAddress(), message, true, upstreamRoutingPolicy);
     }
 
     public DnsQuery processExternalQuery(InetAddress clientAddress, byte[] data) {

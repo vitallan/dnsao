@@ -8,6 +8,7 @@ import com.allanvital.dnsao.cache.pojo.DnsCacheEntry;
 import com.allanvital.dnsao.cache.rewarm.FixedTimeRewarmScheduler;
 import com.allanvital.dnsao.conf.inner.CacheConf;
 import com.allanvital.dnsao.conf.inner.ExpiredConf;
+import com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy;
 import com.allanvital.dnsao.infra.clock.Clock;
 import com.allanvital.dnsao.infra.notification.telemetry.EventType;
 import org.xbill.DNS.Message;
@@ -147,11 +148,15 @@ public class CacheManager {
     }
 
     public void put(String key, Message response, Long ttlSecs) {
+        put(key, response, ttlSecs, null);
+    }
+
+    public void put(String key, Message response, Long ttlSecs, UpstreamRoutingPolicy upstreamRoutingPolicy) {
         if (!enabled) {
             return;
         }
         Log.CACHE.info("adding {} to cache", key);
-        addEntry(key, new DnsCacheEntry(response, ttlSecs), true);
+        addEntry(key, new DnsCacheEntry(response, ttlSecs, upstreamRoutingPolicy), true);
     }
 
     public void purgeExpired() {
