@@ -1,4 +1,5 @@
 package com.allanvital.dnsao.cache.pojo;
+import com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy;
 import com.allanvital.dnsao.infra.log.Log;
 
 import com.allanvital.dnsao.infra.clock.Clock;
@@ -17,12 +18,18 @@ public class DnsCacheEntry {
     private final Message response;
     private final long expiryTime;
     private final long configuredTtlInSeconds;
+    private final UpstreamRoutingPolicy upstreamRoutingPolicy;
     private int rewarmCount = 0;
     private long lastAccessSeq = 0;
     private int transientRewarmFailureCount = 0;
 
     public DnsCacheEntry(Message response, Long ttlInSeconds) {
+        this(response, ttlInSeconds, null);
+    }
+
+    public DnsCacheEntry(Message response, Long ttlInSeconds, UpstreamRoutingPolicy upstreamRoutingPolicy) {
         this.response = response;
+        this.upstreamRoutingPolicy = upstreamRoutingPolicy;
         if (ttlInSeconds == null) {
             this.configuredTtlInSeconds = 30;
         } else {
@@ -43,6 +50,11 @@ public class DnsCacheEntry {
         this.rewarmCount = rewarmCount;
     }
 
+    public DnsCacheEntry(Message response, Long ttlInSeconds, int rewarmCount, UpstreamRoutingPolicy upstreamRoutingPolicy) {
+        this(response, ttlInSeconds, upstreamRoutingPolicy);
+        this.rewarmCount = rewarmCount;
+    }
+
     public Message getResponse() {
         return response;
     }
@@ -53,6 +65,10 @@ public class DnsCacheEntry {
 
     public long getConfiguredTtlInSeconds() {
         return configuredTtlInSeconds;
+    }
+
+    public UpstreamRoutingPolicy getUpstreamRoutingPolicy() {
+        return upstreamRoutingPolicy;
     }
 
     public boolean isStale() {

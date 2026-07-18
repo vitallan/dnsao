@@ -53,7 +53,7 @@ public class QueryInfraAssembler {
 
         DOTConnectionPoolFactory dotConnectionPoolFactory = dotConnectionPoolFactory((SSLSocketFactory) SSLSocketFactory.getDefault(), resolverConf.getTlsPoolSize());
         UpstreamResolverBuilder resolverBuilder = upstreamResolverBuilder(dotConnectionPoolFactory, resolverConf.getUpstreams());
-        ResolverProvider resolverProvider = resolverProvider(resolverBuilder, resolverConf.getMultiplier());
+        ResolverProvider resolverProvider = resolverProvider(resolverBuilder, resolverConf.getMultiplier(), conf.getGroups());
         QueryOrchestrator orchestrator = queryOrchestrator(miscConf);
         UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, miscConf, orchestrator);
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
@@ -67,7 +67,7 @@ public class QueryInfraAssembler {
 
         PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, cacheEntryFactory(), notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
-        PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider);
+        PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider, conf.getGroups());
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
         PostHandlerFacade postHandlerFacade = postHandlerFacade(postHandlerProvider, executorServiceFactory);
 
@@ -94,9 +94,9 @@ public class QueryInfraAssembler {
                 .orElse(new BlockDecider(fileListsProvider, listsConf, groups));
     }
 
-    ResolverProvider resolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier) {
+    ResolverProvider resolverProvider(UpstreamResolverBuilder resolverBuilder, int multiplier, Map<String, GroupInnerConf> groups) {
         return overrideRegistry.getRegisteredModule(ResolverProvider.class)
-                .orElse(new UpstreamResolverProvider(resolverBuilder, multiplier));
+                .orElse(new UpstreamResolverProvider(resolverBuilder, multiplier, groups));
     }
 
     UpstreamResolverBuilder upstreamResolverBuilder(DOTConnectionPoolFactory connectionPoolFactory, List<Upstream> upstreams) {
@@ -124,8 +124,8 @@ public class QueryInfraAssembler {
         return mappings;
     }
 
-    private PreHandlerFacade preHandlerFacade(PreHandlerProvider preHandlerProvider) {
-        return new PreHandlerFacade(preHandlerProvider);
+    private PreHandlerFacade preHandlerFacade(PreHandlerProvider preHandlerProvider, Map<String, GroupInnerConf> groups) {
+        return new PreHandlerFacade(preHandlerProvider, groups);
     }
 
     private PreHandlerProvider preHandlerProvider(DNSSecMode dnsSecMode) {

@@ -11,8 +11,16 @@ public interface ResolverProvider {
 
     List<UpstreamResolver> getAllResolvers();
     List<UpstreamResolver> getResolversToUse();
+    default List<UpstreamResolver> getResolversToUse(UpstreamRoutingPolicy routingPolicy) {
+        return getResolversToUse();
+    }
+
     default void notifyLastWinner(UpstreamResolver resolver) {
 
+    }
+
+    default void notifyLastWinner(UpstreamResolver resolver, UpstreamRoutingPolicy routingPolicy) {
+        notifyLastWinner(resolver);
     }
 
 }

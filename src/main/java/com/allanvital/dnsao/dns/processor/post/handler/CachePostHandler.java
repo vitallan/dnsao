@@ -6,6 +6,7 @@ import com.allanvital.dnsao.cache.CacheEntryCandidate;
 import com.allanvital.dnsao.cache.CacheManager;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.pojo.DnsQueryResponse;
+import com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy;
 import org.xbill.DNS.Message;
 
 import static com.allanvital.dnsao.dns.processor.engine.unit.AbstractCacheUnit.key;
@@ -29,17 +30,17 @@ public class CachePostHandler implements PostHandler {
     public void handle(DnsQueryRequest request, DnsQueryResponse response) {
         if (UPSTREAM.equals(response.getQueryResolvedBy()) && !request.isLocalQuery()) {
             Log.DNS.debug("adding {} to cache", key(request.getRequest()));
-            putInCache(request.getRequest(), response.getResponse());
+            putInCache(request.getRequest(), response.getResponse(), request.getUpstreamRoutingPolicy());
         }
     }
 
-    private void putInCache(Message request, Message response) {
+    private void putInCache(Message request, Message response, UpstreamRoutingPolicy upstreamRoutingPolicy) {
         if (cacheManager == null) {
             return;
         }
         CacheEntryCandidate result = cacheEntryFactory.build(response);
         if (result.isCacheable()) {
-            cacheManager.put(key(request), response, result.getDnsCacheEntry().getConfiguredTtlInSeconds());
+            cacheManager.put(key(request), response, result.getDnsCacheEntry().getConfiguredTtlInSeconds(), upstreamRoutingPolicy);
         }
     }
 

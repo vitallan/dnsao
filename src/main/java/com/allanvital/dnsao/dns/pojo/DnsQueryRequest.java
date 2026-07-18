@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.dns.pojo;
 
+import com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy;
 import org.xbill.DNS.Message;
 
 import java.net.InetAddress;
@@ -14,6 +15,7 @@ public class DnsQueryRequest {
     private Message request;
     private final long start;
     private boolean isInternalOrigin = false;
+    private UpstreamRoutingPolicy upstreamRoutingPolicy;
 
     public DnsQueryRequest(InetAddress clientAddress) {
         this.clientAddress = clientAddress;
@@ -58,6 +60,14 @@ public class DnsQueryRequest {
 
     public int getOriginalRequestId() {
         return this.originalRequest.getHeader().getID();
+    }
+
+    public UpstreamRoutingPolicy getUpstreamRoutingPolicy() {
+        return upstreamRoutingPolicy;
+    }
+
+    public void setUpstreamRoutingPolicy(UpstreamRoutingPolicy upstreamRoutingPolicy) {
+        this.upstreamRoutingPolicy = upstreamRoutingPolicy;
     }
 
 }

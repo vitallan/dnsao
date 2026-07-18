@@ -13,6 +13,7 @@ public class GroupInnerConf {
     public static final String MAIN = "main"; //catchall group
 
     private List<String> members = new LinkedList<>();
+    private List<String> upstreams = new LinkedList<>();
     private Set<String> allows = new HashSet<>();
     private Set<String> blocks = new HashSet<>();
 
@@ -22,6 +23,17 @@ public class GroupInnerConf {
 
     public void setMembers(List<String> members) {
         this.members = members;
+    }
+
+    public List<String> getUpstreams() {
+        if (upstreams == null) {
+            upstreams = new LinkedList<>();
+        }
+        return upstreams;
+    }
+
+    public void setUpstreams(List<String> upstreams) {
+        this.upstreams = upstreams;
     }
 
     public Set<String> getAllows() {
