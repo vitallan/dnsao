@@ -30,7 +30,7 @@ title: Início
 
 ## Objetivo
 
-Outros softwares de DNS atuam como [DNS Sinkhole](https://docs.pi-hole.net/){:target="_blank"}, ou suportam multiplos [upstreams com DOT](https://github.com/getdnsapi/stubby){:target="_blank"}, ou fazem a [resolução recursiva de DNS](https://nlnetlabs.nl/projects/unbound/about/){:target="_blank"}, mas é sempre necessário combinar soluções para poder atingir um nível satisfatório de privacidade ou velocidade. O **DNSao** existe para ser a única ferramenta de DNS necessária em sua rede. 
+Outros softwares de DNS atuam como [DNS Sinkhole](https://docs.pi-hole.net/){:target="_blank"} ou focam no encaminhamento para upstreams criptografados, mas muitas vezes é necessário combinar soluções para atingir um nível satisfatório de privacidade ou velocidade. O **DNSao** foca em ser um encaminhador DNS rápido e consciente de privacidade para sua rede.
 
 ---
 
