@@ -44,11 +44,13 @@ resolver:
   upstreamThreadPoolSize: 64
   upstreamQueueSize: 640
   upstreams:
-    - ip: "1.1.1.1"
+    - name: cloudflare-dot-1
+      ip: "1.1.1.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
-    - ip: "1.0.0.1"
+    - name: cloudflare-dot-2
+      ip: "1.0.0.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
@@ -58,7 +60,8 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
-    - host: "dns.quad9.net"
+    - name: quad9-doh
+      host: "dns.quad9.net"
       port: 443
       protocol: "doh"
       path: "/dns-query"
@@ -85,10 +88,16 @@ lists:
     allowList1: "http://url.of.allow.lists.com"
 
 groups:
+  main:
+    upstreams:
+      - cloudflare-dot-1
+      - cloudflare-dot-2
   group1:
     members:
       - "192.168.68.55"
       - "192.168.68.40"
+    upstreams:
+      - quad9-doh
     allows:
       - allowList1
     blocks:
@@ -211,11 +220,13 @@ resolver:
   upstreamThreadPoolSize: 64
   upstreamQueueSize: 640
   upstreams:
-    - ip: "1.1.1.1"
+    - name: cloudflare-dot-1
+      ip: "1.1.1.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
-    - ip: "1.0.0.1"
+    - name: cloudflare-dot-2
+      ip: "1.0.0.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
@@ -225,11 +236,13 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
-    - ip: "149.112.112.112"
+    - name: quad9-dot-1
+      ip: "149.112.112.112"
       port: 853
       protocol: "dot"
       tlsAuthName: "dns.quad9.net"
-    - ip: "9.9.9.9"
+    - name: quad9-dot-2
+      ip: "9.9.9.9"
       port: 853
       protocol: "dot"
       tlsAuthName: "dns.quad9.net"
@@ -247,7 +260,7 @@ The **resolver** property defines the upstreams to be queried. You must specify 
 | Property | Description |
 |---------|------------|
 | **tlsPoolSize** | the maximum pool size for DOT connections per upstream. Using a pool improves performance since the TLS handshake is costly, but increasing it excessively won’t necessarily improve speed — a single connection can serve multiple requests and stale connections are discarded by the upstream |
-| **multiplier** | how many upstreams each query will be sent to. **DNSao** uses the fastest response and discards the others. There’s a trade-off between speed and privacy: the more upstreams queried per request, the more servers will see your DNS queries. If privacy is the main goal, set the multiplier to 1 and use DOT or DOH upstreams. |
+| **multiplier** | how many upstreams each query will be sent to. **DNSao** uses the fastest response and discards the others. When a client group selects a subset of upstreams, the multiplier applies only inside that subset. There’s a trade-off between speed and privacy: the more upstreams queried per request, the more servers will see your DNS queries. If privacy is the main goal, set the multiplier to 1 and use DOT or DOH upstreams. |
 | **upstreamThreadPoolSize** | size of the shared thread pool used to execute upstream calls. Default is **64** |
 | **upstreamQueueSize** | size of the bounded queue for upstream tasks. Default is **640** (64 * 10) |
 
@@ -264,6 +277,7 @@ These are the inner properties for the "upstreams" property.
 | Property | Description |
 |---------|------------|
 | **upstreams** | the list of upstreams to be queried against |
+| **name** | optional name for this upstream. Named upstreams can be referenced by `groups.<group>.upstreams` to route different clients through different resolver pools. Unnamed upstreams remain valid and are used by the global/default resolver pool |
 | **ip** | IP of the upstream server to be used |
 | **port** | Port of the upsream server to be used. For UDP the common port is 53, for DOT, the default port is 853 and for DOH, the default port is 443 | 
 | **protocol** | supported protocols are **udp**, **dot** and **doh** |
@@ -272,6 +286,8 @@ These are the inner properties for the "upstreams" property.
 | **path** | when using **doh** protocol, it is necessary to set the **path** property, which will be appended at the end of the **host** property. It defaults to **/dns-query** |
 
 You can find examples of the configurations on the [config-samples in the github repo](https://github.com/vitallan/dnsao/tree/main/config-samples). Upstreams of different types can be used at the same type, as long as the necessary properties for each protocol are fullfiled.
+
+Named upstreams are optional. If no group-specific upstream selection is configured, **DNSao** uses the full `resolver.upstreams` pool exactly as before.
 
 It is also possible to set **localMappings**: dns entries that will be resolved directly by **DNSao**.
 
@@ -319,10 +335,16 @@ Names must be unique among both blockLists and allowLists to work effectively.
 
 ```yaml
 groups:
+  main:
+    upstreams:
+      - cloudflare-dot-1
   group1:
     members:
       - "192.168.68.55"
       - "192.168.68.40"
+    upstreams:
+      - quad9-dot-1
+      - quad9-dot-2
     allows:
       - allowList1
     blocks:
@@ -334,6 +356,8 @@ groups:
 
 This config is also optional but can be used to selectively block or allow domains based on the client. That way, domains can be blocked for some devices, but not for all network.
 
+Groups can also select which named upstreams should be used for their members. Use `groups.<group>.upstreams` to reference names declared in `resolver.upstreams`.
+
 In the above example, the group named **group1** will have two members (ips ending in 55 and 40), and will only block the domains on the "steven" list and allows only the "allowList1" list.
 
 The group named **group2** will have a single member, and will not block or allow any specific list.
@@ -341,6 +365,12 @@ The group named **group2** will have a single member, and will not block or allo
 All clients not defined in a group will enter the default **MAIN** group.
 
 The **MAIN** group can optionally be defined manually in YAML. When explicitly defined, its `members`, `allows`, and `blocks` are preserved as-is. When `main` is **absent** from the config, **DNSao** creates it automatically as a catchall using all blockLists and allowLists defined in the `lists` section.
+
+Upstream selection follows this order: if the client group defines `upstreams`, only those named upstreams are used; otherwise, **DNSao** uses `main.upstreams` when configured; otherwise, it uses the whole `resolver.upstreams` pool. If any referenced upstream name is unknown, **DNSao** logs an error and uses the whole resolver pool for that selection instead of failing startup.
+
+Winner prioritization is scoped to the selected group/upstream policy. A fast winner for one group does not reorder another group’s upstream pool.
+
+Cache rewarm preserves the upstream policy from the original query. If a cached entry was created from a group-specific upstream selection, its later rewarm attempts use the same selection instead of falling back to the global pool.
 
 ### listeners
 

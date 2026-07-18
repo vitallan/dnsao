@@ -45,11 +45,13 @@ resolver:
   upstreamQueueSize: 640
   dnssec: "simple"
   upstreams:
-    - ip: "1.1.1.1"
+    - name: cloudflare-dot-1
+      ip: "1.1.1.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
-    - ip: "1.0.0.1"
+    - name: cloudflare-dot-2
+      ip: "1.0.0.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
@@ -59,7 +61,8 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
-    - host: "dns.quad9.net"
+    - name: quad9-doh
+      host: "dns.quad9.net"
       port: 443
       protocol: "doh"
       path: "/dns-query"
@@ -86,10 +89,16 @@ lists:
     allowList1: "http://url.of.allow.lists.com"
 
 groups:
+  main:
+    upstreams:
+      - cloudflare-dot-1
+      - cloudflare-dot-2
   group1:
     members:
       - "192.168.68.55"
       - "192.168.68.40"
+    upstreams:
+      - quad9-doh
     allows:
       - allowList1
     blocks:
@@ -211,11 +220,13 @@ resolver:
   upstreamThreadPoolSize: 64
   upstreamQueueSize: 640
   upstreams:
-    - ip: "1.1.1.1"
+    - name: cloudflare-dot-1
+      ip: "1.1.1.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
-    - ip: "1.0.0.1"
+    - name: cloudflare-dot-2
+      ip: "1.0.0.1"
       port: 853
       protocol: "dot"
       tlsAuthName: "cloudflare-dns.com"
@@ -225,11 +236,13 @@ resolver:
     - ip: "1.0.0.1"
       port: 53
       protocol: "udp"
-    - ip: "149.112.112.112"
+    - name: quad9-dot-1
+      ip: "149.112.112.112"
       port: 853
       protocol: "dot"
       tlsAuthName: "dns.quad9.net"
-    - ip: "9.9.9.9"
+    - name: quad9-dot-2
+      ip: "9.9.9.9"
       port: 853
       protocol: "dot"
       tlsAuthName: "dns.quad9.net"
@@ -246,7 +259,7 @@ A propriedade **resolver** define os *upstreams* que serão consultados. Você d
 | Propriedade     | Descrição                                                                                                                                                                                                                                                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **tlsPoolSize** | tamanho máximo do *pool* de conexões DOT por *upstream*. Usar *pool* melhora a performance, já que o *handshake* TLS é custoso, mas aumentá-lo demais não trará necessariamente mais velocidade — uma única conexão pode servir múltiplas requisições e conexões stale são descartadas pelo *upstream*                     |
-| **multiplier**  | para quantos *upstreams* cada query será enviada. O **DNSao** usa a resposta mais rápida e descarta as demais. Há um *trade-off* entre velocidade e privacidade: quanto mais *upstreams* por requisição, mais servidores verão suas queries. Se privacidade é o principal objetivo, defina *multiplier* como 1 e use *upstreams* DOT ou DOH. |
+| **multiplier**  | para quantos *upstreams* cada query será enviada. O **DNSao** usa a resposta mais rápida e descarta as demais. Quando um grupo de clientes seleciona um subconjunto de *upstreams*, o *multiplier* se aplica apenas dentro desse subconjunto. Há um *trade-off* entre velocidade e privacidade: quanto mais *upstreams* por requisição, mais servidores verão suas queries. Se privacidade é o principal objetivo, defina *multiplier* como 1 e use *upstreams* DOT ou DOH. |
 | **upstreamThreadPoolSize** | tamanho do pool compartilhado de threads usado para executar chamadas aos upstreams. O default é **64** |
 | **upstreamQueueSize** | tamanho da fila limitada para tarefas upstream. O default é **640** (64 * 10) |
 
@@ -263,6 +276,7 @@ Estas são as propriedades internas dentro de **upstreams**:
 | Propriedade     | Descrição                                                                                                                                                                                                                                |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **upstreams**   | a lista de *upstreams* que serão consultados                                                                                                                                                                                             |
+| **name**        | nome opcional para este *upstream*. *Upstreams* nomeados podem ser referenciados em `groups.<grupo>.upstreams` para rotear clientes diferentes por pools de resolvedores diferentes. *Upstreams* sem nome continuam válidos e são usados pelo pool global/padrão |
 | **ip**          | IP do servidor *upstream* a ser usado                                                                                                                                                                                                    |
 | **port**        | Porta do servidor *upstream* a ser usada. Para UDP, a porta comum é 53; para DOT, a porta padrão é 853                                                                                                                                   |
 | **protocol**    | protocolos suportados: **udp** e **dot**                                                                                                                                                                                                 |
@@ -271,6 +285,8 @@ Estas são as propriedades internas dentro de **upstreams**:
 | **path** | ao usar o protocolo **doh**, é necessário definir a propriedade **path**, que será incluida ao final de **host**. Seu valor default é **/dns-query**  |
 
 Exemplos das configurações possíveis podem ser encontradas na pasta [config-samples no github](https://github.com/vitallan/dnsao/tree/main/config-samples). Diferentes tipos de upstream podem ser usados ao mesmo tempo contanto que as propriedades necessárias para cada protocolo estejam presentes.
+
+Nomear *upstreams* é opcional. Se nenhuma seleção de *upstream* por grupo for configurada, o **DNSao** usa todo o pool de `resolver.upstreams`, como antes.
 
 Também é possível definir **localMappings**: entradas de DNS que serão resolvidas diretamente pelo **DNSao**.
 
@@ -318,10 +334,16 @@ Nomes precisam ser únicos entre as blockLists e allowLists para funcionarem efe
 
 ```yaml
 groups:
+  main:
+    upstreams:
+      - cloudflare-dot-1
   group1:
     members:
       - "192.168.68.55"
       - "192.168.68.40"
+    upstreams:
+      - quad9-dot-1
+      - quad9-dot-2
     allows:
       - allowList1
     blocks:
@@ -333,6 +355,8 @@ groups:
 
 Essa config é opcional, mas pode ser usada para seletivamente bloquear ou permitir domínios baseado no cliente. Dessa forma, domínios específicos podem ser bloqueados para alguns devices, mas não para toda a rede.
 
+Grupos também podem selecionar quais *upstreams* nomeados serão usados por seus membros. Use `groups.<grupo>.upstreams` para referenciar nomes declarados em `resolver.upstreams`.
+
 No exemplo acima, o grupo nomeado **group1** terá dois membros (os ips terminando em 55 e 40), e só bloqueará os domínios da lista em "steven", e permitirá os domínios da lista "allowList1".                                  
 
 O grupo **group2** terá um único membro e não bloqueará ou permitirá nenhuma lista específica.
@@ -340,6 +364,12 @@ O grupo **group2** terá um único membro e não bloqueará ou permitirá nenhum
 Todo os clientes não definidos individualmente em um grupo entrarão no grupo **MAIN**.
 
 O grupo **MAIN** pode opcionalmente ser definido manualmente no YAML. Quando explicitamente definido, seus `members`, `allows` e `blocks` são preservados como estão. Quando `main` está **ausente** da configuração, o **DNSao** o cria automaticamente como um grupo genérico usando todas as blockLists e allowLists definidas na seção `lists`.
+
+A seleção de *upstreams* segue esta ordem: se o grupo do cliente define `upstreams`, apenas esses *upstreams* nomeados são usados; caso contrário, o **DNSao** usa `main.upstreams` quando configurado; caso contrário, usa todo o pool de `resolver.upstreams`. Se qualquer nome referenciado for desconhecido, o **DNSao** registra um erro no log e usa todo o pool de resolvedores para aquela seleção, sem impedir a inicialização do servidor.
+
+A priorização de vencedor é limitada ao grupo/política de *upstreams* selecionada. Um vencedor rápido de um grupo não reordena o pool de *upstreams* de outro grupo.
+
+O *cache rewarm* preserva a política de *upstream* da query original. Se uma entrada de cache foi criada a partir de uma seleção específica de grupo, as tentativas posteriores de *rewarm* usam a mesma seleção em vez de voltar para o pool global.
 
 ### listeners
 
