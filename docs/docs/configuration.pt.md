@@ -21,9 +21,10 @@ server:
 
 cache:
   enabled: true
-  maxCacheEntries: 1000
+  maxCacheEntries: 2048
   rewarm: true
   maxRewarmCount: 5
+  maxRewarmPerMinute: 3000
   alwaysRewarmTopEntries: 0
   rewarmWorkerPoolSize: 3
   keep:
@@ -152,9 +153,10 @@ O **DNSao** persiste queries e métricas em um arquivo SQLite local por padrão.
 ```yaml
 cache:
   enabled: true
-  maxCacheEntries: 1000
+  maxCacheEntries: 2048
   rewarm: true
   maxRewarmCount: 5
+  maxRewarmPerMinute: 3000
   alwaysRewarmTopEntries: 0
   rewarmWorkerPoolSize: 3
   keep:
@@ -170,6 +172,7 @@ A propriedade **cache** define o comportamento do cache da aplicação. O cache 
 | **maxCacheEntries** | número máximo de entradas permitidas no cache. 1000 é um bom número para redes domésticas e cabe dentro do uso de memória recomendado (conforme observado na [instalação](installation.md)). Se aumentar este número, lembre-se de aumentar também o limite de memória da JVM.                                                                                   |
 | **rewarm**          | habilita o mecanismo de “cache rewarm”: quando uma entrada de cache está perto do fim do seu TTL, uma tentativa de atualização é feita automaticamente. O padrão é **true**                                                                                                                                                                                      |
 | **maxRewarmCount**  | quantas vezes o **DNSao** fará *rewarm* da entrada antes de removê-la da memória. Se chegar uma query para um domínio no cache “warm”, essa entrada é promovida para o cache “hot” e o contador de *rewarm* é reiniciado. Isso garante que domínios acessados com frequência permaneçam disponíveis, melhorando a performance da resolução DNS. O padrão é **5** |
+| **maxRewarmPerMinute** | número máximo de tentativas de *rewarm* por minuto. O DNSao aplica este limite como um orçamento por segundo para evitar picos na virada do minuto; por exemplo, **3000** permite até **50** tentativas de *rewarm* por segundo. Cada tentativa de *rewarm* envia apenas uma query ao upstream. O padrão é **3000**. O mínimo é **1** |
 | **alwaysRewarmTopEntries** | o número de entradas mais frequentemente acessadas que serão sempre reaquecidas, ignorando o **maxRewarmCount**. Diferente de **keep**, estas não são pré-carregadas — elas conquistam seu lugar através de consultas reais dos clientes. As N entradas (não-keep) mais recentes por acesso são promovidas automaticamente. Padrão é **0** (desabilitado). Limitado a **maxCacheEntries** |
 | **rewarmWorkerPoolSize** | o número de threads no pool de workers de rewarm. Um pool maior permite que mais entradas sejam reaquecidas em paralelo, reduzindo a chance de entradas expiradas sob alta carga de consultas. O padrão é **3**. O mínimo é **1** |
 | **keep**            | uma lista de urls para realizar um precache antes de servidor iniciar e também sempre manter em memória. Essas urls sempre serão mantidas quentes mesmo após atingirem o limite estabelecido em **maxRewarmCount**. O objetivo é manter essas entradas sempre disponíveis em cache                                                                               |

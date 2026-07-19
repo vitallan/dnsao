@@ -14,6 +14,7 @@ public class CacheConf {
     private int maxRewarmCount = 3;
     private int secsBeforeTtlToRewarm = 20;
     private int rewarmWorkerPoolSize = 3;
+    private int maxRewarmPerMinute = 3000;
     private int alwaysRewarmTopEntries = 0;
     private List<String> keep = new LinkedList<>();
 
@@ -88,5 +89,13 @@ public class CacheConf {
 
     public void setRewarmWorkerPoolSize(int rewarmWorkerPoolSize) {
         this.rewarmWorkerPoolSize = Math.max(1, rewarmWorkerPoolSize);
+    }
+
+    public int getMaxRewarmPerMinute() {
+        return Math.max(1, maxRewarmPerMinute);
+    }
+
+    public void setMaxRewarmPerMinute(int maxRewarmPerMinute) {
+        this.maxRewarmPerMinute = Math.max(1, maxRewarmPerMinute);
     }
 }

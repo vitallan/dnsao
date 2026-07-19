@@ -85,6 +85,11 @@ public class RewarmWorkerCacheabilityTest {
                         DnsQueryResponse response = new DnsQueryResponse(request, responseMessage);
                         return new DnsQuery(request, response);
                     }
+
+                    @Override
+                    public DnsQuery processSingleUpstreamInternalQuery(Message message, com.allanvital.dnsao.dns.remote.UpstreamRoutingPolicy upstreamRoutingPolicy) {
+                        return processInternalQuery(message);
+                    }
                 };
             }
         };

@@ -121,8 +121,8 @@ public class RewarmWorker implements Runnable {
         try {
             QueryProcessor queryProcessor = queryProcessorFactory.buildQueryProcessor();
             DnsQuery queryResponse = context.upstreamRoutingPolicy() == null
-                    ? queryProcessor.processInternalQuery(query)
-                    : queryProcessor.processInternalQuery(query, context.upstreamRoutingPolicy());
+                    ? queryProcessor.processSingleUpstreamInternalQuery(query, null)
+                    : queryProcessor.processSingleUpstreamInternalQuery(query, context.upstreamRoutingPolicy());
             if (queryResponse == null || queryResponse.getResponse() == null) {
                 Log.CACHE.debug("rewarm returned no response on key={}, retrying", key);
                 return RewarmAttemptResult.retryableFailure("no_response");

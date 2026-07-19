@@ -15,6 +15,7 @@ public class DnsQueryRequest {
     private Message request;
     private final long start;
     private boolean isInternalOrigin = false;
+    private boolean singleUpstream = false;
     private UpstreamRoutingPolicy upstreamRoutingPolicy;
 
     public DnsQueryRequest(InetAddress clientAddress) {
@@ -48,6 +49,14 @@ public class DnsQueryRequest {
 
     public void setIsLocalQuery(boolean isInternalOrigin) {
         this.isInternalOrigin = isInternalOrigin;
+    }
+
+    public boolean isSingleUpstream() {
+        return singleUpstream;
+    }
+
+    public void setSingleUpstream(boolean singleUpstream) {
+        this.singleUpstream = singleUpstream;
     }
 
     public Message getOriginalRequest() {

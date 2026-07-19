@@ -7,9 +7,10 @@ server:
 
 cache:
   enabled: true
-  maxCacheEntries: 1000
+  maxCacheEntries: 2048
   rewarm: true
   maxRewarmCount: 5
+  maxRewarmPerMinute: 3000
 
 misc:
   timeout: 3
@@ -42,4 +43,3 @@ resolver:
       ip: "192.168.68.113"
     - domain: "cronicle.intranet"
       ip: "192.168.68.126"
-

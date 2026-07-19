@@ -53,7 +53,7 @@ public class GroupUpstreamRewarmRoutingTest extends TestHolder {
         DnsQuery initialResponse = processor.processExternalQuery(InetAddress.getByName("127.0.0.10"), request.toWire());
         assertEquals(KIDS_INITIAL_IP, MessageHelper.extractIpFromResponseMessage(initialResponse.getResponse()));
 
-        testTimeProvider.walkNow(1200L);
+        testTimeProvider.walkNow(950L);
         eventListener.assertCount(CACHE_REWARM, 1, false);
 
         DnsCacheEntry entry = cacheManager.safeGet(key(request));
