@@ -88,6 +88,27 @@ public class UpstreamResolverProviderTest {
         assertEquals(List.of(mainPrimary, shared), scopedProvider.getResolversToUse(UpstreamRoutingPolicy.forGroup("main")));
     }
 
+    @Test
+    public void singleResolverSelectionShouldRespectRoutingPolicy() {
+        assertEquals(List.of(cloudflare), provider.getSingleResolverToUse(UpstreamRoutingPolicy.forGroup("kids")));
+        assertEquals(List.of(quad9), provider.getSingleResolverToUse(UpstreamRoutingPolicy.forGroup("unconfigured")));
+    }
+
+    @Test
+    public void singleResolverSelectionShouldPreferPolicyWinner() {
+        provider.notifyLastWinner(google, UpstreamRoutingPolicy.forGroup("kids"));
+
+        assertEquals(List.of(google), provider.getSingleResolverToUse(UpstreamRoutingPolicy.forGroup("kids")));
+    }
+
+    @Test
+    public void nullRoutingPolicyShouldUpdateGlobalWinner() {
+        provider.notifyLastWinner(google, null);
+
+        assertEquals(List.of(google, quad9, cloudflare), provider.getResolversToUse(null));
+        assertEquals(List.of(google), provider.getSingleResolverToUse(null));
+    }
+
     private record NamedResolver(String name) implements UpstreamResolver {
         @Override
         public String getIp() {

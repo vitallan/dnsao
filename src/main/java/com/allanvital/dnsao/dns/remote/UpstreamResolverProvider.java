@@ -56,6 +56,17 @@ public class UpstreamResolverProvider implements ResolverProvider {
         return selectResolvers(resolvers, winner);
     }
 
+    @Override
+    public List<UpstreamResolver> getSingleResolverToUse(UpstreamRoutingPolicy routingPolicy) {
+        List<UpstreamResolver> resolvers = getResolversForPolicy(routingPolicy);
+        UpstreamResolver winner = routingPolicy == null ? lastWinner.get() : lastWinnerByPolicy.get(policyKey(routingPolicy));
+        UpstreamResolver selected = selectSingleResolver(resolvers, winner);
+        if (selected == null) {
+            return List.of();
+        }
+        return List.of(selected);
+    }
+
     private List<UpstreamResolver> getResolversForPolicy(UpstreamRoutingPolicy routingPolicy) {
         List<UpstreamResolver> allResolvers = getAllResolvers();
         if (routingPolicy == null || groups == null || groups.isEmpty()) {
@@ -123,15 +134,22 @@ public class UpstreamResolverProvider implements ResolverProvider {
         return winner;
     }
 
-    @Override
-    public void notifyLastWinner(UpstreamResolver resolver) {
-        lastWinner.set(resolver);
+    private UpstreamResolver selectSingleResolver(List<UpstreamResolver> resolvers, UpstreamResolver winner) {
+        UpstreamResolver lastWinner = getLastWinner(resolvers, winner);
+        if (lastWinner != null) {
+            return lastWinner;
+        }
+        if (resolvers.isEmpty()) {
+            return null;
+        }
+        int position = Math.floorMod(index.getAndIncrement(), resolvers.size());
+        return resolvers.get(position);
     }
 
     @Override
     public void notifyLastWinner(UpstreamResolver resolver, UpstreamRoutingPolicy routingPolicy) {
         if (routingPolicy == null) {
-            notifyLastWinner(resolver);
+            lastWinner.set(resolver);
             return;
         }
         lastWinnerByPolicy.put(policyKey(routingPolicy), resolver);

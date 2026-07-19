@@ -37,9 +37,14 @@ public class QueryProcessor {
     }
 
     public DnsQuery processQuery(InetAddress clientAddress, Message clientQuery, boolean isInternalQuery, UpstreamRoutingPolicy upstreamRoutingPolicy) {
+        return processQuery(clientAddress, clientQuery, isInternalQuery, upstreamRoutingPolicy, false);
+    }
+
+    public DnsQuery processQuery(InetAddress clientAddress, Message clientQuery, boolean isInternalQuery, UpstreamRoutingPolicy upstreamRoutingPolicy, boolean singleUpstream) {
         DnsQueryRequest request = null;
         try {
             request = preHandler.prepare(clientAddress, clientQuery, isInternalQuery);
+            request.setSingleUpstream(singleUpstream);
             if (upstreamRoutingPolicy != null) {
                 request.setUpstreamRoutingPolicy(upstreamRoutingPolicy);
             }
@@ -63,6 +68,10 @@ public class QueryProcessor {
 
     public DnsQuery processInternalQuery(Message message, UpstreamRoutingPolicy upstreamRoutingPolicy) {
         return processQuery(InetAddress.getLoopbackAddress(), message, true, upstreamRoutingPolicy);
+    }
+
+    public DnsQuery processSingleUpstreamInternalQuery(Message message, UpstreamRoutingPolicy upstreamRoutingPolicy) {
+        return processQuery(InetAddress.getLoopbackAddress(), message, true, upstreamRoutingPolicy, true);
     }
 
     public DnsQuery processExternalQuery(InetAddress clientAddress, byte[] data) {

@@ -118,6 +118,7 @@ public class SystemGraphAssembler {
                     cacheManager,
                     queryProcessorFactory,
                     cacheConf.getMaxRewarmCount(),
+                    cacheConf.getMaxRewarmPerMinute(),
                     rewarmExecutorService,
                     cacheConf.getRewarmWorkerPoolSize(),
                     cacheEntryFactory

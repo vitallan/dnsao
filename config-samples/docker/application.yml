@@ -13,6 +13,7 @@ cache:
   maxCacheEntries: 2048
   rewarm: true
   maxRewarmCount: 5
+  maxRewarmPerMinute: 3000
   alwaysRewarmTopEntries: 1024
 
 misc:

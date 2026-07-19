@@ -15,12 +15,16 @@ public interface ResolverProvider {
         return getResolversToUse();
     }
 
-    default void notifyLastWinner(UpstreamResolver resolver) {
-
+    default List<UpstreamResolver> getSingleResolverToUse(UpstreamRoutingPolicy routingPolicy) {
+        List<UpstreamResolver> resolvers = getResolversToUse(routingPolicy);
+        if (resolvers.isEmpty()) {
+            return resolvers;
+        }
+        return List.of(resolvers.get(0));
     }
 
     default void notifyLastWinner(UpstreamResolver resolver, UpstreamRoutingPolicy routingPolicy) {
-        notifyLastWinner(resolver);
+
     }
 
 }
