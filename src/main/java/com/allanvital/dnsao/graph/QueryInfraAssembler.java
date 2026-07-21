@@ -54,7 +54,8 @@ public class QueryInfraAssembler {
         DOTConnectionPoolFactory dotConnectionPoolFactory = dotConnectionPoolFactory((SSLSocketFactory) SSLSocketFactory.getDefault(), resolverConf.getTlsPoolSize());
         UpstreamResolverBuilder resolverBuilder = upstreamResolverBuilder(dotConnectionPoolFactory, resolverConf.getUpstreams());
         ResolverProvider resolverProvider = resolverProvider(resolverBuilder, resolverConf.getMultiplier(), conf.getGroups());
-        QueryOrchestrator orchestrator = queryOrchestrator(miscConf);
+        CacheEntryFactory cacheEntryFactory = cacheEntryFactory();
+        QueryOrchestrator orchestrator = queryOrchestrator(miscConf, cacheEntryFactory);
         UpstreamUnitConf upstreamUnitConf = upstreamUnitConf(resolverProvider, miscConf, orchestrator);
         Map<String, String> locaMappings = localMappings(resolverConf.getLocalMappings());
         DomainListFileReader domainListFileReader = domainListFileReader();
@@ -65,7 +66,7 @@ public class QueryInfraAssembler {
         PreHandlerProvider preHandlerProvider = preHandlerProvider(miscConf.getDnsSecMode());
         EngineUnitProvider engineUnitProvider = engineUnitProvider(executorServiceFactory, upstreamThreadPoolExecutor, blockDecider, locaMappings, cacheManager, upstreamUnitConf, mutableState);
 
-        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, cacheEntryFactory(), notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
+        PostHandlerProvider postHandlerProvider = postHandlerProvider(cacheManager, cacheEntryFactory, notificationManager, conf.getListeners().getHttp(), resolverProvider, miscConf.isQueryLog());
 
         PreHandlerFacade preHandlerFacade = preHandlerFacade(preHandlerProvider, conf.getGroups());
         QueryEngine queryEngine = queryEngine(engineUnitProvider);
@@ -108,8 +109,8 @@ public class QueryInfraAssembler {
         return new DOTConnectionPoolFactory(socketFactory, maxPoolSize);
     }
 
-    private QueryOrchestrator queryOrchestrator(MiscConf miscConf) {
-        return new QueryOrchestrator(miscConf.getTimeout(), miscConf.getDnsSecMode(), miscConf.getRetries());
+    private QueryOrchestrator queryOrchestrator(MiscConf miscConf, CacheEntryFactory cacheEntryFactory) {
+        return new QueryOrchestrator(miscConf.getTimeout(), miscConf.getDnsSecMode(), miscConf.getRetries(), cacheEntryFactory);
     }
 
     private UpstreamUnitConf upstreamUnitConf(ResolverProvider resolverProvider, MiscConf miscConf, QueryOrchestrator queryOrchestrator) {

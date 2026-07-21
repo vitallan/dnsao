@@ -41,7 +41,7 @@ public class ProtectedEntriesFreshnessTest extends TestHolder {
 
         String key = cacheKey(Type.A, KEEP_DOMAIN);
         Message cachedResponse = buildNoErrorEmptyResponseWithSoa(KEEP_DOMAIN, Type.A, 90L, 180L);
-        fakeUpstreamServer.mockResponse(buildRequest(KEEP_DOMAIN, Type.A), cachedResponse);
+        fakeUpstreamServer.mockResponse(buildRequest(KEEP_DOMAIN, Type.A), buildNoErrorEmptyResponse(KEEP_DOMAIN, Type.A));
         CacheManager cacheManager = assembler.getCacheManager();
         cacheManager.put(key, cachedResponse, 1L);
 
@@ -64,8 +64,8 @@ public class ProtectedEntriesFreshnessTest extends TestHolder {
         String coldKey = cacheKey(Type.A, COLD_DOMAIN);
         Message hotCachedResponse = buildNoErrorEmptyResponseWithSoa(HOT_DOMAIN, Type.A, 90L, 180L);
         Message coldCachedResponse = buildNoErrorEmptyResponseWithSoa(COLD_DOMAIN, Type.A, 90L, 180L);
-        fakeUpstreamServer.mockResponse(buildRequest(HOT_DOMAIN, Type.A), hotCachedResponse);
-        fakeUpstreamServer.mockResponse(buildRequest(COLD_DOMAIN, Type.A), coldCachedResponse);
+        fakeUpstreamServer.mockResponse(buildRequest(HOT_DOMAIN, Type.A), buildNoErrorEmptyResponse(HOT_DOMAIN, Type.A));
+        fakeUpstreamServer.mockResponse(buildRequest(COLD_DOMAIN, Type.A), buildNoErrorEmptyResponse(COLD_DOMAIN, Type.A));
 
         cacheManager.put(hotKey, hotCachedResponse, 1L);
         cacheManager.put(coldKey, coldCachedResponse, 1L);

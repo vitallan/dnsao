@@ -1,7 +1,8 @@
 package com.allanvital.dnsao.dns.processor.engine.unit.upstream;
 
+import com.allanvital.dnsao.cache.CacheEntryCandidate;
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.dns.processor.engine.pojo.DnsQueryResult;
-import com.allanvital.dnsao.dns.remote.DnsUtils;
 
 import java.util.List;
 import java.util.concurrent.*;
@@ -14,11 +15,13 @@ public class TaskExecutorAndDecider {
     private final ExecutorService executor;
     private final int timeoutInSecs;
     private final boolean isInternalQuery;
+    private final CacheEntryFactory cacheEntryFactory;
 
-    public TaskExecutorAndDecider(ExecutorService executor, int timeoutInSecs, boolean isInternalQuery) {
+    public TaskExecutorAndDecider(ExecutorService executor, int timeoutInSecs, boolean isInternalQuery, CacheEntryFactory cacheEntryFactory) {
         this.executor = executor;
         this.timeoutInSecs = timeoutInSecs;
         this.isInternalQuery = isInternalQuery;
+        this.cacheEntryFactory = cacheEntryFactory;
     }
 
     public DnsQueryResult executeAndPickResult(List<Callable<DnsQueryResult>> tasks) throws InterruptedException, ExecutionException, TimeoutException {
@@ -47,7 +50,11 @@ public class TaskExecutorAndDecider {
                 } catch (ExecutionException | CancellationException e) {
                     continue;
                 }
-                Long ttl = DnsUtils.getTtlFromDirectResponse(dnsQueryResult.message());
+                CacheEntryCandidate cacheEntryCandidate = cacheEntryFactory.build(dnsQueryResult.message());
+                if (!cacheEntryCandidate.isCacheable()) {
+                    continue;
+                }
+                long ttl = cacheEntryCandidate.getDnsCacheEntry().getConfiguredTtlInSeconds();
                 if (ttl > bestTtl) {
                     bestResult = dnsQueryResult;
                     bestTtl = ttl;
