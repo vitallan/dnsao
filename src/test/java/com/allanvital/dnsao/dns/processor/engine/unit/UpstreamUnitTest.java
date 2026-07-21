@@ -1,5 +1,6 @@
 package com.allanvital.dnsao.dns.processor.engine.unit;
 
+import com.allanvital.dnsao.cache.CacheEntryFactory;
 import com.allanvital.dnsao.conf.inner.DNSSecMode;
 import com.allanvital.dnsao.dns.pojo.DnsQueryRequest;
 import com.allanvital.dnsao.dns.processor.engine.pojo.DnsQueryResult;
@@ -56,7 +57,7 @@ public class UpstreamUnitTest {
 
     @NotNull
     private static UpstreamUnit getUpstreamUnit(AtomicReference<ExecutorService> seenExecutor, ResolverProvider provider, UpstreamThreadPoolExecutor upstreamPool) {
-        QueryOrchestrator orchestrator = new QueryOrchestrator(1, DNSSecMode.SIMPLE, 1) {
+        QueryOrchestrator orchestrator = new QueryOrchestrator(1, DNSSecMode.SIMPLE, 1, new CacheEntryFactory()) {
             @Override
             public DnsQueryResult query(ExecutorService executorService, DnsQueryRequest request, List<UpstreamResolver> resolvers) {
                 seenExecutor.set(executorService);
